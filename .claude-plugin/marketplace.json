@@ -1,0 +1,11 @@
+{
+  "name": "rpai",
+  "owner": { "name": "RPAI 數位優化器" },
+  "plugins": [
+    {
+      "name": "rpai-course-platform",
+      "source": "./plugin",
+      "description": "在自己的 Claude Code 裡替 RPAI Course Platform 產出課程大綱、簡報與學員手冊"
+    }
+  ]
+}
