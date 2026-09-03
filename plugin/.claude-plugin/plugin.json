@@ -1,0 +1,24 @@
+{
+  "name": "rpai-course-platform",
+  "displayName": "RPAI Course Platform",
+  "version": "0.1.0",
+  "description": "在自己的 Claude Code 裡替 RPAI Course Platform 產出課程大綱、簡報與學員手冊：用 MCP 拉藍圖、用 rpai-* skill 產檔、把成品傳回平台。",
+  "author": { "name": "RPAI 數位優化器" },
+  "repository": "https://github.com/rpaidevolper/rpai-course-platform",
+  "keywords": ["rpai", "course", "pptx", "docx", "teaching"],
+  "userConfig": {
+    "server_url": {
+      "type": "string",
+      "title": "平台網址",
+      "description": "RPAI Course Platform 的網址，例如 https://course.rpai.tw（不含結尾斜線）",
+      "required": true
+    },
+    "api_token": {
+      "type": "string",
+      "title": "個人存取權杖",
+      "description": "在平台「設定 → Claude Code 權杖」產生，rcp_ 開頭",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

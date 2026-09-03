@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "rpai-course-platform": {
+      "url": "${user_config.server_url}/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.api_token}"
+      }
+    }
+  }
+}
