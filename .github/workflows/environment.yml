@@ -1,0 +1,66 @@
+name: Environment
+
+# 驗證 Dev Container 與 production image 真的建得起來、跑得起來。
+# 只在相關檔案變動時執行，不是 required check。
+on:
+  pull_request:
+    paths: &paths
+      - .devcontainer/**
+      - Dockerfile
+      - .dockerignore
+      - supabase/**
+      - scripts/db-start.sh
+      - package.json
+      - pnpm-lock.yaml
+      - next.config.ts
+      - .github/workflows/environment.yml
+  push:
+    branches: [main]
+    paths: *paths
+
+concurrency:
+  group: environment-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  devcontainer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          runCmd: |
+            set -euo pipefail
+            node --version && pnpm --version && gh --version && claude --version && docker --version
+            pnpm lint
+            pnpm typecheck
+            pnpm test
+            pnpm db:start
+            set -a && . ./.env.local && set +a
+            # migrations 已套用：courses 表可以透過 API 查詢
+            curl --fail --silent --show-error \
+              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/courses?select=id"
+            echo
+
+  docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: docker build -t rpai-course-platform .
+      - name: Home page responds
+        run: |
+          docker run -d --name app -p 3000:3000 rpai-course-platform
+          for i in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null http://localhost:3000; then
+              echo "OK"; exit 0
+            fi
+            sleep 1
+          done
+          docker logs app
+          exit 1

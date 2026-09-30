@@ -1,0 +1,34 @@
+{
+  "name": "rpai-course-platform",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // 本機 Supabase 是一組 Docker 容器，由容器內的 Docker 執行
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+  },
+  // 本機 Supabase 約需 4 GB 記憶體；Codespaces 會依此挑選機型
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb"
+  },
+  // Claude Code 的登入狀態與設定放在 volume，重建容器後仍保留
+  "mounts": ["source=rpai-claude-config-${devcontainerId},target=/home/node/.claude,type=volume"],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
+  },
+  "remoteUser": "node",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [3000, 54321, 54323],
+  "portsAttributes": {
+    "3000": { "label": "Next.js" },
+    "54321": { "label": "Supabase API" },
+    "54323": { "label": "Supabase Studio" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code", "dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss"]
+    }
+  }
+}
