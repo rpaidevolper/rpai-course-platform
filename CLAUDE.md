@@ -118,6 +118,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 | 型別檢查 | `pnpm typecheck`（會先跑 `next typegen` 產生 Next.js 的全域型別） |
 | 測試 | `pnpm test`（單檔：`pnpm test src/lib/blueprint/schema.test.ts`） |
 | Build | `pnpm build` |
+| 本機 Supabase | `pnpm db:start`（啟動並把連線資訊寫入 `.env.local`）、`pnpm db:stop`、`pnpm db:reset`（清空並重套 migrations） |
 | 建講師權杖 | `pnpm token:create --user <auth.users.id> --label 名稱` |
 | 測 plugin | `claude --plugin-dir ./plugin` |
 
@@ -134,6 +135,8 @@ src/lib/supabase/     Supabase client
 supabase/migrations/  SQL migration，只新增不改舊檔
 plugin/               講師端 Claude Code plugin（.mcp.json、runner skill、打包的 rpai-* skill）
 .claude-plugin/       marketplace.json，讓 `claude plugin marketplace add rpaidevolper/rpai-course-platform` 找得到 plugin
+.devcontainer/        開發環境（Dev Container）；改了工具鏈版本要同步改 `Dockerfile` 與 `.github/workflows/ci.yml`
+Dockerfile            production image（Next.js standalone）
 scripts/              一次性維運腳本
 docs/                 架構與決策記錄
 ```
