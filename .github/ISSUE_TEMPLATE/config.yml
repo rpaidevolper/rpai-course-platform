@@ -1,0 +1,2 @@
+# 保留空白 issue：/to-spec 與 /to-tickets 會用 gh 直接建立 issue
+blank_issues_enabled: true

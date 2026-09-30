@@ -1,0 +1,31 @@
+name: PR Conventions
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  pr-conventions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check title and linked issue
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          failed=0
+
+          # squash merge 後 PR 標題就是 main 上的 commit message
+          if ! grep -Eq '^(feat|fix|docs|refactor|test|chore|ci|build|perf|style|revert)(\([a-z0-9-]+\))?!?: .+' <<<"$PR_TITLE"; then
+            echo "::error::PR 標題必須符合 Conventional Commits，例如「feat: add blueprint chat」。目前標題：$PR_TITLE"
+            failed=1
+          fi
+
+          if ! grep -Eiq '(close[sd]?|fix(e[sd])?|resolve[sd]?) #[0-9]+' <<<"$PR_BODY"; then
+            echo "::error::PR 內文必須連結 issue，例如「Closes #12」。沒有 issue 請先開一張。"
+            failed=1
+          fi
+
+          exit $failed
