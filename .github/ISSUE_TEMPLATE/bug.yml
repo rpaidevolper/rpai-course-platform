@@ -1,0 +1,33 @@
+name: Bug 回報
+description: 有東西壞了，或行為和預期不同
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 發生了什麼
+      description: 實際看到的行為，有錯誤訊息請完整貼上。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期應該怎樣
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 重現步驟
+      description: 從哪個畫面或指令開始，一步一步寫。
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 環境與補充
+      description: 分支或 commit、瀏覽器、截圖等。

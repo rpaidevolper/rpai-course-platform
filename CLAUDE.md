@@ -59,7 +59,7 @@ claude plugin install mattpocock-skills@mattpocock
 - 動模組介面／切分層時，用 `codebase-design` 的詞彙（deep module、seam），不要自創「service」「component」等說法。
 - merge / rebase 衝突走 `resolving-merge-conflicts`，一律解完，不要 `--abort`。
 
-`/to-spec`、`/to-tickets`、`triage` 需要先設定 issue tracker。第一次使用前跑 `/setup-matt-pocock-skills`。
+`/to-spec`、`/to-tickets`、`triage` 讀的 issue tracker 設定已經建好，見下方「Agent skills」，不需要再跑 `/setup-matt-pocock-skills`。
 
 ### 4. 內容生產流程——維持原有 RPAI 鏈，不要換
 
@@ -166,6 +166,29 @@ docs/                 架構與決策記錄
 
 名稱列在 `.env.example`；本機放 `.env.local`。永遠不要 commit、cat 或 echo 任何 `.env*`（`.env.example` 除外）。
 
-## Git
+## Agent skills
 
-在 `claude/*` 分支開發，不要直接推 default branch。
+### Issue tracker
+
+Issue、spec、ticket 都在這個 repo 的 GitHub Issues，用 `gh` 操作。See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+使用預設的五個狀態 label（`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`）。See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context：repo 根目錄的 `GLOSSARY.md` 與 `docs/adr/`。See `docs/agents/domain.md`.
+
+## Git 與 PR
+
+`main` 有 ruleset 保護，不能直接 push，一律走 PR。完整流程見 `README.md` 的「開發流程」。
+
+- 沒有 issue 就沒有 PR。開工前先確認有對應的 issue，沒有就先開。
+- 分支名 `<issue 編號>-<英文簡述>`，例如 `12-blueprint-chat`。Claude Code on the web 與 `@claude` 自動建立的 `claude/*` 分支也可以。
+- PR 標題用 Conventional Commits（`feat: ...`、`fix: ...`），squash merge 後它就是 `main` 上的 commit message。
+- PR 內文必須有 `Closes #<issue 編號>`，並依 `.github/pull_request_template.md` 填寫驗收條件與測試證據。
+- Issue、spec、PR 說明、文件用繁體中文；程式碼、commit message、分支名用英文。
+- 合併條件：`lint`、`typecheck`、`test`、`build`、`pr-conventions`、`ai-review` 全過，且所有 review 對話 resolved。不要求人類 approve（見 `docs/adr/0001-ai-gated-merge-without-human-approval.md`）。
+- AI review 的 inline 留言要逐條處理：修正，或回覆不修的理由，然後 resolve。不要沒處理就 resolve。
+- 改 `.github/rulesets/` 或 `.github/labels.json` 後，要由 owner 帳號執行 `scripts/setup-github.sh` 才會生效。
