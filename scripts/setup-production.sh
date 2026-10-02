@@ -228,7 +228,11 @@ warn "免費方案沒有自動備份。真實講師資料進來之前，建議�
 pause "專案建好了？"
 open_url "https://supabase.com/dashboard/project/_/settings/general"
 step "在 Settings → General 找到 Reference ID（20 個字元），複製。"
-ask SUPABASE_PROJECT_REF "Paste Reference ID:"
+while :; do
+  ask SUPABASE_PROJECT_REF "Paste Reference ID:"
+  [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] && break
+  warn "Reference ID 必須是 20 個小寫英數字元，請重新貼上。"
+done
 ask_secret SUPABASE_DB_PASSWORD "Paste database password:"
 write_env SUPABASE_PROJECT_REF "$SUPABASE_PROJECT_REF"
 write_env SUPABASE_DB_PASSWORD "$SUPABASE_DB_PASSWORD"
