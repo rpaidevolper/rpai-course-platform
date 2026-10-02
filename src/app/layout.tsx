@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { DemoRuntime } from "./_components/demo-runtime";
 
 export const metadata: Metadata = {
   title: "RPAI 講師後台",
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="zh-Hant">
-      <body>{children}</body>
+      <body>
+        {children}
+        <DemoRuntime />
+      </body>
     </html>
   );
 }

@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { getCourse, getProject, instructorEdit, isStale, outlineFeedback, publicationProblems, staleReasons } from "./logic";
 import type { Artifact, Course } from "./types";
+import { initialState } from "./state";
+
+const st = initialState();
 
 /**
  * 產物鏈（ADR 0003）：藍圖 → 課程大綱、講師準備單；藍圖 → 逐頁腳本（每天）→ 簡報（每天）；各天逐頁腳本 → 學員手冊。
  * 每個測試自己組一份兩天課程的快照，不依賴 fixture 示範的狀態。
  */
 
-const base = getCourse("c-gas-two-day")!;
+const base = getCourse(st, "c-gas-two-day")!;
 
 function v(a: Pick<Artifact, "id" | "kind"> & Partial<Artifact>): Artifact {
   return {
@@ -162,7 +165,7 @@ describe("可發布", () => {
 });
 
 describe("課綱討論：課程大綱與客戶回饋", () => {
-  const project = getProject("p-a-2026")!;
+  const project = getProject(st, "p-a-2026")!;
 
   it("列出回應某一版課程大綱的客戶回饋", () => {
     expect(outlineFeedback(project, "a-ci-outline-1").map((d) => d.id)).toEqual(["doc-a-feedback-1"]);

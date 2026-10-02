@@ -10,12 +10,15 @@ import {
   type ReadinessItem,
 } from "./logic";
 import type { Course, Session } from "./types";
+import { initialState } from "./state";
+
+const st = initialState();
 
 /** 準備度彙整（#25 user story 48）：每一種來源各有正例與反例，只透過 readiness／readinessText／readinessGroups 驗證。 */
 
-const session = (id: string) => getSession(id)!;
-const course = (id: string) => getCourse(id)!;
-const items = (s: Session, c?: Course) => readiness(s, c);
+const session = (id: string) => getSession(st, id)!;
+const course = (id: string) => getCourse(st, id)!;
+const items = (s: Session, c?: Course) => readiness(st, s, c);
 const ofKind = <K extends ReadinessItem["kind"]>(list: ReadinessItem[], kind: K) =>
   list.filter((i): i is Extract<ReadinessItem, { kind: K }> => i.kind === kind);
 const texts = (list: ReadinessItem[]) => list.map(readinessText);
@@ -27,7 +30,7 @@ describe("準備度：全部就緒", () => {
   });
 
   it("首頁接下來的場次裡至少有一場已經準備好", () => {
-    expect(upcomingSessions(MOCK_NOW).some((s) => readiness(s).length === 0)).toBe(true);
+    expect(upcomingSessions(st, MOCK_NOW).some((s) => readiness(st, s).length === 0)).toBe(true);
   });
 });
 

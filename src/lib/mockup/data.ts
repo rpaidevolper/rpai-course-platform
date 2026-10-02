@@ -672,6 +672,7 @@ export const KNOWLEDGE_DRAFTS: KnowledgeDraft[] = [
   {
     id: "d-pa-framework",
     fromCourseId: "c-pa-finance",
+    importedFileName: null,
     createdAt: "2026-09-18T17:00:00+08:00",
     trigger: "auto",
     proposal: {
@@ -683,6 +684,7 @@ export const KNOWLEDGE_DRAFTS: KnowledgeDraft[] = [
   {
     id: "d-pa-scenario",
     fromCourseId: "c-pa-finance",
+    importedFileName: null,
     createdAt: "2026-09-18T17:00:00+08:00",
     trigger: "auto",
     proposal: {

@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { gateBlockText, generationGate, getCourse, instructorEdit } from "./logic";
 import type { Artifact, Course } from "./types";
+import { initialState } from "./state";
+
+const st = initialState();
 
 /**
  * 定稿閘：給一個想排的產檔工作，回傳可以（空陣列）或被哪一步擋住。
  * 每個測試自己組一份兩天課程的快照，不依賴 fixture 示範的狀態。
  */
 
-const base = getCourse("c-gas-two-day")!;
+const base = getCourse(st, "c-gas-two-day")!;
 const FINALIZED = "2026-10-02T12:00:00+08:00";
 
 function v(a: Pick<Artifact, "id" | "kind"> & Partial<Artifact>): Artifact {

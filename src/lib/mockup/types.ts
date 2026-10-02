@@ -239,10 +239,16 @@ export interface Session {
 
 export interface KnowledgeDraft {
   id: string;
-  fromCourseId: string;
+  /** 匯入過往講義產生的草稿沒有來源課程，為 null */
+  fromCourseId: string | null;
+  /** 匯入時的檔名；其他來源為 null */
+  importedFileName: string | null;
   createdAt: IsoTime;
   trigger: "auto" | "manual" | "import";
-  proposal:
-    | { kind: "framework_version"; frameworkId: string; changes: string[] }
-    | { kind: "new_scenario"; scenario: Omit<Scenario, "id"> };
+  proposal: DraftProposal;
 }
+
+export type DraftProposal =
+  | { kind: "framework_version"; frameworkId: string; changes: string[] }
+  | { kind: "new_framework"; framework: Pick<Framework, "topicId" | "title" | "summary" | "moduleTitles"> }
+  | { kind: "new_scenario"; scenario: Omit<Scenario, "id"> };

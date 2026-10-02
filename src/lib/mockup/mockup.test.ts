@@ -29,6 +29,9 @@ import {
   upcomingSessions,
 } from "./logic";
 import type { Course, Project, Session } from "./types";
+import { initialState } from "./state";
+
+const st = initialState();
 
 const unitsOf = (c: Course) => c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
 
@@ -67,7 +70,7 @@ describe("設計稿 fixture 參照完整", () => {
   });
 
   it("有一門多天課程示範天 → 時段 → 單元：至少兩天、每天兩個時段，且有跨天承接", () => {
-    const multiDay = getCourse("c-gas-two-day")!;
+    const multiDay = getCourse(st, "c-gas-two-day")!;
     expect(multiDay.blueprint.days.length).toBeGreaterThanOrEqual(2);
     for (const d of multiDay.blueprint.days) expect(d.slots).toHaveLength(2);
     const day1Titles = multiDay.blueprint.days[0].slots.flatMap((s) => s.units.map((u) => u.title));
@@ -87,7 +90,7 @@ describe("設計稿 fixture 參照完整", () => {
   it("複製來的課程指向同一個專案裡另一門課程的某一版藍圖", () => {
     for (const c of COURSES) {
       if (!c.copiedFrom) continue;
-      const from = getCourse(c.copiedFrom.courseId);
+      const from = getCourse(st, c.copiedFrom.courseId);
       expect(from, `${c.id} 複製自 ${c.copiedFrom.courseId}`).toBeDefined();
       expect(from!.id).not.toBe(c.id);
       expect(from!.projectId).toBe(c.projectId);
@@ -96,7 +99,7 @@ describe("設計稿 fixture 參照完整", () => {
   });
 
   it("有一門從同仁班複製出的主管班，單元混合沿用、要改與新做", () => {
-    const managers = getCourse("c-claude-intro-managers")!;
+    const managers = getCourse(st, "c-claude-intro-managers")!;
     expect(managers.copiedFrom).toEqual({ courseId: "c-claude-intro", blueprintVersion: 3 });
     expect(new Set(unitsOf(managers).map((u) => u.reuse))).toEqual(new Set(["reuse", "modify", "new"]));
     for (const u of unitsOf(managers)) {
@@ -110,7 +113,7 @@ describe("設計稿 fixture 參照完整", () => {
       if (u.source === null) continue;
       const src = u.source;
       if (src.kind === "course") {
-        const from = getCourse(src.id);
+        const from = getCourse(st, src.id);
         expect(from, `${u.title} 來源課程 ${src.id}`).toBeDefined();
         expect(from!.blueprintHistory.map((v) => v.version)).toContain(src.version);
         // 只存了最新一版藍圖的內容，所以只有指向最新版時才能核對單元標題
@@ -201,7 +204,7 @@ describe("設計稿 fixture 參照完整", () => {
   it("發布只鎖定同一門課程的產物與素材，且不含講師準備單", () => {
     for (const s of SESSIONS) {
       if (!s.publication) continue;
-      expect(publicationProblems(getCourse(s.courseId)!, s.publication), s.id).toEqual([]);
+      expect(publicationProblems(getCourse(st, s.courseId)!, s.publication), s.id).toEqual([]);
     }
   });
 
@@ -211,19 +214,19 @@ describe("設計稿 fixture 參照完整", () => {
   });
 
   it("知識庫草稿指向存在的課程", () => {
-    for (const d of KNOWLEDGE_DRAFTS) expect(getCourse(d.fromCourseId)).toBeDefined();
+    for (const d of KNOWLEDGE_DRAFTS) expect(getCourse(st, d.fromCourseId!)).toBeDefined();
   });
 });
 
 describe("產物過期（fixture 示範）", () => {
   it("出自舊版藍圖的產物算過期，出自最新版的不算", () => {
-    const course = getCourse("c-claude-intro")!;
+    const course = getCourse(st, "c-claude-intro")!;
     expect(isStale(course, latestArtifact(course, "handbook")!)).toBe(true);
     expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(false);
   });
 
   it("兩天課程只改了第一天逐頁腳本：第一天簡報與學員手冊過期，第二天簡報沒有", () => {
-    const course = getCourse("c-gas-two-day")!;
+    const course = getCourse(st, "c-gas-two-day")!;
     expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(true);
     expect(isStale(course, latestArtifact(course, "handbook")!)).toBe(true);
     expect(isStale(course, latestArtifact(course, "slides", 2)!)).toBe(false);
@@ -260,7 +263,7 @@ describe("定稿（fixture）", () => {
   });
 
   it("示範兩天課程：第 1 天簡報與學員手冊被沒定稿的第 1 天逐頁腳本擋住，第 2 天簡報可以排", () => {
-    const course = getCourse("c-gas-two-day")!;
+    const course = getCourse(st, "c-gas-two-day")!;
     expect(generationGate(course, { kind: "slides", day: 1 }).map(gateBlockText)).toEqual(["第 1 天逐頁腳本 v2 還沒定稿"]);
     expect(generationGate(course, { kind: "handbook", day: null }).map(gateBlockText)).toEqual(["第 1 天逐頁腳本 v2 還沒定稿"]);
     expect(generationGate(course, { kind: "slides", day: 2 })).toEqual([]);
@@ -268,7 +271,7 @@ describe("定稿（fixture）", () => {
   });
 
   it("示範藍圖還沒定稿的課程：逐頁腳本被擋，課程大綱照樣可以排", () => {
-    const course = getCourse("c-claude-intro-managers")!;
+    const course = getCourse(st, "c-claude-intro-managers")!;
     expect(generationGate(course, { kind: "page_script", day: 1 }).map(gateBlockText)).toEqual(["藍圖 v1 還沒定稿"]);
     expect(generationGate(course, { kind: "outline", day: null })).toEqual([]);
   });
@@ -276,43 +279,43 @@ describe("定稿（fixture）", () => {
 
 describe("講師首頁的場次", () => {
   it("只列還沒結束的場次，依開始時間排序", () => {
-    expect(upcomingSessions(MOCK_NOW).map((s) => s.id)).toEqual(["s-ci-1015", "s-gas-1020", "s-ci-1022", "s-pa-1029", "s-ca-1105"]);
+    expect(upcomingSessions(st, MOCK_NOW).map((s) => s.id)).toEqual(["s-ci-1015", "s-gas-1020", "s-ci-1022", "s-pa-1029", "s-ca-1105"]);
   });
 });
 
 describe("學員入口", () => {
   it("只顯示發布時鎖定的版本，不是課程最新的版本", () => {
-    const view = portalView("a1015", MOCK_NOW)!;
+    const view = portalView(st, "a1015", MOCK_NOW)!;
     expect(view.state).toBe("open");
     expect(view.artifacts.map((a) => a.id)).toEqual(["a-ci-outline-1", "a-ci-slides-1", "a-ci-handbook-1"]);
   });
 
   it("不含專案與價格", () => {
-    const json = JSON.stringify(portalView("a1015", MOCK_NOW));
+    const json = JSON.stringify(portalView(st, "a1015", MOCK_NOW));
     expect(json).not.toMatch(/price|360000|A 公司 2026 AI 培訓/);
   });
 
   it("欄位固定，新增欄位要先改這個測試（避免悄悄帶出專案或價格）", () => {
-    expect(Object.keys(portalView("a1015", MOCK_NOW)!).sort()).toEqual(
+    expect(Object.keys(portalView(st, "a1015", MOCK_NOW)!).sort()).toEqual(
       ["artifacts", "courseTitle", "day", "days", "expiresAt", "links", "materials", "state"],
     );
   });
 
   it("未發布時不給任何教材", () => {
-    const view = portalView("a1022", MOCK_NOW)!;
+    const view = portalView(st, "a1022", MOCK_NOW)!;
     expect(view.state).toBe("unpublished");
     expect([...view.artifacts, ...view.materials, ...view.links]).toEqual([]);
   });
 
   it("課後 30 天失效，之後不給任何教材", () => {
-    const s = getSession("s-pa-0918")!;
+    const s = getSession(st, "s-pa-0918")!;
     expect(portalState(s, "2026-10-18T16:00:00+08:00")).toBe("open");
     expect(portalState(s, "2026-10-18T16:31:00+08:00")).toBe("expired");
-    expect(portalView("b0918", "2026-10-19T00:00:00+08:00")!.artifacts).toEqual([]);
+    expect(portalView(st, "b0918", "2026-10-19T00:00:00+08:00")!.artifacts).toEqual([]);
   });
 
   it("講師提前關閉後立即失效；延長後依延長的時間", () => {
-    const base = getSession("s-pa-0918")!;
+    const base = getSession(st, "s-pa-0918")!;
     const closed: Session = { ...base, portal: { ...base.portal, closedAt: "2026-10-01T00:00:00+08:00" } };
     expect(portalState(closed, MOCK_NOW)).toBe("closed");
     const extended: Session = { ...base, portal: { ...base.portal, expiresAtOverride: "2026-12-31T23:59:00+08:00" } };
@@ -320,18 +323,18 @@ describe("學員入口", () => {
   });
 
   it("還沒發布時一律是未發布，即使講師已經關閉", () => {
-    const base = getSession("s-ci-1022")!;
+    const base = getSession(st, "s-ci-1022")!;
     const closed: Session = { ...base, portal: { ...base.portal, closedAt: "2026-10-01T00:00:00+08:00" } };
     expect(portalState(closed, MOCK_NOW)).toBe("unpublished");
   });
 
   it("找不到代碼回傳 undefined", () => {
-    expect(portalView("nope", MOCK_NOW)).toBeUndefined();
+    expect(portalView(st, "nope", MOCK_NOW)).toBeUndefined();
   });
 });
 
 describe("需求條目的負責課程", () => {
-  const project = getProject("p-a-2026")!;
+  const project = getProject(st, "p-a-2026")!;
 
   it("列出沒有指定負責課程的需求條目", () => {
     expect(unassignedRequirements(project, COURSES).map((r) => r.id)).toEqual(["r-a-security"]);
@@ -354,7 +357,7 @@ describe("需求條目的負責課程", () => {
   });
 
   it("每條都有人負責時回傳空陣列", () => {
-    expect(unassignedRequirements(getProject("p-b-2026")!, COURSES)).toEqual([]);
+    expect(unassignedRequirements(getProject(st, "p-b-2026")!, COURSES)).toEqual([]);
   });
 });
 
@@ -369,7 +372,7 @@ describe("專案列表依狀態分組", () => {
   });
 
   it("沒有專案的狀態也保留空的一組，畫面上的順序固定", () => {
-    const groups = projectsByStatus([getProject("p-d-2026")!]);
+    const groups = projectsByStatus([getProject(st, "p-d-2026")!]);
     expect(groups.map((g) => [g.status, g.projects.length])).toEqual([
       ["negotiating", 0],
       ["active", 0],
@@ -385,7 +388,7 @@ describe("專案 fixture 參照完整", () => {
     for (const p of PROJECTS) {
       for (const r of p.requirements) {
         if (r.courseId === null) continue;
-        expect(getCourse(r.courseId)?.projectId).toBe(p.id);
+        expect(getCourse(st, r.courseId)?.projectId).toBe(p.id);
       }
     }
   });
@@ -400,7 +403,7 @@ describe("專案 fixture 參照完整", () => {
 
   it("只有回饋會指向課程大綱，且指向同一個專案裡存在的課程大綱", () => {
     for (const p of PROJECTS) {
-      const outlineIds = coursesOfProject(p.id).flatMap((c) =>
+      const outlineIds = coursesOfProject(st, p.id).flatMap((c) =>
         c.artifacts.filter((a) => a.kind === "outline").map((a) => a.id),
       );
       for (const d of p.clientDocuments) {
@@ -417,7 +420,7 @@ describe("專案 fixture 參照完整", () => {
   });
 
   it("fixture 至少示範一則指向課程大綱的回饋", () => {
-    expect(getProject("p-a-2026")!.clientDocuments.find((d) => d.kind === "feedback")?.respondsToOutlineId).toBe(
+    expect(getProject(st, "p-a-2026")!.clientDocuments.find((d) => d.kind === "feedback")?.respondsToOutlineId).toBe(
       "a-ci-outline-1",
     );
   });
@@ -425,7 +428,7 @@ describe("專案 fixture 參照完整", () => {
 
 describe("課程頁的需求對照", () => {
   it("「Claude 入門」逐條列出負責的需求條目，三種狀態都有", () => {
-    const rows = requirementMappingOfCourse(getCourse("c-claude-intro")!);
+    const rows = requirementMappingOfCourse(st, getCourse(st, "c-claude-intro")!);
     expect(rows.map((r) => [r.requirement.id, r.mapping.status, r.mapping.deltaMinutes])).toEqual([
       ["r-a-8d", "covered", 30],
       ["r-a-project", "partial", null],
@@ -436,14 +439,14 @@ describe("課程頁的需求對照", () => {
   });
 
   it("附上設計稿標註的實質涵蓋判斷；沒標註的為 null", () => {
-    const rows = requirementMappingOfCourse(getCourse("c-claude-advanced")!);
+    const rows = requirementMappingOfCourse(st, getCourse(st, "c-claude-advanced")!);
     expect(rows.map((r) => [r.requirement.id, r.review])).toEqual([["r-a-handover", null]]);
-    const intro = requirementMappingOfCourse(getCourse("c-claude-intro")!);
+    const intro = requirementMappingOfCourse(st, getCourse(st, "c-claude-intro")!);
     expect(intro.find((r) => r.requirement.id === "r-a-weekly")!.review?.substantive).toBe(false);
   });
 
   it("沒有負責任何需求條目的課程回傳空陣列", () => {
-    expect(requirementMappingOfCourse(getCourse("c-gas-two-day")!)).toEqual([]);
+    expect(requirementMappingOfCourse(st, getCourse(st, "c-gas-two-day")!)).toEqual([]);
   });
 
   it("實質涵蓋標註都指向存在的需求條目", () => {

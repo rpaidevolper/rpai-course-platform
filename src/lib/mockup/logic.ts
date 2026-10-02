@@ -1,15 +1,7 @@
 import { openItems } from "@/lib/blueprint/open-items";
 import { mapRequirements, type RequirementMapping } from "@/lib/blueprint/requirement-mapping";
 import { checkBlueprint, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
-import {
-  COURSES,
-  FRAMEWORKS,
-  KNOWLEDGE_DRAFTS,
-  PROJECTS,
-  REQUIREMENT_REVIEWS,
-  SCENARIOS,
-  SESSIONS,
-} from "./data";
+import type { DemoState } from "./state";
 import {
   ARTIFACT_LABELS,
   PROJECT_STATUSES,
@@ -30,7 +22,7 @@ import {
   type Session,
 } from "./types";
 
-/** 純函式：所有「現在」都由呼叫端傳入（設計稿用 MOCK_NOW）。 */
+/** 純函式：資料一律從呼叫端傳入的 DemoState 讀，「現在」由呼叫端傳入（demo 用 state.now）。 */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** 學員入口預設在課後多久失效 */
@@ -40,27 +32,27 @@ const ms = (t: IsoTime) => new Date(t).getTime();
 
 // ── 查詢 ──────────────────────────────────────────────
 
-export const getProject = (id: string) => PROJECTS.find((p) => p.id === id);
-export const getCourse = (id: string) => COURSES.find((c) => c.id === id);
-export const getSession = (id: string) => SESSIONS.find((s) => s.id === id);
-export const getFramework = (id: string) => FRAMEWORKS.find((f) => f.id === id);
-export const getScenario = (id: string) => SCENARIOS.find((s) => s.id === id);
-export const getSessionByPortalCode = (code: string) =>
-  SESSIONS.find((s) => s.portal.code === code);
+export const getProject = (st: DemoState, id: string) => st.projects.find((p) => p.id === id);
+export const getCourse = (st: DemoState, id: string) => st.courses.find((c) => c.id === id);
+export const getSession = (st: DemoState, id: string) => st.sessions.find((s) => s.id === id);
+export const getFramework = (st: DemoState, id: string) => st.frameworks.find((f) => f.id === id);
+export const getScenario = (st: DemoState, id: string) => st.scenarios.find((s) => s.id === id);
+export const getSessionByPortalCode = (st: DemoState, code: string) =>
+  st.sessions.find((s) => s.portal.code === code);
 
-export const coursesOfProject = (projectId: string) =>
-  COURSES.filter((c) => c.projectId === projectId);
+export const coursesOfProject = (st: DemoState, projectId: string) =>
+  st.courses.filter((c) => c.projectId === projectId);
 
-export const sessionsOfCourse = (courseId: string) =>
-  SESSIONS.filter((s) => s.courseId === courseId).sort((a, b) => ms(sessionStartsAt(a)) - ms(sessionStartsAt(b)));
+export const sessionsOfCourse = (st: DemoState, courseId: string) =>
+  st.sessions.filter((s) => s.courseId === courseId).sort((a, b) => ms(sessionStartsAt(a)) - ms(sessionStartsAt(b)));
 
 export const latestFrameworkVersion = (f: Framework) =>
   Math.max(...f.versions.map((v) => v.version));
 
-export const frameworksOfTopic = (topicId: string) =>
-  FRAMEWORKS.filter((f) => f.topicId === topicId);
+export const frameworksOfTopic = (st: DemoState, topicId: string) =>
+  st.frameworks.filter((f) => f.topicId === topicId);
 
-export const pendingDrafts = () => KNOWLEDGE_DRAFTS;
+export const pendingDrafts = (st: DemoState) => st.drafts;
 
 // ── 藍圖與產物 ────────────────────────────────────────
 
@@ -107,12 +99,12 @@ export function latestReadyArtifact(course: Course, kind: ArtifactKind, day: num
 }
 
 /** 單元來源的顯示文字：「Claude 入門」藍圖 v3・提示詞的四個零件 */
-export function unitSourceText(source: UnitSource): string {
+export function unitSourceText(st: DemoState, source: UnitSource): string {
   if (source.kind === "course") {
-    const title = getCourse(source.id)?.title ?? source.id;
+    const title = getCourse(st, source.id)?.title ?? source.id;
     return `課程「${title}」藍圖 v${source.version}・${source.unit}`;
   }
-  const title = getFramework(source.id)?.title ?? source.id;
+  const title = getFramework(st, source.id)?.title ?? source.id;
   return `框架「${title}」v${source.version}・${source.unit}`;
 }
 
@@ -311,7 +303,7 @@ export type ReadinessItem =
  * 純講述單元（lecture_only）是設計上的提醒、不是缺項，所以不列。
  * course 預設依場次查；測試可傳入改過的課程。
  */
-export function readiness(session: Session, course: Course | undefined = getCourse(session.courseId)): ReadinessItem[] {
+export function readiness(st: DemoState, session: Session, course: Course | undefined = getCourse(st, session.courseId)): ReadinessItem[] {
   if (!course) throw new Error(`場次 ${session.id} 找不到課程 ${session.courseId}`);
   const bp = course.blueprint;
   const items: ReadinessItem[] = [];
@@ -335,7 +327,7 @@ export function readiness(session: Session, course: Course | undefined = getCour
   if (work.modify + work.new > 0) items.push({ kind: "units_need_work", ...work });
 
   // 需求對照：和課程頁的 ✅／⚠️／❌ 用同一個判斷（mapping.status）
-  const rows = requirementMappingOfCourse(course);
+  const rows = requirementMappingOfCourse(st, course);
   const textsOf = (status: RequirementMapping["status"]) =>
     rows.filter((r) => r.mapping.status === status).map((r) => r.requirement.text);
   const gaps = { partial: textsOf("partial"), notFound: textsOf("not_found") };
@@ -467,8 +459,8 @@ export function readinessGroups(
 }
 
 /** 講師首頁：還沒結束的場次（最後一天還沒上完），依第一天開始時間排序。 */
-export function upcomingSessions(now: IsoTime): Session[] {
-  return SESSIONS.filter((s) => ms(sessionEndsAt(s)) >= ms(now)).sort(
+export function upcomingSessions(st: DemoState, now: IsoTime): Session[] {
+  return st.sessions.filter((s) => ms(sessionEndsAt(s)) >= ms(now)).sort(
     (a, b) => ms(sessionStartsAt(a)) - ms(sessionStartsAt(b)),
   );
 }
@@ -548,10 +540,10 @@ export interface PortalView {
   links: Link[];
 }
 
-export function portalView(code: string, now: IsoTime): PortalView | undefined {
-  const session = getSessionByPortalCode(code);
+export function portalView(st: DemoState, code: string, now: IsoTime): PortalView | undefined {
+  const session = getSessionByPortalCode(st, code);
   if (!session) return undefined;
-  const course = getCourse(session.courseId)!;
+  const course = getCourse(st, session.courseId)!;
   const state = portalState(session, now);
   const pub = state === "open" ? session.publication : null;
   const day = portalDay(session, now);
@@ -576,14 +568,18 @@ export function portalView(code: string, now: IsoTime): PortalView | undefined {
 
 const TZ = "Asia/Taipei";
 
-export const formatDate = (t: IsoTime) =>
-  new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, month: "long", day: "numeric", weekday: "short" }).format(new Date(t));
+/**
+ * Node 與瀏覽器的 ICU 版本不同，可能在日期與時間之間放 U+202F 等特殊空白，
+ * 造成 hydration mismatch。一律換成一般空白。
+ */
+const fmt = (opts: Intl.DateTimeFormatOptions) => (t: IsoTime) =>
+  new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, ...opts }).format(new Date(t)).replace(/\s/g, " ");
 
-export const formatTime = (t: IsoTime) =>
-  new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(t));
+export const formatDate = fmt({ month: "long", day: "numeric", weekday: "short" });
 
-export const formatDateTime = (t: IsoTime) =>
-  new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(t));
+export const formatTime = fmt({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+export const formatDateTime = fmt({ year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 /** 日期軸用：{ day: "15", month: "10 月" } */
 export function dateParts(t: IsoTime): { day: string; month: string } {
@@ -619,7 +615,7 @@ export function projectsByStatus(projects: Project[]): { status: ProjectStatus; 
 
 /**
  * 沒人負責的需求條目：沒指定負責課程，或指定的課程不存在、不屬於這個專案。
- * courses 由呼叫端傳入（設計稿傳 COURSES）。
+ * courses 由呼叫端傳入（demo 傳 state.courses）。
  */
 export function unassignedRequirements(project: Project, courses: Course[]): Requirement[] {
   const own = new Set(courses.filter((c) => c.projectId === project.id).map((c) => c.id));
@@ -635,13 +631,13 @@ export interface RequirementMappingRow {
 }
 
 /** 課程頁的需求對照：這門課負責的需求條目，依專案裡的順序逐條比對最新藍圖。 */
-export function requirementMappingOfCourse(course: Course): RequirementMappingRow[] {
-  const requirements = getProject(course.projectId)?.requirements.filter((r) => r.courseId === course.id) ?? [];
+export function requirementMappingOfCourse(st: DemoState, course: Course): RequirementMappingRow[] {
+  const requirements = getProject(st, course.projectId)?.requirements.filter((r) => r.courseId === course.id) ?? [];
   const mappings = mapRequirements(course.blueprint, requirements);
   return requirements.map((requirement, i) => ({
     requirement,
     mapping: mappings[i],
-    review: REQUIREMENT_REVIEWS.find((r) => r.requirementId === requirement.id) ?? null,
+    review: st.requirementReviews.find((r) => r.requirementId === requirement.id) ?? null,
   }));
 }
 

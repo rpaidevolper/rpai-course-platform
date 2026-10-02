@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ResetDemoButton } from "../_components/demo-runtime";
 import { InstructorNav } from "../_components/instructor-nav";
 
 /** 講師端外框。學員入口在 (student) 群組，不會看到這組導覽。 */
@@ -15,11 +16,14 @@ export default function InstructorLayout({ children }: LayoutProps<"/">) {
             <InstructorNav />
           </div>
         </div>
-        <p className="hidden px-5 text-xs leading-relaxed text-body-muted lg:absolute lg:bottom-6 lg:block">
-          設計稿：假資料，
-          <br />
-          未接資料庫與 AI。
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t-2 border-iced px-4 py-2 text-xs leading-relaxed text-body-muted lg:absolute lg:bottom-6 lg:block lg:border-0 lg:px-5 lg:py-0">
+          <p>
+            Demo：假資料存在這個瀏覽器，
+            <br className="hidden lg:inline" />
+            未接資料庫與 AI。
+          </p>
+          <ResetDemoButton className="lg:mt-2" />
+        </div>
       </aside>
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-8 lg:py-10">{children}</main>
     </div>
