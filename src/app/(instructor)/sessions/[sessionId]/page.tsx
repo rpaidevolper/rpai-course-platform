@@ -12,12 +12,12 @@ import {
   portalExpiresAt,
   portalState,
   readiness,
-  readinessText,
   seriesLabel,
   sessionDateRange,
   sessionDayCountMismatch,
   type PortalState,
 } from "@/lib/mockup/logic";
+import { ReadinessList } from "../../../_components/readiness-list";
 import { SessionDays } from "../../../_components/session-days";
 import { Badge, Breadcrumb, Card, CARD, Empty, Facts, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
 
@@ -214,14 +214,7 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[sess
               {items.length === 0 ? (
                 <Badge tone="success">準備好了</Badge>
               ) : (
-                <ul className="space-y-1.5 text-sm">
-                  {items.map((item, i) => (
-                    <li key={i} className="flex gap-2.5">
-                      <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-warning" />
-                      <span>{readinessText(item)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <ReadinessList session={session} items={items} detailed />
               )}
             </Card>
           </section>
