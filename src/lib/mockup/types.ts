@@ -147,6 +147,11 @@ export interface Course {
   title: string;
   /** 藍圖誕生時複製自哪個框架的哪一版、哪個情境（ADR 0002：記錄來源，不引用） */
   source: { frameworkId: string; frameworkVersion: number; scenarioId: string } | null;
+  /**
+   * 以另一門課程的某一版藍圖為底建立時，記錄複製自哪裡（ADR 0002：複製，之後兩邊各改各的）。
+   * 從框架或從零談出的課程為 null。
+   */
+  copiedFrom: { courseId: string; blueprintVersion: number } | null;
   /** 最新一版藍圖的內容；舊版只列出版本紀錄 */
   blueprint: Blueprint;
   blueprintHistory: BlueprintVersion[];

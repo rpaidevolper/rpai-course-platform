@@ -31,6 +31,35 @@ const NonEmpty = z.string().trim().min(1);
 /** 時段預設長度：講師以「三小時一段、不另排休息」排課。 */
 export const DEFAULT_SLOT_MINUTES = 180;
 
+/** 沿用程度：這個單元相對於來源要花多少工。 */
+export const REUSE_LEVELS = ["reuse", "modify", "new"] as const;
+export type ReuseLevel = (typeof REUSE_LEVELS)[number];
+
+export const REUSE_LABELS: Record<ReuseLevel, string> = {
+  reuse: "沿用",
+  modify: "要改",
+  new: "新做",
+};
+
+/** 單元來源種類：過去的課程，或知識庫的框架。新做的單元沒有來源（null）。 */
+export const UNIT_SOURCE_KINDS = ["course", "framework"] as const;
+export type UnitSourceKind = (typeof UNIT_SOURCE_KINDS)[number];
+
+/**
+ * 單元的來源（ADR 0002：來源記錄在單元層級，內容是複製來的，不引用）。
+ * 不用 discriminated union，維持一個扁平物件，結構化輸出比較穩。
+ */
+export const UnitSourceSchema = z.object({
+  kind: z.enum(UNIT_SOURCE_KINDS).describe("course＝過去的課程；framework＝知識庫的框架"),
+  id: NonEmpty.describe("來源課程或框架的 id"),
+  version: z
+    .number()
+    .int()
+    .positive()
+    .describe("kind 為 course 時是該課程的藍圖版本；為 framework 時是框架版本"),
+  unit: NonEmpty.describe("來源裡那個單元的標題"),
+});
+
 /** 單元：時段裡的一段教學。 */
 export const UnitSchema = z.object({
   title: NonEmpty,
@@ -50,6 +79,12 @@ export const UnitSchema = z.object({
     .string()
     .nullable()
     .describe("承接自哪個較早單元的標題（前一單元的成果是這個單元的輸入）；沒有則為 null"),
+  source: UnitSourceSchema.nullable().describe(
+    "這個單元出自哪門過去課程或哪個框架的哪個單元；新做的單元為 null",
+  ),
+  reuse: z
+    .enum(REUSE_LEVELS)
+    .describe("沿用程度：reuse＝沿用、modify＝要改、new＝新做（來源為 null 時一律是 new）"),
 });
 
 /** 時段：一天裡連續上課、不另排休息的一段。 */
@@ -154,6 +189,7 @@ export type Slot = z.infer<typeof SlotSchema>;
 export type Unit = z.infer<typeof UnitSchema>;
 export type Tool = z.infer<typeof ToolSchema>;
 export type OpenQuestion = z.infer<typeof OpenQuestionSchema>;
+export type UnitSource = z.infer<typeof UnitSourceSchema>;
 
 /** 五元素裡還是空的那幾格。 */
 export function missingElements(bp: Blueprint): FiveElement[] {
@@ -176,6 +212,9 @@ export function plannedMinutes(slot: Slot): number {
 /** 純講述單元：沒有動手環節。 */
 export const isLectureOnly = (unit: Unit) => unit.activity === null;
 
+/** 要改或新做的單元：講師還要花工夫準備。 */
+export const needsWork = (unit: Unit) => unit.reuse !== "reuse";
+
 /** 天與時段的位置，皆從 1 起算（第 1 天、第 1 個時段）。 */
 export interface SlotLocation {
   day: number;
@@ -187,7 +226,8 @@ export type BlueprintIssue =
   | ({ kind: "duration_mismatch"; planned: number; expected: number } & SlotLocation)
   | ({ kind: "lecture_only"; unit: string } & SlotLocation)
   | ({ kind: "open_question" } & OpenQuestion)
-  | { kind: "unconfirmed_tool"; tool: string; plan: ToolPlan };
+  | { kind: "unconfirmed_tool"; tool: string; plan: ToolPlan }
+  | ({ kind: "unit_needs_work"; unit: string; reuse: Exclude<ReuseLevel, "reuse"> } & SlotLocation);
 
 /**
  * 藍圖完整性檢查。回傳空陣列代表可以放心拿去生成教材；
@@ -209,6 +249,11 @@ export function checkBlueprint(bp: Blueprint): BlueprintIssue[] {
       }
       for (const unit of slot.units) {
         if (isLectureOnly(unit)) issues.push({ kind: "lecture_only", ...at, unit: unit.title });
+      }
+      for (const unit of slot.units) {
+        if (unit.reuse !== "reuse") {
+          issues.push({ kind: "unit_needs_work", ...at, unit: unit.title, reuse: unit.reuse });
+        }
       }
     });
   });

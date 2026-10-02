@@ -15,6 +15,7 @@ import {
   getProject,
   getSession,
   isStale,
+  latestBlueprintVersion,
   latestArtifact,
   portalState,
   portalView,
@@ -23,7 +24,9 @@ import {
   unassignedRequirements,
   upcomingSessions,
 } from "./logic";
-import type { Project, Session } from "./types";
+import type { Course, Project, Session } from "./types";
+
+const unitsOf = (c: Course) => c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
 
 describe("設計稿 fixture 參照完整", () => {
   it.each(COURSES)("課程 $id 的藍圖通過 BlueprintSchema", (c) => {
@@ -74,6 +77,55 @@ describe("設計稿 fixture 參照完整", () => {
       if (!c.source) continue;
       const f = FRAMEWORKS.find((x) => x.id === c.source!.frameworkId);
       expect(f?.versions.some((v) => v.version === c.source!.frameworkVersion)).toBe(true);
+    }
+  });
+
+  it("複製來的課程指向同一個專案裡另一門課程的某一版藍圖", () => {
+    for (const c of COURSES) {
+      if (!c.copiedFrom) continue;
+      const from = getCourse(c.copiedFrom.courseId);
+      expect(from, `${c.id} 複製自 ${c.copiedFrom.courseId}`).toBeDefined();
+      expect(from!.id).not.toBe(c.id);
+      expect(from!.projectId).toBe(c.projectId);
+      expect(from!.blueprintHistory.map((v) => v.version)).toContain(c.copiedFrom.blueprintVersion);
+    }
+  });
+
+  it("有一門從同仁班複製出的主管班，單元混合沿用、要改與新做", () => {
+    const managers = getCourse("c-claude-intro-managers")!;
+    expect(managers.copiedFrom).toEqual({ courseId: "c-claude-intro", blueprintVersion: 3 });
+    expect(new Set(unitsOf(managers).map((u) => u.reuse))).toEqual(new Set(["reuse", "modify", "new"]));
+    for (const u of unitsOf(managers)) {
+      if (u.source === null) continue;
+      expect(u.source, u.title).toMatchObject({ kind: "course", id: "c-claude-intro", version: 3 });
+    }
+  });
+
+  it.each(COURSES)("課程 $id 的單元來源都存在：課程版本或框架版本，以及其中的單元", (c) => {
+    for (const u of unitsOf(c)) {
+      if (u.source === null) continue;
+      const src = u.source;
+      if (src.kind === "course") {
+        const from = getCourse(src.id);
+        expect(from, `${u.title} 來源課程 ${src.id}`).toBeDefined();
+        expect(from!.blueprintHistory.map((v) => v.version)).toContain(src.version);
+        // 只存了最新一版藍圖的內容，所以只有指向最新版時才能核對單元標題
+        if (src.version === latestBlueprintVersion(from!)) {
+          expect(unitsOf(from!).map((x) => x.title), `${u.title} 來源單元`).toContain(src.unit);
+        }
+      } else {
+        const f = FRAMEWORKS.find((x) => x.id === src.id);
+        expect(f, `${u.title} 來源框架 ${src.id}`).toBeDefined();
+        expect(f!.versions.map((v) => v.version)).toContain(src.version);
+        expect(f!.moduleTitles, `${u.title} 來源單元`).toContain(src.unit);
+      }
+    }
+  });
+
+  it.each(COURSES)("課程 $id 的沿用程度與來源一致：沒有來源就是新做", (c) => {
+    for (const u of unitsOf(c)) {
+      if (u.source === null) expect(u.reuse, u.title).toBe("new");
+      else expect(u.reuse, u.title).not.toBe("new");
     }
   });
 
@@ -133,6 +185,10 @@ describe("準備度", () => {
     expect(items).toContainEqual({ kind: "missing_elements", labels: ["故事"] });
     expect(items.filter((i) => i.kind === "artifact_missing")).toHaveLength(3);
     expect(items.map((i) => i.kind)).toContain("venue_unset");
+  });
+
+  it("有要改或新做的單元時列出各幾個", () => {
+    expect(readiness(getSession("s-ca-1105")!)).toContainEqual({ kind: "units_need_work", modify: 1, new: 0 });
   });
 
   it("全部就緒的場次沒有缺項", () => {

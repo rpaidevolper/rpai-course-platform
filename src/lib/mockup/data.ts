@@ -10,7 +10,7 @@ import type {
 
 /**
  * 設計稿（#22）的假資料。一個貫穿全部畫面的例子：
- * 專案「A 公司 2026 AI 培訓」→ 課程「Claude 入門」「Claude 進階」→「Claude 入門」有 10/15、10/22 兩個場次。
+ * 專案「A 公司 2026 AI 培訓」→ 課程「Claude 入門」「Claude 入門・主管班」（從入門複製）「Claude 進階」→「Claude 入門」有 10/15、10/22 兩個場次。
  * 不接資料庫、不接 AI。
  */
 
@@ -212,16 +212,16 @@ const claudeIntroBlueprint = BlueprintSchema.parse({
           label: "上午",
           minutes: 180,
           units: [
-            { title: "AI 能做什麼、不能做什麼", minutes: 60, objective: "分辨哪些工作適合交給 AI", method: "講述＋案例", outcome: "一張「可交給 AI／不可上傳」對照表", keyPoints: ["生成、整理、比對三種用途", "哪些資料不能上傳"], activity: null, elements: ["theory", "story"], carriesFrom: null },
-            { title: "提示詞的四個零件", minutes: 120, objective: "寫出能穩定產出 8D 草稿的提示詞", method: "示範後個人實作", outcome: "一份可重複使用的 8D 草稿提示詞", keyPoints: ["格式要寫死", "給一個範例勝過十句說明"], activity: "拿一封客訴信改三次提示詞並比較", elements: ["theory", "handsOn"], carriesFrom: null },
+            { title: "AI 能做什麼、不能做什麼", minutes: 60, objective: "分辨哪些工作適合交給 AI", method: "講述＋案例", outcome: "一張「可交給 AI／不可上傳」對照表", keyPoints: ["生成、整理、比對三種用途", "哪些資料不能上傳"], activity: null, elements: ["theory", "story"], carriesFrom: null, source: { kind: "framework", id: "fw-claude-intro", version: 2, unit: "AI 能做什麼、不能做什麼" }, reuse: "reuse" },
+            { title: "提示詞的四個零件", minutes: 120, objective: "寫出能穩定產出 8D 草稿的提示詞", method: "示範後個人實作", outcome: "一份可重複使用的 8D 草稿提示詞", keyPoints: ["格式要寫死", "給一個範例勝過十句說明"], activity: "拿一封客訴信改三次提示詞並比較", elements: ["theory", "handsOn"], carriesFrom: null, source: { kind: "framework", id: "fw-claude-intro", version: 2, unit: "提示詞的四個零件" }, reuse: "modify" },
           ],
         },
         {
           label: "下午",
           minutes: 180,
           units: [
-            { title: "用 Project 記住工作脈絡", minutes: 120, objective: "建立一個帶有部門規範與範本的 Project", method: "示範後個人實作", outcome: "自己部門的 Project", keyPoints: ["指示與知識檔的分工", "範本放在哪裡"], activity: "建立自己部門的 Project，用它回覆一封供應商來信", elements: ["handsOn", "takeaway"], carriesFrom: "提示詞的四個零件" },
-            { title: "找出自己的三件事", minutes: 60, objective: "列出明天就能交給 AI 的三件工作", method: "個人填寫＋兩兩互評", outcome: "三件事清單", keyPoints: ["頻率 × 耗時 × 出錯成本", "先做最小的一個"], activity: "填三件事清單並兩兩互評", elements: ["takeaway"], carriesFrom: null },
+            { title: "用 Project 記住工作脈絡", minutes: 120, objective: "建立一個帶有部門規範與範本的 Project", method: "示範後個人實作", outcome: "自己部門的 Project", keyPoints: ["指示與知識檔的分工", "範本放在哪裡"], activity: "建立自己部門的 Project，用它回覆一封供應商來信", elements: ["handsOn", "takeaway"], carriesFrom: "提示詞的四個零件", source: { kind: "framework", id: "fw-claude-intro", version: 2, unit: "用 Project 記住工作脈絡" }, reuse: "reuse" },
+            { title: "找出自己的三件事", minutes: 60, objective: "列出明天就能交給 AI 的三件工作", method: "個人填寫＋兩兩互評", outcome: "三件事清單", keyPoints: ["頻率 × 耗時 × 出錯成本", "先做最小的一個"], activity: "填三件事清單並兩兩互評", elements: ["takeaway"], carriesFrom: null, source: { kind: "framework", id: "fw-claude-intro", version: 2, unit: "找出自己的三件事" }, reuse: "reuse" },
           ],
         },
       ],
@@ -259,9 +259,9 @@ const claudeAdvancedBlueprint = BlueprintSchema.parse({
           label: "下午",
           minutes: 180,
           units: [
-            { title: "從個人到部門", minutes: 40, objective: "盤點入門課後各自的用法", method: "分組分享", outcome: "部門用法盤點表", keyPoints: ["誰在用、用在哪"], activity: "分組分享一個成功與一個失敗", elements: ["theory"], carriesFrom: null },
-            { title: "審核規則寫成提示詞", minutes: 90, objective: "寫出部門共用的審核規則", method: "分組實作＋互測", outcome: "一份部門共用的審核規則提示詞", keyPoints: ["規則要能被驗證"], activity: "兩組互相測對方的規則", elements: ["handsOn", "quote"], carriesFrom: "從個人到部門" },
-            { title: "流程上線與維護", minutes: 50, objective: "訂出流程的負責人與更新方式", method: "講述＋討論", outcome: "流程負責人與檢查週期", keyPoints: ["誰改規則、多久檢查一次"], activity: null, elements: ["takeaway"], carriesFrom: null },
+            { title: "從個人到部門", minutes: 40, objective: "盤點入門課後各自的用法", method: "分組分享", outcome: "部門用法盤點表", keyPoints: ["誰在用、用在哪"], activity: "分組分享一個成功與一個失敗", elements: ["theory"], carriesFrom: null, source: { kind: "framework", id: "fw-claude-advanced", version: 1, unit: "從個人到部門" }, reuse: "reuse" },
+            { title: "審核規則寫成提示詞", minutes: 90, objective: "寫出部門共用的審核規則", method: "分組實作＋互測", outcome: "一份部門共用的審核規則提示詞", keyPoints: ["規則要能被驗證"], activity: "兩組互相測對方的規則", elements: ["handsOn", "quote"], carriesFrom: "從個人到部門", source: { kind: "framework", id: "fw-claude-advanced", version: 1, unit: "審核規則寫成提示詞" }, reuse: "modify" },
+            { title: "流程上線與維護", minutes: 50, objective: "訂出流程的負責人與更新方式", method: "講述＋討論", outcome: "流程負責人與檢查週期", keyPoints: ["誰改規則、多久檢查一次"], activity: null, elements: ["takeaway"], carriesFrom: null, source: { kind: "framework", id: "fw-claude-advanced", version: 1, unit: "流程上線與維護" }, reuse: "reuse" },
           ],
         },
       ],
@@ -303,16 +303,16 @@ const paFinanceBlueprint = BlueprintSchema.parse({
           label: "上午",
           minutes: 180,
           units: [
-            { title: "雲端流程上手", minutes: 60, objective: "建立第一個雲端流程", method: "示範後跟做", outcome: "一個收信存附件的流程", keyPoints: ["觸發、動作、條件"], activity: "收到郵件就存附件", elements: ["theory", "handsOn"], carriesFrom: null },
-            { title: "核准與退回分支", minutes: 120, objective: "建立含退回原因的簽核流程", method: "兩人一組實作", outcome: "差旅請款簽核流程", keyPoints: ["Approvals 動作", "退回要帶原因"], activity: "兩人一組互相送單核准", elements: ["handsOn", "story"], carriesFrom: "雲端流程上手" },
+            { title: "雲端流程上手", minutes: 60, objective: "建立第一個雲端流程", method: "示範後跟做", outcome: "一個收信存附件的流程", keyPoints: ["觸發、動作、條件"], activity: "收到郵件就存附件", elements: ["theory", "handsOn"], carriesFrom: null, source: { kind: "framework", id: "fw-pa-basics", version: 2, unit: "雲端流程上手" }, reuse: "reuse" },
+            { title: "核准與退回分支", minutes: 120, objective: "建立含退回原因的簽核流程", method: "兩人一組實作", outcome: "差旅請款簽核流程", keyPoints: ["Approvals 動作", "退回要帶原因"], activity: "兩人一組互相送單核准", elements: ["handsOn", "story"], carriesFrom: "雲端流程上手", source: { kind: "framework", id: "fw-pa-basics", version: 2, unit: "核准與退回分支" }, reuse: "reuse" },
           ],
         },
         {
           label: "下午",
           minutes: 180,
           units: [
-            { title: "逾期提醒", minutes: 90, objective: "逾期三天自動提醒主管", method: "個人實作＋假資料測試", outcome: "逾期提醒排程流程", keyPoints: ["排程流程"], activity: "設定提醒並用假資料測試", elements: ["handsOn"], carriesFrom: "核准與退回分支" },
-            { title: "上線檢查表", minutes: 90, objective: "確認流程可以正式上線", method: "講述＋逐項檢查", outcome: "填好的上線檢查表", keyPoints: ["權限、例外、負責人"], activity: null, elements: ["takeaway", "quote"], carriesFrom: null },
+            { title: "逾期提醒", minutes: 90, objective: "逾期三天自動提醒主管", method: "個人實作＋假資料測試", outcome: "逾期提醒排程流程", keyPoints: ["排程流程"], activity: "設定提醒並用假資料測試", elements: ["handsOn"], carriesFrom: "核准與退回分支", source: { kind: "framework", id: "fw-pa-basics", version: 2, unit: "逾期提醒" }, reuse: "reuse" },
+            { title: "上線檢查表", minutes: 90, objective: "確認流程可以正式上線", method: "講述＋逐項檢查", outcome: "填好的上線檢查表", keyPoints: ["權限、例外、負責人"], activity: null, elements: ["takeaway", "quote"], carriesFrom: null, source: { kind: "framework", id: "fw-pa-basics", version: 2, unit: "上線檢查表" }, reuse: "reuse" },
           ],
         },
       ],
@@ -357,16 +357,16 @@ const gasTwoDayBlueprint = BlueprintSchema.parse({
           label: "上午",
           minutes: 180,
           units: [
-            { title: "為什麼異常總是晚一天", minutes: 40, objective: "說出目前檢驗流程的三個延遲點", method: "案例講述＋小組討論", outcome: "一張現況流程圖", keyPoints: ["紙本傳遞的延遲", "誰需要在什麼時候知道"], activity: null, elements: ["story", "theory"], carriesFrom: null },
-            { title: "進料檢驗表單", minutes: 140, objective: "建立一份欄位完整、可驗證的檢驗回報表單", method: "示範後個人實作", outcome: "自己部門的進料檢驗表單", keyPoints: ["必填與驗證規則", "料號用下拉選單"], activity: "把一張紙本檢驗單改成表單並互填", elements: ["handsOn"], carriesFrom: "為什麼異常總是晚一天" },
+            { title: "為什麼異常總是晚一天", minutes: 40, objective: "說出目前檢驗流程的三個延遲點", method: "案例講述＋小組討論", outcome: "一張現況流程圖", keyPoints: ["紙本傳遞的延遲", "誰需要在什麼時候知道"], activity: null, elements: ["story", "theory"], carriesFrom: null, source: null, reuse: "new" },
+            { title: "進料檢驗表單", minutes: 140, objective: "建立一份欄位完整、可驗證的檢驗回報表單", method: "示範後個人實作", outcome: "自己部門的進料檢驗表單", keyPoints: ["必填與驗證規則", "料號用下拉選單"], activity: "把一張紙本檢驗單改成表單並互填", elements: ["handsOn"], carriesFrom: "為什麼異常總是晚一天", source: null, reuse: "new" },
           ],
         },
         {
           label: "下午",
           minutes: 180,
           units: [
-            { title: "第一支 Apps Script", minutes: 90, objective: "讀懂並修改一支彙整腳本", method: "跟做＋改寫", outcome: "能每天彙整檢驗結果的腳本", keyPoints: ["編輯器與執行紀錄", "變數與迴圈只學用得到的"], activity: "改寫範例腳本，彙整自己表單的回覆", elements: ["theory", "handsOn"], carriesFrom: "進料檢驗表單" },
-            { title: "每日彙整報表", minutes: 90, objective: "產出一份每天自動更新的檢驗彙整表", method: "個人實作＋兩兩檢查", outcome: "每日檢驗彙整報表", keyPoints: ["時間觸發器", "樞紐分析接在彙整結果後面"], activity: "設定每天早上 8 點自動彙整", elements: ["handsOn", "takeaway"], carriesFrom: "第一支 Apps Script" },
+            { title: "第一支 Apps Script", minutes: 90, objective: "讀懂並修改一支彙整腳本", method: "跟做＋改寫", outcome: "能每天彙整檢驗結果的腳本", keyPoints: ["編輯器與執行紀錄", "變數與迴圈只學用得到的"], activity: "改寫範例腳本，彙整自己表單的回覆", elements: ["theory", "handsOn"], carriesFrom: "進料檢驗表單", source: { kind: "framework", id: "fw-gas-forms", version: 1, unit: "第一支 Apps Script" }, reuse: "modify" },
+            { title: "每日彙整報表", minutes: 90, objective: "產出一份每天自動更新的檢驗彙整表", method: "個人實作＋兩兩檢查", outcome: "每日檢驗彙整報表", keyPoints: ["時間觸發器", "樞紐分析接在彙整結果後面"], activity: "設定每天早上 8 點自動彙整", elements: ["handsOn", "takeaway"], carriesFrom: "第一支 Apps Script", source: null, reuse: "new" },
           ],
         },
       ],
@@ -378,16 +378,16 @@ const gasTwoDayBlueprint = BlueprintSchema.parse({
           label: "上午",
           minutes: 180,
           units: [
-            { title: "表單觸發器", minutes: 100, objective: "在表單送出時立即判斷是否異常", method: "示範後個人實作", outcome: "送出即判斷異常的觸發器", keyPoints: ["onFormSubmit", "執行權限與授權畫面"], activity: "接上第一天的表單，送出不良品時寫入異常分頁", elements: ["theory", "handsOn"], carriesFrom: "每日彙整報表" },
-            { title: "異常通知信", minutes: 80, objective: "異常時自動寄信給品保主管與供應商窗口", method: "個人實作", outcome: "異常通知信腳本", keyPoints: ["收件人從對照表取", "信件內容帶料號與照片連結"], activity: "寫通知信並寄給自己測試", elements: ["handsOn"], carriesFrom: "表單觸發器" },
+            { title: "表單觸發器", minutes: 100, objective: "在表單送出時立即判斷是否異常", method: "示範後個人實作", outcome: "送出即判斷異常的觸發器", keyPoints: ["onFormSubmit", "執行權限與授權畫面"], activity: "接上第一天的表單，送出不良品時寫入異常分頁", elements: ["theory", "handsOn"], carriesFrom: "每日彙整報表", source: { kind: "framework", id: "fw-gas-forms", version: 1, unit: "表單觸發器" }, reuse: "reuse" },
+            { title: "異常通知信", minutes: 80, objective: "異常時自動寄信給品保主管與供應商窗口", method: "個人實作", outcome: "異常通知信腳本", keyPoints: ["收件人從對照表取", "信件內容帶料號與照片連結"], activity: "寫通知信並寄給自己測試", elements: ["handsOn"], carriesFrom: "表單觸發器", source: null, reuse: "new" },
           ],
         },
         {
           label: "下午",
           minutes: 180,
           units: [
-            { title: "寄送前的安全網", minutes: 90, objective: "避免誤寄、重寄與額度用完", method: "講述＋找碴練習", outcome: "加上三道檢查的通知腳本", keyPoints: ["測試模式開關", "重複寄送檢查", "每日寄信額度"], activity: "互相送異常單，找出對方腳本會誤寄的情況", elements: ["theory", "handsOn", "quote"], carriesFrom: "異常通知信" },
-            { title: "交接與維護", minutes: 90, objective: "讓同事能接手維護這個流程", method: "分組撰寫＋互評", outcome: "流程交接說明與維護清單", keyPoints: ["誰改對照表", "腳本壞掉先看哪裡"], activity: "寫交接說明，讓隔壁組照著操作一次", elements: ["takeaway"], carriesFrom: "寄送前的安全網" },
+            { title: "寄送前的安全網", minutes: 90, objective: "避免誤寄、重寄與額度用完", method: "講述＋找碴練習", outcome: "加上三道檢查的通知腳本", keyPoints: ["測試模式開關", "重複寄送檢查", "每日寄信額度"], activity: "互相送異常單，找出對方腳本會誤寄的情況", elements: ["theory", "handsOn", "quote"], carriesFrom: "異常通知信", source: { kind: "framework", id: "fw-gas-forms", version: 1, unit: "寄送前的安全網" }, reuse: "reuse" },
+            { title: "交接與維護", minutes: 90, objective: "讓同事能接手維護這個流程", method: "分組撰寫＋互評", outcome: "流程交接說明與維護清單", keyPoints: ["誰改對照表", "腳本壞掉先看哪裡"], activity: "寫交接說明，讓隔壁組照著操作一次", elements: ["takeaway"], carriesFrom: "寄送前的安全網", source: null, reuse: "new" },
           ],
         },
       ],
@@ -404,12 +404,69 @@ const gasTwoDayBlueprint = BlueprintSchema.parse({
   ],
 });
 
+/**
+ * 變體課程的範例：以「Claude 入門」（同仁班）藍圖 v3 為底複製出主管班（ADR 0002）。
+ * 單元來源都指向同仁班的 v3，沿用程度混合沿用、要改與新做。
+ */
+const fromStaffV3 = (unit: string) => ({ kind: "course" as const, id: "c-claude-intro", version: 3, unit });
+
+const claudeIntroManagersBlueprint = BlueprintSchema.parse({
+  title: "Claude 入門・主管班：帶團隊把文書交給 AI",
+  oneLiner: "讓生管與品保主管一天之內學會審 AI 產出的文件，並帶自己的團隊開始用。",
+  audience: {
+    who: "A 公司生管、品保與業務部門的課長與組長",
+    size: 10,
+    priorKnowledge: "看過同仁用 ChatGPT，自己很少用；每天要審同仁交來的報告",
+    painPoints: ["不確定 AI 寫的 8D 報告能不能信", "同仁各用各的，沒有共同規範"],
+  },
+  outcomes: ["用一份檢查清單審一份 AI 產出的 8D 草稿", "建立部門共用、帶審核規範的 Project", "訂出團隊導入的第一個流程與負責人"],
+  format: { mode: "workshop", venue: "A 公司台中廠 3F 訓練教室" },
+  narrative: {
+    model: "SCQA",
+    arc: ["情境：同仁開始用 AI 交報告", "衝突：主管不知道怎麼審、怎麼管", "提問：主管要會到什麼程度", "解答：審核清單加上部門共用 Project"],
+  },
+  elements: {
+    theory: ["提示詞的四個零件：角色、任務、格式、範例", "審 AI 文件的三個檢查點"],
+    handsOn: ["審一份 AI 寫的 8D 草稿", "建立部門共用 Project"],
+    takeaway: ["主管審核清單", "團隊導入計畫"],
+    quote: ["主管不用比同仁會寫提示詞，但要比同仁會挑錯"],
+    story: ["品保課長把 8D 報告從兩小時縮到二十分鐘"],
+  },
+  days: [
+    {
+      theme: "從審得懂到帶得動",
+      slots: [
+        {
+          label: "上午",
+          minutes: 180,
+          units: [
+            { title: "AI 能做什麼、不能做什麼", minutes: 60, objective: "分辨哪些工作適合交給 AI", method: "講述＋案例", outcome: "一張「可交給 AI／不可上傳」對照表", keyPoints: ["生成、整理、比對三種用途", "哪些資料不能上傳"], activity: null, elements: ["theory", "story"], carriesFrom: null, source: fromStaffV3("AI 能做什麼、不能做什麼"), reuse: "reuse" },
+            { title: "主管怎麼審 AI 的 8D 草稿", minutes: 120, objective: "用檢查清單找出 AI 草稿裡的錯誤與缺漏", method: "示範後個人實作", outcome: "一份主管審核清單", keyPoints: ["先看格式再看事實", "要求同仁附上提示詞"], activity: "審一份故意埋了三個錯的 8D 草稿", elements: ["theory", "handsOn", "quote"], carriesFrom: null, source: fromStaffV3("提示詞的四個零件"), reuse: "modify" },
+          ],
+        },
+        {
+          label: "下午",
+          minutes: 180,
+          units: [
+            { title: "部門共用的 Project", minutes: 90, objective: "建立一個帶部門審核規範的共用 Project", method: "示範後個人實作", outcome: "部門共用 Project", keyPoints: ["審核規範寫進指示", "誰能改知識檔"], activity: "把上午的審核清單放進部門共用 Project", elements: ["handsOn", "takeaway"], carriesFrom: "主管怎麼審 AI 的 8D 草稿", source: fromStaffV3("用 Project 記住工作脈絡"), reuse: "modify" },
+            { title: "帶團隊導入的第一步", minutes: 90, objective: "訂出團隊第一個導入的流程與負責人", method: "分組討論＋互評", outcome: "團隊導入計畫", keyPoints: ["先挑一個每週都會發生的流程", "負責人與檢查週期"], activity: "寫團隊導入計畫並兩兩互評", elements: ["takeaway"], carriesFrom: null, source: null, reuse: "new" },
+          ],
+        },
+      ],
+    },
+  ],
+  constraints: ["主管班與同仁班分開上，避免同仁不敢發問", "客訴信需去識別化"],
+  tools: [{ name: "Claude", plan: "paid", confirmedWithClient: true }],
+  openQuestions: [],
+});
+
 export const COURSES: Course[] = [
   {
     id: "c-claude-intro",
     projectId: "p-a-2026",
     title: "Claude 入門",
     source: { frameworkId: "fw-claude-intro", frameworkVersion: 2, scenarioId: "sc-manufacturing" },
+    copiedFrom: null,
     blueprint: claudeIntroBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-09-12T15:20:00+08:00", note: "由框架 v2 與製造業情境談出初版" },
@@ -429,10 +486,24 @@ export const COURSES: Course[] = [
     ],
   },
   {
+    id: "c-claude-intro-managers",
+    projectId: "p-a-2026",
+    title: "Claude 入門・主管班",
+    source: { frameworkId: "fw-claude-intro", frameworkVersion: 2, scenarioId: "sc-manufacturing" },
+    copiedFrom: { courseId: "c-claude-intro", blueprintVersion: 3 },
+    blueprint: claudeIntroManagersBlueprint,
+    blueprintHistory: [
+      { version: 1, createdAt: "2026-10-08T09:30:00+08:00", note: "以「Claude 入門」藍圖 v3 為底複製，改成主管視角" },
+    ],
+    artifacts: [],
+    materials: [],
+  },
+  {
     id: "c-claude-advanced",
     projectId: "p-a-2026",
     title: "Claude 進階",
     source: { frameworkId: "fw-claude-advanced", frameworkVersion: 1, scenarioId: "sc-manufacturing" },
+    copiedFrom: null,
     blueprint: claudeAdvancedBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-10-05T14:00:00+08:00", note: "由框架 v1 談出初版，帶入專案的客戶背景" },
@@ -445,6 +516,7 @@ export const COURSES: Course[] = [
     projectId: "p-b-2026",
     title: "請款簽核工作坊",
     source: { frameworkId: "fw-pa-basics", frameworkVersion: 2, scenarioId: "sc-finance-approval" },
+    copiedFrom: null,
     blueprint: paFinanceBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-08-28T10:00:00+08:00", note: "由框架 v2 與金融業情境談出初版" },
@@ -462,6 +534,7 @@ export const COURSES: Course[] = [
     projectId: "p-e-2026",
     title: "Apps Script 兩天實戰營",
     source: { frameworkId: "fw-gas-forms", frameworkVersion: 1, scenarioId: "sc-manufacturing" },
+    copiedFrom: null,
     blueprint: gasTwoDayBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-09-22T10:00:00+08:00", note: "由框架 v1 與製造業情境談出初版，一天" },

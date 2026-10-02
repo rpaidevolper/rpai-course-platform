@@ -5,6 +5,7 @@ import {
   formatDate,
   formatDateTime,
   formatTime,
+  getCourse,
   getFramework,
   getProject,
   getScenario,
@@ -12,6 +13,7 @@ import {
   latestArtifact,
   latestBlueprintVersion,
   sessionsOfCourse,
+  unitSourceText,
   VENUE_UNSET,
 } from "@/lib/mockup/logic";
 import { ARTIFACT_KINDS, ARTIFACT_LABELS } from "@/lib/mockup/types";
@@ -39,6 +41,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
   const latestBp = latestBlueprintVersion(course);
   const history = [...course.blueprintHistory].sort((a, b) => b.version - a.version);
   const sessions = sessionsOfCourse(course.id);
+  const copiedFrom = course.copiedFrom ? getCourse(course.copiedFrom.courseId) : undefined;
 
   return (
     <>
@@ -46,7 +49,18 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
       <PageHeader
         title={course.title}
         description={
-          course.source && framework && scenario ? (
+          course.copiedFrom && copiedFrom ? (
+            <>
+              <p>
+                以課程「
+                <Link href={`/courses/${copiedFrom.id}`} className="font-bold text-navy underline underline-offset-2">
+                  {copiedFrom.title}
+                </Link>
+                」藍圖 v{course.copiedFrom.blueprintVersion} 為底複製。
+              </p>
+              <p className="mt-1 text-body-muted">內容是複製來的，之後兩邊各改各的；每個單元的來源與沿用程度見下方藍圖。</p>
+            </>
+          ) : course.source && framework && scenario ? (
             <>
               <p>
                 從框架「
@@ -121,7 +135,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
         </SectionTitle>
         <div className="grid gap-5 lg:grid-cols-[1fr_18rem] lg:items-start">
           <Card>
-            <BlueprintPanel blueprint={course.blueprint} />
+            <BlueprintPanel blueprint={course.blueprint} sourceLabel={unitSourceText} />
           </Card>
           <div className="rounded-lg bg-iced p-5">
             <h3 className="text-sm font-bold text-navy">版本紀錄</h3>
