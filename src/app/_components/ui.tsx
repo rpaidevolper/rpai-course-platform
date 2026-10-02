@@ -124,6 +124,37 @@ export function MockAction({ children, variant = "primary", reason = "設計稿�
   );
 }
 
+/**
+ * 受定稿閘管的產檔按鈕。blocks 為空時看起來可以按（設計稿仍未接上）；
+ * 被擋時變暗、aria-disabled，原因用看得到的文字列在按鈕下方（手機沒有 hover），並以 aria-describedby 綁定。
+ */
+export function GatedAction({ id, children, blocks, variant = "primary" }: { id: string; children: ReactNode; blocks: string[]; variant?: "primary" | "secondary" }) {
+  const fill = variant === "primary" ? PRIMARY : SECONDARY;
+  if (blocks.length === 0) {
+    return (
+      <button type="button" title="設計稿：這個動作還沒接上" className={fill}>
+        {children}
+      </button>
+    );
+  }
+  const reasonId = `${id}-blocked`;
+  return (
+    <div className="flex min-w-0 basis-full flex-col items-start gap-1.5">
+      <button
+        type="button"
+        aria-disabled
+        aria-describedby={reasonId}
+        className={`${BTN} ${variant === "primary" ? PRIMARY_FILL : SECONDARY_FILL} cursor-not-allowed opacity-60`}
+      >
+        {children}
+      </button>
+      <p id={reasonId} className="text-xs font-bold text-warning">
+        還不能排：{blocks.join("；")}
+      </p>
+    </div>
+  );
+}
+
 /** 定義清單：label / value 成對。 */
 export function Facts({ items }: { items: [label: string, value: ReactNode][] }) {
   return (

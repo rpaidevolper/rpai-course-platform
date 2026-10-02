@@ -477,9 +477,9 @@ const claudeIntroManagersBlueprint = BlueprintSchema.parse({
   openQuestions: [],
 });
 
-/** 產物版本的簡寫：沒寫的欄位用「整門課一份、AI 產出、沒有上游、沒寄給客戶、可用」。 */
+/** 產物版本的簡寫：沒寫的欄位用「整門課一份、AI 產出、沒有上游、沒寄給客戶、沒定稿、可用」。 */
 function artifact(a: Pick<Artifact, "id" | "kind" | "version" | "blueprintVersion" | "createdAt"> & Partial<Artifact>): Artifact {
-  return { day: null, upstreamIds: [], editedFromId: null, sentToClientAt: null, status: "ready", ...a };
+  return { day: null, upstreamIds: [], editedFromId: null, sentToClientAt: null, finalizedAt: null, status: "ready", ...a };
 }
 
 export const COURSES: Course[] = [
@@ -491,19 +491,19 @@ export const COURSES: Course[] = [
     copiedFrom: null,
     blueprint: claudeIntroBlueprint,
     blueprintHistory: [
-      { version: 1, createdAt: "2026-09-12T15:20:00+08:00", note: "由框架 v2 與製造業情境談出初版" },
-      { version: 2, createdAt: "2026-09-26T11:05:00+08:00", note: "加入供應商來信案例" },
-      { version: 3, createdAt: "2026-10-07T16:40:00+08:00", note: "Project 單元延長到 120 分鐘" },
+      { version: 1, createdAt: "2026-09-12T15:20:00+08:00", note: "由框架 v2 與製造業情境談出初版", finalizedAt: null },
+      { version: 2, createdAt: "2026-09-26T11:05:00+08:00", note: "加入供應商來信案例", finalizedAt: "2026-09-28T10:00:00+08:00" },
+      { version: 3, createdAt: "2026-10-07T16:40:00+08:00", note: "Project 單元延長到 120 分鐘", finalizedAt: "2026-10-07T18:00:00+08:00" },
     ],
     artifacts: [
       artifact({ id: "a-ci-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-09-28T09:30:00+08:00", createdAt: "2026-09-27T10:00:00+08:00" }),
       artifact({ id: "a-ci-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-09-27T10:05:00+08:00" }),
-      artifact({ id: "a-ci-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, createdAt: "2026-09-28T15:00:00+08:00" }),
+      artifact({ id: "a-ci-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-09-28T18:00:00+08:00", createdAt: "2026-09-28T15:00:00+08:00" }),
       artifact({ id: "a-ci-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-ci-script-d1-1"], createdAt: "2026-09-28T21:30:00+08:00" }),
       artifact({ id: "a-ci-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-ci-script-d1-1"], createdAt: "2026-09-29T20:10:00+08:00" }),
       artifact({ id: "a-ci-outline-2", kind: "outline", version: 2, blueprintVersion: 3, createdAt: "2026-10-07T17:00:00+08:00" }),
       artifact({ id: "a-ci-prep-2", kind: "prep_sheet", version: 2, blueprintVersion: 3, createdAt: "2026-10-07T17:05:00+08:00" }),
-      artifact({ id: "a-ci-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 3, createdAt: "2026-10-07T19:00:00+08:00" }),
+      artifact({ id: "a-ci-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 3, finalizedAt: "2026-10-07T21:00:00+08:00", createdAt: "2026-10-07T19:00:00+08:00" }),
       artifact({ id: "a-ci-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 3, upstreamIds: ["a-ci-script-d1-2"], createdAt: "2026-10-07T22:15:00+08:00" }),
       // 講師把 v2 改過再上傳：沿用 v2 的藍圖與上游綁定
       artifact({ id: "a-ci-slides-3", kind: "slides", day: 1, version: 3, blueprintVersion: 3, upstreamIds: ["a-ci-script-d1-2"], editedFromId: "a-ci-slides-2", createdAt: "2026-10-08T08:30:00+08:00" }),
@@ -521,7 +521,7 @@ export const COURSES: Course[] = [
     copiedFrom: { courseId: "c-claude-intro", blueprintVersion: 3 },
     blueprint: claudeIntroManagersBlueprint,
     blueprintHistory: [
-      { version: 1, createdAt: "2026-10-08T09:30:00+08:00", note: "以「Claude 入門」藍圖 v3 為底複製，改成主管視角" },
+      { version: 1, createdAt: "2026-10-08T09:30:00+08:00", note: "以「Claude 入門」藍圖 v3 為底複製，改成主管視角", finalizedAt: null },
     ],
     artifacts: [],
     materials: [],
@@ -534,7 +534,7 @@ export const COURSES: Course[] = [
     copiedFrom: null,
     blueprint: claudeAdvancedBlueprint,
     blueprintHistory: [
-      { version: 1, createdAt: "2026-10-05T14:00:00+08:00", note: "由框架 v1 談出初版，帶入專案的客戶背景" },
+      { version: 1, createdAt: "2026-10-05T14:00:00+08:00", note: "由框架 v1 談出初版，帶入專案的客戶背景", finalizedAt: null },
     ],
     artifacts: [],
     materials: [],
@@ -547,13 +547,13 @@ export const COURSES: Course[] = [
     copiedFrom: null,
     blueprint: paFinanceBlueprint,
     blueprintHistory: [
-      { version: 1, createdAt: "2026-08-28T10:00:00+08:00", note: "由框架 v2 與金融業情境談出初版" },
-      { version: 2, createdAt: "2026-09-10T09:30:00+08:00", note: "逾期提醒獨立成一個單元" },
+      { version: 1, createdAt: "2026-08-28T10:00:00+08:00", note: "由框架 v2 與金融業情境談出初版", finalizedAt: null },
+      { version: 2, createdAt: "2026-09-10T09:30:00+08:00", note: "逾期提醒獨立成一個單元", finalizedAt: "2026-09-11T09:00:00+08:00" },
     ],
     artifacts: [
       artifact({ id: "a-pa-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-09-10T15:00:00+08:00", createdAt: "2026-09-10T12:00:00+08:00" }),
       artifact({ id: "a-pa-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-09-10T12:05:00+08:00" }),
-      artifact({ id: "a-pa-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, createdAt: "2026-09-11T20:00:00+08:00" }),
+      artifact({ id: "a-pa-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-09-12T10:00:00+08:00", createdAt: "2026-09-11T20:00:00+08:00" }),
       artifact({ id: "a-pa-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pa-script-d1-1"], createdAt: "2026-09-12T22:00:00+08:00" }),
       artifact({ id: "a-pa-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-pa-script-d1-1"], createdAt: "2026-09-13T20:00:00+08:00" }),
     ],
@@ -567,15 +567,15 @@ export const COURSES: Course[] = [
     copiedFrom: null,
     blueprint: gasTwoDayBlueprint,
     blueprintHistory: [
-      { version: 1, createdAt: "2026-09-22T10:00:00+08:00", note: "由框架 v1 與製造業情境談出初版，一天" },
-      { version: 2, createdAt: "2026-10-01T15:30:00+08:00", note: "拆成兩天：第一天彙整、第二天通知，每天上午下午各 180 分鐘" },
+      { version: 1, createdAt: "2026-09-22T10:00:00+08:00", note: "由框架 v1 與製造業情境談出初版，一天", finalizedAt: null },
+      { version: 2, createdAt: "2026-10-01T15:30:00+08:00", note: "拆成兩天：第一天彙整、第二天通知，每天上午下午各 180 分鐘", finalizedAt: "2026-10-02T12:00:00+08:00" },
     ],
     // 示範只改第一天逐頁腳本：第一天簡報與學員手冊過期，第二天簡報不受影響
     artifacts: [
       artifact({ id: "a-gas-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-10-02T11:00:00+08:00", createdAt: "2026-10-01T17:00:00+08:00" }),
       artifact({ id: "a-gas-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-10-01T17:05:00+08:00" }),
-      artifact({ id: "a-gas-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, createdAt: "2026-10-03T14:00:00+08:00" }),
-      artifact({ id: "a-gas-script-d2-1", kind: "page_script", day: 2, version: 1, blueprintVersion: 2, createdAt: "2026-10-03T16:00:00+08:00" }),
+      artifact({ id: "a-gas-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-10-04T10:00:00+08:00", createdAt: "2026-10-03T14:00:00+08:00" }),
+      artifact({ id: "a-gas-script-d2-1", kind: "page_script", day: 2, version: 1, blueprintVersion: 2, finalizedAt: "2026-10-04T11:00:00+08:00", createdAt: "2026-10-03T16:00:00+08:00" }),
       artifact({ id: "a-gas-slides-d1-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d1-1"], createdAt: "2026-10-04T20:00:00+08:00" }),
       artifact({ id: "a-gas-slides-d2-1", kind: "slides", day: 2, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d2-1"], createdAt: "2026-10-04T22:00:00+08:00" }),
       artifact({ id: "a-gas-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d1-1", "a-gas-script-d2-1"], createdAt: "2026-10-05T10:00:00+08:00" }),

@@ -17,6 +17,7 @@ function v(a: Pick<Artifact, "id" | "kind"> & Partial<Artifact>): Artifact {
     upstreamIds: [],
     editedFromId: null,
     sentToClientAt: null,
+    finalizedAt: null,
     status: "ready",
     createdAt: "2026-10-01T10:00:00+08:00",
     ...a,
@@ -37,7 +38,7 @@ const FRESH: Artifact[] = [
 function snapshot(artifacts: Artifact[], blueprintVersions = [1]): Course {
   return {
     ...base,
-    blueprintHistory: blueprintVersions.map((version) => ({ version, createdAt: "2026-09-30T10:00:00+08:00", note: "" })),
+    blueprintHistory: blueprintVersions.map((version) => ({ version, createdAt: "2026-09-30T10:00:00+08:00", note: "", finalizedAt: null })),
     artifacts,
   };
 }
