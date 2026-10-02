@@ -146,6 +146,8 @@ export interface BlueprintVersion {
   version: number;
   createdAt: IsoTime;
   note: string;
+  /** 講師把這一版標成定稿的時間；null 表示還沒定稿（定稿閘：最新版定稿後才能產逐頁腳本） */
+  finalizedAt: IsoTime | null;
 }
 
 /** 產物的一個版本。同一種類（逐頁腳本與簡報再加上同一天）的各版本是同一份產物。 */
@@ -163,6 +165,8 @@ export interface Artifact {
   editedFromId: string | null;
   /** 已寄給客戶的時間；只有課程大綱會有，其他一律 null */
   sentToClientAt: IsoTime | null;
+  /** 講師把這個版本標成定稿的時間；只有逐頁腳本會有，其他一律 null（定稿閘：定稿後才能產下游） */
+  finalizedAt: IsoTime | null;
   status: "pending" | "generating" | "ready" | "failed";
   createdAt: IsoTime;
 }

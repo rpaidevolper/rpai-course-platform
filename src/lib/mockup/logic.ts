@@ -166,6 +166,73 @@ export function staleReasonText(reason: StaleReason): string {
   return reason.kind === "upstream" ? `${label}已到 v${reason.latestVersion}` : `${label}已過期`;
 }
 
+// ── 定稿閘 ────────────────────────────────────────────
+
+/** 產檔工作被擋住的原因：缺哪一步定稿。 */
+export type GateBlock =
+  | { kind: "blueprint_not_finalized"; version: number }
+  /** 那天沒有可用（ready）的逐頁腳本：還沒產，或還在產、產失敗 */
+  | { kind: "script_missing"; day: number }
+  | { kind: "script_not_finalized"; day: number; version: number }
+  | { kind: "script_stale"; day: number; version: number };
+
+/** 某一天最新可用的逐頁腳本能不能當下游的上游：要定稿、而且沒過期。 */
+function scriptBlock(course: Course, day: number): GateBlock | null {
+  const script = latestReadyArtifact(course, "page_script", day);
+  if (!script) return { kind: "script_missing", day };
+  if (script.finalizedAt === null) return { kind: "script_not_finalized", day, version: script.version };
+  if (isStale(course, script)) return { kind: "script_stale", day, version: script.version };
+  return null;
+}
+
+/**
+ * 定稿閘：某個產檔工作現在能不能排。空陣列代表可以排。
+ * 「最新」一律指最新的可用版本（ready）；還在產或產失敗的新版不算。
+ * - 逐頁腳本：藍圖最新版已定稿。
+ * - 某天簡報：該天最新可用的逐頁腳本已定稿、沒過期。
+ * - 學員手冊：藍圖每一天最新可用的逐頁腳本都已定稿、沒過期；每一天的問題都列出。
+ * - 課程大綱、講師準備單：不設閘。
+ * 天數不在藍圖範圍內、或整門課一份的產物帶了天，是呼叫端的錯，直接丟例外。
+ */
+export function generationGate(course: Course, job: ArtifactSeries): GateBlock[] {
+  const perDay = job.kind === "page_script" || job.kind === "slides";
+  const validDay = perDay
+    ? job.day !== null && Number.isInteger(job.day) && job.day >= 1 && job.day <= course.blueprint.days.length
+    : job.day === null;
+  if (!validDay) throw new Error(`課程 ${course.id} 沒有「${ARTIFACT_LABELS[job.kind]}・第 ${job.day} 天」這個產檔工作`);
+
+  switch (job.kind) {
+    case "outline":
+    case "prep_sheet":
+      return [];
+    case "page_script": {
+      const latest = course.blueprintHistory.find((v) => v.version === latestBlueprintVersion(course))!;
+      return latest.finalizedAt === null ? [{ kind: "blueprint_not_finalized", version: latest.version }] : [];
+    }
+    case "slides": {
+      const block = scriptBlock(course, job.day!);
+      return block ? [block] : [];
+    }
+    case "handbook":
+      return course.blueprint.days
+        .map((_, i) => scriptBlock(course, i + 1))
+        .filter((b): b is GateBlock => b !== null);
+  }
+}
+
+export function gateBlockText(block: GateBlock): string {
+  if (block.kind === "blueprint_not_finalized") return `藍圖 v${block.version} 還沒定稿`;
+  const label = seriesLabel({ kind: "page_script", day: block.day });
+  switch (block.kind) {
+    case "script_missing":
+      return `${label}還沒有可用的版本`;
+    case "script_not_finalized":
+      return `${label} v${block.version} 還沒定稿`;
+    case "script_stale":
+      return `${label} v${block.version} 已過期，要先重產並定稿`;
+  }
+}
+
 /**
  * 講師把某個版本改過再上傳：成為同一份產物的下一版（排在目前最新版之後），
  * 沿用原版本的藍圖與上游綁定，所以過期與否跟著原本的綁定走。
@@ -183,6 +250,7 @@ export function instructorEdit(course: Course, baseId: string, upload: { id: str
     upstreamIds: [...original.upstreamIds],
     editedFromId: original.id,
     sentToClientAt: null,
+    finalizedAt: null,
     status: "ready",
     createdAt: upload.createdAt,
   };

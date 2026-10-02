@@ -6,6 +6,8 @@ import {
   formatDate,
   formatDateTime,
   formatTime,
+  gateBlockText,
+  generationGate,
   getCourse,
   getFramework,
   getProject,
@@ -24,7 +26,7 @@ import {
 import type { Artifact, Course, Project } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
 import { RequirementMappingPanel } from "../../../_components/requirement-mapping-panel";
-import { Badge, Breadcrumb, Card, CARD, Empty, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
+import { Badge, Breadcrumb, Card, CARD, Empty, GatedAction, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
 
 export function generateStaticParams() {
   return COURSES.map((c) => ({ courseId: c.id }));
@@ -46,6 +48,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
   const scenario = course.source ? getScenario(course.source.scenarioId) : undefined;
   const latestBp = latestBlueprintVersion(course);
   const history = [...course.blueprintHistory].sort((a, b) => b.version - a.version);
+  const latestBpFinalized = history[0].finalizedAt !== null;
   const sessions = sessionsOfCourse(course.id);
   const copiedFrom = course.copiedFrom ? getCourse(course.copiedFrom.courseId) : undefined;
 
@@ -94,7 +97,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
           <span id="artifacts">產物鏈</span>
         </SectionTitle>
         <p className="-mt-1 mb-4 max-w-2xl text-xs text-body-muted">
-          藍圖 → 課程大綱、講師準備單；藍圖 → 每天的逐頁腳本 → 那天的簡報；各天逐頁腳本 → 學員手冊。上游換了新版本，下游就標成過期。
+          藍圖 → 課程大綱、講師準備單；藍圖 → 每天的逐頁腳本 → 那天的簡報；各天逐頁腳本 → 學員手冊。上游換了新版本，下游就標成過期。藍圖定稿後才能產逐頁腳本；某天的逐頁腳本定稿後才能產那天的簡報；每一天都定稿後才能產學員手冊。
         </p>
 
         <div className="space-y-6">
@@ -150,12 +153,19 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
                   <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-navy">
                     v{v.version}
                     {v.version === latestBp && <Badge tone="outline">目前</Badge>}
+                    {v.finalizedAt && <Badge tone="success">已定稿</Badge>}
                   </p>
                   <p className="text-xs text-body-muted">{formatDateTime(v.createdAt)}</p>
                   <p className="mt-1 text-sm">{v.note}</p>
                 </li>
               ))}
             </ol>
+            {!latestBpFinalized && (
+              <div className="mt-4 border-t-2 border-white pt-3">
+                <p className="mb-2 text-xs">v{latestBp} 還沒定稿；定稿後才能產逐頁腳本。課程大綱與講師準備單隨時可以產。</p>
+                <MockAction variant="secondary">把 v{latestBp} 標成定稿</MockAction>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -226,6 +236,9 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   const stale = reasons.length > 0;
   const isOutline = series.kind === "outline";
   const older = isOutline ? versions : versions.slice(1);
+  const blocks = generationGate(course, series).map(gateBlockText);
+  const isScript = series.kind === "page_script";
+  const canFinalize = isScript && latest?.status === "ready" && latest.finalizedAt === null && !stale;
 
   return (
     <li className={`${CARD} min-w-0 p-5 ${stale ? "border-l-[3px] border-navy" : ""}`}>
@@ -234,6 +247,8 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
         {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
         {latest && <Badge tone={STATUS_TONE[latest.status]}>{STATUS_TEXT[latest.status]}</Badge>}
         {latest?.editedFromId && <Badge tone="outline">講師修改</Badge>}
+        {isScript && latest?.finalizedAt && <Badge tone="success">已定稿</Badge>}
+        {isScript && latest?.status === "ready" && !latest.finalizedAt && <Badge tone="warning">還沒定稿</Badge>}
         {series.kind === "prep_sheet" && <Badge>內部・永不發布</Badge>}
       </h4>
       {latest ? (
@@ -261,7 +276,8 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
               return (
                 <li key={a.id}>
                   <span className="font-bold text-navy">v{a.version}</span>（藍圖 v{a.blueprintVersion}
-                  {a.editedFromId ? "，講師修改" : ""}）
+                  {a.editedFromId ? "，講師修改" : ""}
+                  {a.finalizedAt ? "，已定稿" : ""}）
                   {a.sentToClientAt && <span className="font-bold text-navy">・{formatDate(a.sentToClientAt)}已寄給客戶</span>}
                   {feedback.map((d) => (
                     <span key={d.id}>
@@ -279,11 +295,10 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {!latest ? (
-          <MockAction>產出{label}</MockAction>
-        ) : stale ? (
-          <MockAction>依最新藍圖與上游重新產出</MockAction>
-        ) : null}
+        <GatedAction id={`gate-${series.kind}-${series.day ?? "all"}`} blocks={blocks} variant={!latest || stale ? "primary" : "secondary"}>
+          {!latest ? `產出${label}` : stale ? "依最新藍圖與上游重新產出" : "產出新版本"}
+        </GatedAction>
+        {canFinalize && <MockAction variant="secondary">把 v{latest.version} 標成定稿</MockAction>}
         {latest && <MockAction variant="secondary">上傳講師修改版</MockAction>}
         {isOutline && latest && !latest.sentToClientAt && <MockAction variant="secondary">標記已寄給客戶</MockAction>}
       </div>
