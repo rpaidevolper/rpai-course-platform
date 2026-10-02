@@ -4,6 +4,7 @@ import type {
   Framework,
   KnowledgeDraft,
   Project,
+  RequirementReview,
   Scenario,
   Session,
 } from "./types";
@@ -102,10 +103,13 @@ export const PROJECTS: Project[] = [
       { id: "doc-a-feedback-1", kind: "feedback", title: "人資對課程大綱 v1 的回饋", fileName: "回覆：課程大綱初稿.eml", receivedAt: "2026-10-01T09:40:00+08:00", respondsToOutlineId: "a-ci-outline-1" },
     ],
     requirements: [
-      { id: "r-a-8d", text: "要有一段實際把客訴信整理成 8D 報告的練習", sourceDocumentId: "doc-a-needs", minutes: 90, courseId: "c-claude-intro" },
-      { id: "r-a-project", text: "學員課後要有一個能直接用的部門 Project", sourceDocumentId: "doc-a-syllabus", minutes: null, courseId: "c-claude-intro" },
-      { id: "r-a-handover", text: "主管要學會把個人用法寫成部門可交接的流程", sourceDocumentId: "doc-a-syllabus", minutes: 180, courseId: "c-claude-advanced" },
-      { id: "r-a-security", text: "說明哪些公司資料不能交給 AI 處理", sourceDocumentId: "doc-a-needs", minutes: 30, courseId: null },
+      { id: "r-a-8d", text: "要有一段實際把客訴信整理成 8D 報告的練習", sourceDocumentId: "doc-a-needs", keywords: ["8D"], minutes: 90, courseId: "c-claude-intro" },
+      { id: "r-a-project", text: "學員課後要有一個能直接用的部門 Project", sourceDocumentId: "doc-a-syllabus", keywords: ["Project"], minutes: null, courseId: "c-claude-intro" },
+      { id: "r-a-limits", text: "先講清楚 AI 能做與不能做的事，至少一個半小時", sourceDocumentId: "doc-a-syllabus", keywords: ["不能做什麼"], minutes: 90, courseId: "c-claude-intro" },
+      { id: "r-a-supplier", text: "供應商來信的交期比對要有一段實作", sourceDocumentId: "doc-a-needs", keywords: ["供應商來信"], minutes: 60, courseId: "c-claude-intro" },
+      { id: "r-a-weekly", text: "週會記錄整理成跨部門待辦", sourceDocumentId: "doc-a-needs", keywords: ["週會"], minutes: 30, courseId: "c-claude-intro" },
+      { id: "r-a-handover", text: "主管要學會把個人用法寫成部門可交接的流程", sourceDocumentId: "doc-a-syllabus", keywords: ["交接"], minutes: 180, courseId: "c-claude-advanced" },
+      { id: "r-a-security", text: "說明哪些公司資料不能交給 AI 處理", sourceDocumentId: "doc-a-needs", keywords: ["不能上傳"], minutes: 30, courseId: null },
     ],
   },
   {
@@ -125,7 +129,7 @@ export const PROJECTS: Project[] = [
       { id: "doc-b-needs", kind: "requirements", title: "財務部需求清單", fileName: "請款流程需求.xlsx", receivedAt: "2026-08-20T16:00:00+08:00", respondsToOutlineId: null },
     ],
     requirements: [
-      { id: "r-b-reminder", text: "逾期未核准要自動提醒主管", sourceDocumentId: "doc-b-needs", minutes: 60, courseId: "c-pa-finance" },
+      { id: "r-b-reminder", text: "逾期未核准要自動提醒主管", sourceDocumentId: "doc-b-needs", keywords: ["逾期"], minutes: 60, courseId: "c-pa-finance" },
     ],
   },
   {
@@ -145,7 +149,7 @@ export const PROJECTS: Project[] = [
       { id: "doc-c-needs", kind: "requirements", title: "訓練需求初談紀錄", fileName: "初談紀錄.docx", receivedAt: "2026-09-30T15:00:00+08:00", respondsToOutlineId: null },
     ],
     requirements: [
-      { id: "r-c-weekly", text: "用 AI 彙整十家門市的週報", sourceDocumentId: "doc-c-needs", minutes: null, courseId: null },
+      { id: "r-c-weekly", text: "用 AI 彙整十家門市的週報", sourceDocumentId: "doc-c-needs", keywords: ["週報"], minutes: null, courseId: null },
     ],
   },
   {
@@ -180,6 +184,18 @@ export const PROJECTS: Project[] = [
     clientDocuments: [],
     requirements: [],
   },
+];
+
+/**
+ * 需求條目是否被藍圖實質涵蓋：設計稿手動標註，真實版本交給 AI 判斷。
+ * 「Claude 入門」的五條需求示範了 ✅、⚠️（擠在一起、時間偏短）、❌ 三種字面狀態。
+ */
+export const REQUIREMENT_REVIEWS: RequirementReview[] = [
+  { requirementId: "r-a-8d", substantive: true, note: "「提示詞的四個零件」整段都拿客訴信練 8D 草稿。" },
+  { requirementId: "r-a-project", substantive: true, note: "學員在課堂上建好自己部門的 Project，課後可直接用。" },
+  { requirementId: "r-a-limits", substantive: true, note: "內容有講到，但只排了 60 分鐘，比客戶要求少半小時。" },
+  { requirementId: "r-a-supplier", substantive: false, note: "只在 Project 練習裡順帶回覆一封供應商來信，沒有交期比對。" },
+  { requirementId: "r-a-weekly", substantive: false, note: "週會只出現在受眾痛點，沒有任何單元處理它。" },
 ];
 
 const claudeIntroBlueprint = BlueprintSchema.parse({

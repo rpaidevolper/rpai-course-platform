@@ -1,10 +1,12 @@
 import { openItems } from "@/lib/blueprint/open-items";
+import { mapRequirements, type RequirementMapping } from "@/lib/blueprint/requirement-mapping";
 import { checkBlueprint, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
 import {
   COURSES,
   FRAMEWORKS,
   KNOWLEDGE_DRAFTS,
   PROJECTS,
+  REQUIREMENT_REVIEWS,
   SCENARIOS,
   SESSIONS,
 } from "./data";
@@ -22,6 +24,7 @@ import {
   type Project,
   type ProjectStatus,
   type Requirement,
+  type RequirementReview,
   type Scenario,
   type Session,
 } from "./types";
@@ -276,4 +279,23 @@ export function projectsByStatus(projects: Project[]): { status: ProjectStatus; 
 export function unassignedRequirements(project: Project, courses: Course[]): Requirement[] {
   const own = new Set(courses.filter((c) => c.projectId === project.id).map((c) => c.id));
   return project.requirements.filter((r) => r.courseId === null || !own.has(r.courseId));
+}
+
+export interface RequirementMappingRow {
+  requirement: Requirement;
+  /** 字面與時數：由 mapRequirements 計算 */
+  mapping: RequirementMapping;
+  /** 實質涵蓋：設計稿的 fixture 標註；沒標註則為 null */
+  review: RequirementReview | null;
+}
+
+/** 課程頁的需求對照：這門課負責的需求條目，依專案裡的順序逐條比對最新藍圖。 */
+export function requirementMappingOfCourse(course: Course): RequirementMappingRow[] {
+  const requirements = getProject(course.projectId)?.requirements.filter((r) => r.courseId === course.id) ?? [];
+  const mappings = mapRequirements(course.blueprint, requirements);
+  return requirements.map((requirement, i) => ({
+    requirement,
+    mapping: mappings[i],
+    review: REQUIREMENT_REVIEWS.find((r) => r.requirementId === requirement.id) ?? null,
+  }));
 }

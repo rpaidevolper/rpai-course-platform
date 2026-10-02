@@ -103,10 +103,25 @@ export interface Requirement {
   text: string;
   /** 出自哪份客戶文件；講師口頭記下的則為 null */
   sourceDocumentId: string | null;
+  /**
+   * 需求對照用的關鍵詞（講師從原文挑出；真實版本可由 AI 抽出）。
+   * 全部出現在藍圖同一個單元裡，才算字面上涵蓋。
+   */
+  keywords: string[];
   /** 客戶要求的時數（分鐘）；沒指定時數則為 null */
   minutes: number | null;
   /** 負責的課程；null 表示還沒人負責 */
   courseId: string | null;
+}
+
+/**
+ * 需求條目是否被藍圖「實質」涵蓋的判斷。字面與時數由 mapRequirements 計算；
+ * 內容有沒有真的教到，設計稿用 fixture 標註，真實版本未來交給 AI。
+ */
+export interface RequirementReview {
+  requirementId: string;
+  substantive: boolean;
+  note: string;
 }
 
 export interface Project {

@@ -12,12 +12,14 @@ import {
   isStale,
   latestArtifact,
   latestBlueprintVersion,
+  requirementMappingOfCourse,
   sessionsOfCourse,
   unitSourceText,
   VENUE_UNSET,
 } from "@/lib/mockup/logic";
 import { ARTIFACT_KINDS, ARTIFACT_LABELS } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
+import { RequirementMappingPanel } from "../../../_components/requirement-mapping-panel";
 import { Badge, Breadcrumb, Card, CARD, Empty, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
 
 export function generateStaticParams() {
@@ -127,6 +129,13 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
             );
           })}
         </ul>
+      </section>
+
+      <section aria-labelledby="requirement-mapping" className="mb-10">
+        <SectionTitle aside="字面與時數由系統比對；實質涵蓋為設計稿標註">
+          <span id="requirement-mapping">需求對照</span>
+        </SectionTitle>
+        <RequirementMappingPanel rows={requirementMappingOfCourse(course)} blueprint={course.blueprint} />
       </section>
 
       <section aria-labelledby="blueprint" className="mb-10">

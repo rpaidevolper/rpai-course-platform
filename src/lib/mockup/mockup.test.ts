@@ -7,6 +7,7 @@ import {
   KNOWLEDGE_DRAFTS,
   MOCK_NOW,
   PROJECTS,
+  REQUIREMENT_REVIEWS,
   SESSIONS,
 } from "./data";
 import {
@@ -21,6 +22,7 @@ import {
   portalView,
   projectsByStatus,
   readiness,
+  requirementMappingOfCourse,
   unassignedRequirements,
   upcomingSessions,
 } from "./logic";
@@ -264,8 +266,8 @@ describe("需求條目的負責課程", () => {
       ...project,
       requirements: [
         ...project.requirements,
-        { id: "r-x-gone", text: "指向已刪除的課程", sourceDocumentId: "doc-a-needs", minutes: null, courseId: "c-deleted" },
-        { id: "r-x-other", text: "指向別的專案的課程", sourceDocumentId: "doc-a-needs", minutes: null, courseId: "c-pa-finance" },
+        { id: "r-x-gone", text: "指向已刪除的課程", sourceDocumentId: "doc-a-needs", keywords: [], minutes: null, courseId: "c-deleted" },
+        { id: "r-x-other", text: "指向別的專案的課程", sourceDocumentId: "doc-a-needs", keywords: [], minutes: null, courseId: "c-pa-finance" },
       ],
     };
     expect(unassignedRequirements(withBadRefs, COURSES).map((r) => r.id)).toEqual([
@@ -342,5 +344,34 @@ describe("專案 fixture 參照完整", () => {
     expect(getProject("p-a-2026")!.clientDocuments.find((d) => d.kind === "feedback")?.respondsToOutlineId).toBe(
       "a-ci-outline-1",
     );
+  });
+});
+
+describe("課程頁的需求對照", () => {
+  it("「Claude 入門」逐條列出負責的需求條目，三種狀態都有", () => {
+    const rows = requirementMappingOfCourse(getCourse("c-claude-intro")!);
+    expect(rows.map((r) => [r.requirement.id, r.mapping.status, r.mapping.deltaMinutes])).toEqual([
+      ["r-a-8d", "covered", 30],
+      ["r-a-project", "partial", null],
+      ["r-a-limits", "partial", -30],
+      ["r-a-supplier", "partial", 0],
+      ["r-a-weekly", "not_found", -30],
+    ]);
+  });
+
+  it("附上設計稿標註的實質涵蓋判斷；沒標註的為 null", () => {
+    const rows = requirementMappingOfCourse(getCourse("c-claude-advanced")!);
+    expect(rows.map((r) => [r.requirement.id, r.review])).toEqual([["r-a-handover", null]]);
+    const intro = requirementMappingOfCourse(getCourse("c-claude-intro")!);
+    expect(intro.find((r) => r.requirement.id === "r-a-weekly")!.review?.substantive).toBe(false);
+  });
+
+  it("沒有負責任何需求條目的課程回傳空陣列", () => {
+    expect(requirementMappingOfCourse(getCourse("c-gas-two-day")!)).toEqual([]);
+  });
+
+  it("實質涵蓋標註都指向存在的需求條目", () => {
+    const ids = PROJECTS.flatMap((p) => p.requirements.map((r) => r.id));
+    for (const r of REQUIREMENT_REVIEWS) expect(ids).toContain(r.requirementId);
   });
 });
