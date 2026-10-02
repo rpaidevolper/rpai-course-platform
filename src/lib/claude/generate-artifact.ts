@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Blueprint } from "@/lib/blueprint/schema";
-import { getAnthropic, MODEL } from "./client";
+import { getAnthropic } from "./client";
+import type { ModelId } from "./models";
 
 import type { ArtifactKind } from "@/lib/artifacts";
 export type { ArtifactKind };
@@ -12,6 +13,8 @@ export interface GeneratedFile {
 }
 
 export interface GenerateArtifactInput {
+  /** 產檔用的模型；由呼叫端依該場對話的選擇傳入。 */
+  model: ModelId;
   kind: ArtifactKind;
   blueprint: Blueprint;
   /** 品牌規範全文；固定內容，放 system 最前面吃快取。 */
@@ -69,6 +72,7 @@ export function collectOutputFileIds(
  * 這個呼叫可能跑好幾分鐘，只能在背景工作裡用，不要放在請求路徑上同步等。
  */
 export async function generateArtifact({
+  model,
   kind,
   blueprint,
   brandGuidelines,
@@ -77,7 +81,7 @@ export async function generateArtifact({
   const client = getAnthropic();
 
   const stream = client.beta.messages.stream({
-    model: MODEL,
+    model,
     max_tokens: 64000,
     betas: ["code-execution-2025-08-25"],
     container: { skills: skillsFor(kind) },
