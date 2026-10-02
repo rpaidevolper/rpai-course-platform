@@ -9,6 +9,24 @@
 
 產品規格見 [`docs/spec.md`](docs/spec.md)，架構見 [`docs/architecture.md`](docs/architecture.md)。
 
+## 部署速查
+
+**Production：<https://rpai-course-platform.vercel.app>**（Vercel + 雲端 Supabase，2026-10-02 上線）
+
+| 我想要… | 做法 |
+|---|---|
+| 部署 | 把 PR 合併到 `main`，其餘自動：CI → 套 migration → 部署 → smoke test |
+| 確認服務正常 | `curl https://rpai-course-platform.vercel.app/api/health`，預期 `{"status":"ok","database":"ok","commit":"<sha>"}` |
+| 看部署紀錄 | GitHub → Actions → **Deploy** |
+| 重跑部署 | `gh workflow run Deploy --ref main`（只能在 `main`） |
+| 手動跑 smoke test | `scripts/smoke-test.sh https://rpai-course-platform.vercel.app [commit]` |
+| 回滾程式碼 | Vercel → Deployments → 上一個正常部署 → **Instant Rollback**，然後 `main` 上 revert |
+| 回滾 migration | 沒有 down，寫一個新的修正 migration 走 PR |
+| 換金鑰或 token | 見 [`docs/runbook.md`](docs/runbook.md)「輪替金鑰」（需 owner） |
+| 出事了 | 見 [`docs/runbook.md`](docs/runbook.md)「故障排除」 |
+
+一般開發者只需要第一列。其餘需要 owner 帳號（`rpaidevolper`）。細節見[第 11 節](#11-環境與部署)。
+
 ---
 
 # 新成員上手指南
@@ -211,6 +229,8 @@ claude plugin install mattpocock-skills@mattpocock
 - **GitHub 規則**：ruleset 在 `.github/rulesets/main.json`，labels 在 `.github/labels.json`。修改後走 PR 合併，再執行 `scripts/setup-github.sh` 套用。
 - **Claude 憑證**：GitHub 端的 AI review 與 `@claude` 使用 repo secret `CLAUDE_CODE_OAUTH_TOKEN`。更新方式：執行 `claude setup-token` 取得 token，再執行 `gh secret set CLAUDE_CODE_OAUTH_TOKEN`。
 - **Claude 服務中斷或額度用完**：`ai-review` 是必要 check，會擋住所有合併。執行 `scripts/setup-github.sh --without-ai-review` 暫時解除，恢復後再執行不帶參數的版本。
-- **建立 production 環境（只做一次）**：在 owner 帳號下執行 `scripts/setup-production.sh`。它會帶你建立 Supabase 與 Vercel 專案，並設定 GitHub secrets 與 Vercel 環境變數。最後一關會在你的終端機做第一次（bootstrap）部署並跑 smoke test。**請先跑 wizard，再合併包含 `deploy.yml` 的 PR**：合併本身就會觸發 Deploy，secrets 沒設好會讓 `main` 顯示紅燈。Wizard 要在你自己的終端機執行（密碼是隱藏輸入，不能透過 Claude Code 的 `!`）。
+- **Production 環境已建好（2026-10-02）**：不需要再跑 `scripts/setup-production.sh`。只有要從零重建（例如換 Supabase 或 Vercel 專案）才再跑，請在自己的終端機執行（密碼是隱藏輸入，不能透過 Claude Code 的 `!`）；腳本會記住 `.env.production.local` 已存的值。跑完可刪除 `.env.production.local` 與 `.vercel/`，內含 production 密碼。
+- **Vercel token 的範圍**：Vercel access token 只能限定到帳號或 team，無法限定單一專案。想縮小影響範圍，可把專案放進專屬 team，並設較短的到期日定期輪替。換 token：到 Vercel 產生新的，執行 `gh secret set VERCEL_TOKEN`，再 `gh workflow run Deploy --ref main` 驗證，最後刪除舊 token。
+- **資料備份**：Supabase 免費方案沒有自動備份，真實講師資料進來之前請升級到有每日備份的方案。
 - **Production image**：`docker build -t rpai-course-platform --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... .`，執行時以 `--env-file` 提供其餘環境變數。兩個 `NEXT_PUBLIC_*` 必須在 build 時給。
 - **新增成員**：Settings → Collaborators 加入對方的 GitHub 帳號。
