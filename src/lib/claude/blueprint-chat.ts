@@ -5,7 +5,8 @@ import {
   FIVE_ELEMENT_LABELS,
   type Blueprint,
 } from "@/lib/blueprint/schema";
-import { getAnthropic, MODEL } from "./client";
+import { getAnthropic } from "./client";
+import type { ModelId } from "./models";
 
 const ELEMENT_LIST = Object.values(FIVE_ELEMENT_LABELS).join("／");
 
@@ -35,6 +36,8 @@ function systemBlocks(current: Blueprint | null): Anthropic.TextBlockParam[] {
 }
 
 export interface BlueprintChatInput {
+  /** 這場對話選用的模型（`conversations.model`）。 */
+  model: ModelId;
   /** 對話紀錄，直接存 Anthropic 的 MessageParam，不要另外定型別。 */
   history: Anthropic.MessageParam[];
   /** 這門課目前最新一版藍圖；還沒有就 null。 */
@@ -43,11 +46,12 @@ export interface BlueprintChatInput {
 
 /** 跟講師對話，回傳 stream；呼叫端自己決定要逐字轉發還是等 finalMessage()。 */
 export function streamBlueprintChat({
+  model,
   history,
   currentBlueprint,
 }: BlueprintChatInput) {
   return getAnthropic().messages.stream({
-    model: MODEL,
+    model,
     max_tokens: 64000,
     system: systemBlocks(currentBlueprint),
     messages: history,
@@ -59,11 +63,12 @@ export function streamBlueprintChat({
  * 呼叫端存進 blueprints 前不用再 parse 一次。
  */
 export async function extractBlueprint({
+  model,
   history,
   currentBlueprint,
 }: BlueprintChatInput): Promise<Blueprint> {
   const response = await getAnthropic().messages.parse({
-    model: MODEL,
+    model,
     max_tokens: 16000,
     system: [
       ...systemBlocks(currentBlueprint),

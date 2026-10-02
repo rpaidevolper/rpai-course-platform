@@ -86,7 +86,7 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 |---|---|---|---|
 | 技術棧 | Next.js 16 + TypeScript，單一 repo | 前後端一起、串流聊天順手 | 2026-09-03 |
 | 資料庫 | Supabase Postgres + Storage，RLS 依 owner_id | 登入、檔案、資料庫一站解決 | 2026-09-03 |
-| 模型 | `claude-opus-5`，adaptive thinking，用 effort 調深度 | 依 claude-api skill 的預設 | 2026-09-03 |
+| 模型 | 預設 `claude-opus-5`，每場對話可在 `conversations.model` 各自選（Opus 5／Sonnet 5.5／Haiku 4.5／Fable 5.1，清單在 `src/lib/claude/models.ts`）；不指定 thinking（各模型用自己的預設），用 effort 調深度 | 依 claude-api skill 的預設；講師依草稿／定稿、成本、速度自選 | 2026-09-03、2026-10-02 |
 | 藍圖版本 | 不可變、只新增；產物綁定版本 | 產物才能可靠指向出生時的藍圖 | 2026-09-03 |
 | **長時間產檔在哪跑** | **講師自己的 Claude Code + plugin（MCP 橋接）** | 用講師的訂閱與電腦；既有 skill 原樣可用；不踩「第三方產品不得使用訂閱登入」的政策。捨棄的選項：雲端 worker（要付 API 費、skill 要重新上傳）、Agent SDK 打包成 runner app（政策上需要 API key，還要做打包與金鑰分發） | 2026-09-03 |
 | rpai-* skill 怎麼給講師 | 打包進 plugin | 講師裝一次就齊全，版本由 repo 控制 | 2026-09-03 |
