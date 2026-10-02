@@ -3,15 +3,15 @@ import { MOCK_NOW } from "@/lib/mockup/data";
 import {
   dateParts,
   formatDate,
-  formatTime,
   getCourse,
   getProject,
   pendingDrafts,
   readiness,
   readinessText,
+  sessionStartsAt,
   upcomingSessions,
-  VENUE_UNSET,
 } from "@/lib/mockup/logic";
+import { SessionDays } from "../_components/session-days";
 import { Badge, CARD, PageHeader } from "../_components/ui";
 
 /** 講師首頁：接下來的場次，依日期排在一條日程軸上，每場列出準備度缺項。 */
@@ -31,7 +31,7 @@ export default function HomePage() {
           const course = getCourse(s.courseId)!;
           const project = getProject(course.projectId)!;
           const items = readiness(s);
-          const { day, month } = dateParts(s.startsAt);
+          const { day, month } = dateParts(sessionStartsAt(s));
           const next = i === 0;
 
           return (
@@ -64,18 +64,9 @@ export default function HomePage() {
                   )}
                 </div>
 
-                <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                  <div className="flex gap-2">
-                    <dt className="text-body-muted">時間</dt>
-                    <dd className="text-navy">
-                      {formatDate(s.startsAt)} {formatTime(s.startsAt)}–{formatTime(s.endsAt)}
-                    </dd>
-                  </div>
-                  <div className="flex gap-2">
-                    <dt className="text-body-muted">地點</dt>
-                    <dd className={s.venue === null ? "font-bold text-warning" : "text-navy"}>{s.venue ?? VENUE_UNSET}</dd>
-                  </div>
-                </dl>
+                <div className="mt-3">
+                  <SessionDays session={s} />
+                </div>
 
                 {items.length > 0 && (
                   <ul className="mt-4 space-y-1.5 border-t-2 border-iced pt-4 text-sm">

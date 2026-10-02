@@ -4,9 +4,7 @@ import { notFound } from "next/navigation";
 import { MOCK_NOW, SESSIONS } from "@/lib/mockup/data";
 import {
   PORTAL_VALID_DAYS,
-  formatDate,
   formatDateTime,
-  formatTime,
   getCourse,
   getProject,
   getSession,
@@ -16,9 +14,11 @@ import {
   readiness,
   readinessText,
   seriesLabel,
+  sessionDateRange,
+  sessionDayCountMismatch,
   type PortalState,
-  VENUE_UNSET,
 } from "@/lib/mockup/logic";
+import { SessionDays } from "../../../_components/session-days";
 import { Badge, Breadcrumb, Card, CARD, Empty, Facts, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
 
 export function generateStaticParams() {
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps<"/sessions/[session
   const { sessionId } = await params;
   const session = getSession(sessionId);
   const course = session && getCourse(session.courseId);
-  return { title: course ? `${course.title} ${formatDate(session!.startsAt)}` : "場次" };
+  return { title: course ? `${course.title} ${sessionDateRange(session!)}` : "場次" };
 }
 
 const PORTAL_BADGE: Record<PortalState, { tone: "neutral" | "success" | "warning" | "danger"; label: string }> = {
@@ -48,6 +48,7 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[sess
   const project = getProject(course.projectId)!;
 
   const items = readiness(session);
+  const dayMismatch = sessionDayCountMismatch(session, course.blueprint);
   const pub = session.publication;
   const state = portalState(session, MOCK_NOW);
   const badge = PORTAL_BADGE[state];
@@ -62,11 +63,11 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[sess
         items={[
           { label: project.title, href: `/projects/${project.id}` },
           { label: course.title, href: `/courses/${course.id}` },
-          { label: formatDate(session.startsAt) },
+          { label: sessionDateRange(session) },
         ]}
       />
       <PageHeader
-        title={`${course.title}　${formatDate(session.startsAt)}`}
+        title={`${course.title}　${sessionDateRange(session)}`}
         description="這一場的時間、地點、連結和要給學員的東西，都在這裡。"
       />
 
@@ -195,20 +196,13 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[sess
               <span id="info">場次資訊</span>
             </SectionTitle>
             <Card>
-              <Facts
-                items={[
-                  ["日期", formatDate(session.startsAt)],
-                  ["時間", `${formatTime(session.startsAt)}–${formatTime(session.endsAt)}`],
-                  [
-                    "地點",
-                    session.venue === null ? (
-                      <span key="v" className="font-bold text-warning">{VENUE_UNSET}</span>
-                    ) : (
-                      session.venue
-                    ),
-                  ],
-                ]}
-              />
+              <p className="mb-3 text-xs text-body-muted">每一天對應藍圖的同一天，各有日期、地點與授課講師。</p>
+              <SessionDays session={session} />
+              {dayMismatch && (
+                <p role="alert" className="mt-3 text-sm font-bold text-warning">
+                  這個場次排了 {dayMismatch.sessionDays} 天，藍圖是 {dayMismatch.blueprintDays} 天。時程不同的版本請另開一門課程。
+                </p>
+              )}
             </Card>
           </section>
 

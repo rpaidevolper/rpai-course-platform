@@ -588,14 +588,13 @@ export const COURSES: Course[] = [
 const SLIDO_CI_1015: { label: string; url: string } = { label: "Slido 互動", url: "https://app.sli.do/event/demo-a1015" };
 const SLIDO_PA_0918 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-b0918" };
 const SLIDO_CA_1105 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-a1105" };
+const SLIDO_GAS_1020 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-e1020" };
 
 export const SESSIONS: Session[] = [
   {
     id: "s-ci-1015",
     courseId: "c-claude-intro",
-    startsAt: "2026-10-15T09:00:00+08:00",
-    endsAt: "2026-10-15T16:00:00+08:00",
-    venue: "A 公司台中廠 3F 訓練教室",
+    days: [{ startsAt: "2026-10-15T09:00:00+08:00", endsAt: "2026-10-15T16:00:00+08:00", venue: "A 公司台中廠 3F 訓練教室", instructorId: "inst-lin" }],
     links: [SLIDO_CI_1015],
     publication: {
       publishedAt: "2026-10-06T18:00:00+08:00",
@@ -608,9 +607,7 @@ export const SESSIONS: Session[] = [
   {
     id: "s-ci-1022",
     courseId: "c-claude-intro",
-    startsAt: "2026-10-22T09:00:00+08:00",
-    endsAt: "2026-10-22T16:00:00+08:00",
-    venue: "A 公司台中廠 3F 訓練教室",
+    days: [{ startsAt: "2026-10-22T09:00:00+08:00", endsAt: "2026-10-22T16:00:00+08:00", venue: "A 公司台中廠 3F 訓練教室", instructorId: "inst-lin" }],
     links: [],
     publication: null,
     portal: { code: "a1022", closedAt: null, expiresAtOverride: null },
@@ -618,9 +615,7 @@ export const SESSIONS: Session[] = [
   {
     id: "s-ca-1105",
     courseId: "c-claude-advanced",
-    startsAt: "2026-11-05T13:30:00+08:00",
-    endsAt: "2026-11-05T16:30:00+08:00",
-    venue: null,
+    days: [{ startsAt: "2026-11-05T13:30:00+08:00", endsAt: "2026-11-05T16:30:00+08:00", venue: null, instructorId: "inst-chou" }],
     links: [SLIDO_CA_1105],
     publication: null,
     portal: { code: "a1105", closedAt: null, expiresAtOverride: null },
@@ -628,9 +623,7 @@ export const SESSIONS: Session[] = [
   {
     id: "s-pa-0918",
     courseId: "c-pa-finance",
-    startsAt: "2026-09-18T09:30:00+08:00",
-    endsAt: "2026-09-18T16:30:00+08:00",
-    venue: "B 公司 8F 大會議室",
+    days: [{ startsAt: "2026-09-18T09:30:00+08:00", endsAt: "2026-09-18T16:30:00+08:00", venue: "B 公司 8F 大會議室", instructorId: "inst-lin" }],
     links: [SLIDO_PA_0918],
     publication: {
       publishedAt: "2026-09-16T17:00:00+08:00",
@@ -639,6 +632,24 @@ export const SESSIONS: Session[] = [
       links: [SLIDO_PA_0918],
     },
     portal: { code: "b0918", closedAt: null, expiresAtOverride: null },
+  },
+  {
+    // 兩天課程一個場次：每一天各有日期、地點與授課講師
+    id: "s-gas-1020",
+    courseId: "c-gas-two-day",
+    days: [
+      { startsAt: "2026-10-20T09:00:00+08:00", endsAt: "2026-10-20T16:00:00+08:00", venue: "E 公司新竹廠 2F 會議室", instructorId: "inst-lin" },
+      { startsAt: "2026-10-27T09:00:00+08:00", endsAt: "2026-10-27T16:00:00+08:00", venue: "E 公司新竹廠 2F 會議室", instructorId: "inst-chou" },
+    ],
+    links: [SLIDO_GAS_1020],
+    // 一次發布可以包含每一天的簡報；學員入口只顯示當天那份與整門課的學員手冊
+    publication: {
+      publishedAt: "2026-10-05T18:00:00+08:00",
+      artifactIds: ["a-gas-slides-d1-1", "a-gas-slides-d2-1", "a-gas-handbook-1"],
+      materialIds: [],
+      links: [SLIDO_GAS_1020],
+    },
+    portal: { code: "e1020", closedAt: null, expiresAtOverride: null },
   },
 ];
 
