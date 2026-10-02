@@ -18,7 +18,7 @@
 gh workflow run deploy.yml --ref main
 ```
 
-只允許在 `main` 上手動觸發。第一次部署（環境剛建好時）也是用這個指令。
+只允許在 `main` 上手動觸發。環境剛建好時的第一次部署由 `scripts/setup-production.sh` 完成（bootstrap），之後都是合併到 `main` 自動部署。
 
 ## 回滾
 

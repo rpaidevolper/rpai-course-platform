@@ -25,10 +25,14 @@ env:
 
 jobs:
   deploy:
-    # 手動觸發只允許在 main 上；自動觸發只在 CI 成功時
+    # 手動觸發只允許在 main 上。自動觸發只在「本 repo 自己的 push」CI 成功時：
+    # 這個 job 帶著 production secrets，不能讓 fork PR（分支名也可以叫 main）的 CI 結果觸發它。
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.event == 'push'
+        && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -69,6 +73,8 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # next.config.ts 在 build 時內嵌（不依賴 --prebuilt 部署的 runtime env）
+          APP_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
           # NEXT_PUBLIC_* 會在 build 時寫進前端 bundle，所以 build 前一定要先 pull

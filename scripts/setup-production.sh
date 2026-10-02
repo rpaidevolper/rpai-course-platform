@@ -287,17 +287,41 @@ for name in ANTHROPIC_API_KEY NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON
 done
 pause
 
-# ── 7. Production 網址 ────────────────────────────────────────────────────
-stage "Production 網址（smoke test 用）"
+# ── 7. 首次部署（bootstrap）與 production 網址 ───────────────────────────
+stage "首次部署（bootstrap）並取得 production 網址"
+say "在你的終端機裡完成第一次部署：套用 migration、部署 Vercel、跑 smoke test。"
+say "這同時是 deploy.yml 的預演：它跑的是同一組指令，這裡過了，之後的自動部署才有把握。"
+warn "這是一次性的 bootstrap：把你『目前 checkout 的分支』（$(git rev-parse --abbrev-ref HEAD)）部署到全新的 production。"
+note "之後 production 一律由 GitHub Actions 部署 main，不要再手動部署。"
+confirm "開始部署？" || { warn "已取消。要重來就重跑本腳本（已輸入的值會沿用）。"; exit 1; }
+export SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD VERCEL_ORG_ID VERCEL_PROJECT_ID
+APP_COMMIT_SHA=$(git rev-parse HEAD)
+export APP_COMMIT_SHA
+step "套用 migration …"
+pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+pnpm exec supabase db push --password "$SUPABASE_DB_PASSWORD"
+step "Vercel pull / build / deploy …"
+npx --yes "$VERCEL_CLI" pull --yes --environment=production --token "$VERCEL_TOKEN"
+npx --yes "$VERCEL_CLI" build --prod --token "$VERCEL_TOKEN"
+DEPLOY_URL=$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token "$VERCEL_TOKEN" -e APP_COMMIT_SHA="$APP_COMMIT_SHA")
+say "✓ 已部署：$DEPLOY_URL"
 open_url "https://vercel.com/dashboard"
-step "進入 $VERCEL_PROJECT_NAME 專案 → Settings → Domains，找到 production 網址（通常是 ${VERCEL_PROJECT_NAME}.vercel.app）。"
+step "進入 $VERCEL_PROJECT_NAME 專案 → Settings → Domains，找到 production 網址（不是上面那個單次部署的網址）。"
+note "名稱被占用時 Vercel 會加後綴，所以請以 Dashboard 顯示的為準。"
 ask PRODUCTION_URL "Paste production URL（含 https://）:"
 write_env PRODUCTION_URL "$PRODUCTION_URL"
 set_var PRODUCTION_URL "$PRODUCTION_URL"
+step "Smoke test …"
+if scripts/smoke-test.sh "$PRODUCTION_URL" "$APP_COMMIT_SHA"; then
+  say "✓ production 已上線，smoke test 通過"
+else
+  warn "smoke test 失敗。常見原因見 docs/runbook.md；修好後重跑本腳本。"
+  exit 1
+fi
+pause
 
 finish
-say "下一步：把這個 PR 合併到 main，然後第一次部署由手動觸發："
-say "  gh workflow run deploy.yml --ref main"
-say "之後每次合併到 main 都會自動部署。"
+say "下一步：把這個 PR 合併到 main。合併本身就會觸發 Deploy，之後每次合併到 main 都會自動部署。"
+say "到 GitHub → Actions → Deploy 確認第一次自動部署是綠的。"
 say "做完可刪除 $ENV_FILE 與 .vercel/（內含 production 密碼，已被 .gitignore 排除）。"
 printf '\n'

@@ -211,6 +211,6 @@ claude plugin install mattpocock-skills@mattpocock
 - **GitHub 規則**：ruleset 在 `.github/rulesets/main.json`，labels 在 `.github/labels.json`。修改後走 PR 合併，再執行 `scripts/setup-github.sh` 套用。
 - **Claude 憑證**：GitHub 端的 AI review 與 `@claude` 使用 repo secret `CLAUDE_CODE_OAUTH_TOKEN`。更新方式：執行 `claude setup-token` 取得 token，再執行 `gh secret set CLAUDE_CODE_OAUTH_TOKEN`。
 - **Claude 服務中斷或額度用完**：`ai-review` 是必要 check，會擋住所有合併。執行 `scripts/setup-github.sh --without-ai-review` 暫時解除，恢復後再執行不帶參數的版本。
-- **建立 production 環境（只做一次）**：在 owner 帳號下執行 `scripts/setup-production.sh`。它會帶你建立 Supabase 與 Vercel 專案，並設定 GitHub secrets 與 Vercel 環境變數。完成後把 PR 合併到 `main`，再執行 `gh workflow run deploy.yml --ref main` 做第一次部署。
+- **建立 production 環境（只做一次）**：在 owner 帳號下執行 `scripts/setup-production.sh`。它會帶你建立 Supabase 與 Vercel 專案，並設定 GitHub secrets 與 Vercel 環境變數。最後一關會在你的終端機做第一次（bootstrap）部署並跑 smoke test。**請先跑 wizard，再合併包含 `deploy.yml` 的 PR**：合併本身就會觸發 Deploy，secrets 沒設好會讓 `main` 顯示紅燈。Wizard 要在你自己的終端機執行（密碼是隱藏輸入，不能透過 Claude Code 的 `!`）。
 - **Production image**：`docker build -t rpai-course-platform --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... .`，執行時以 `--env-file` 提供其餘環境變數。兩個 `NEXT_PUBLIC_*` 必須在 build 時給。
 - **新增成員**：Settings → Collaborators 加入對方的 GitHub 帳號。

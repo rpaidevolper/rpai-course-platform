@@ -37,7 +37,9 @@
 
 ### 合併後（`deploy.yml`）
 
-觸發：`workflow_run`，等 `main` 上的 `CI` workflow 成功；也提供 `workflow_dispatch` 手動重跑。使用 `concurrency` 讓同時間只有一個部署，且不取消進行中的部署。
+觸發：`workflow_run`，等 `main` 上的 `CI` workflow 成功；也提供 `workflow_dispatch` 手動重跑（只允許在 `main`）。
+
+**安全**：repo 是 public，而 deploy job 帶著 production secrets。`workflow_run` 的 `branches` 只比對觸發 run 的分支名，fork PR 的分支也可以叫 `main`。所以 job 條件額外要求 `workflow_run.event == 'push'` 且 `head_repository.full_name == github.repository`，只有本 repo 自己的 push 能觸發部署。使用 `concurrency` 讓同時間只有一個部署，且不取消進行中的部署。
 
 1. `supabase link` + `supabase db push`：把尚未套用的 migration 套到 production。
 2. `vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`，輸出部署網址。
@@ -50,7 +52,7 @@
 
 ### Health check
 
-`GET /api/health` 回 JSON：`{ status, database, commit }`。`database` 用 service role client 查一次 `courses`（`select id limit 1`）判斷。資料庫不通時回 503。不洩漏錯誤細節與任何金鑰。`commit` 取部署時由 workflow 以 `-e APP_COMMIT_SHA=$GITHUB_SHA` 注入的環境變數，沒有則為 `null`；smoke test 用它確認線上跑的就是剛部署的 commit。Smoke test 打 production 網址（repo variable `PRODUCTION_URL`），不打單次部署的唯一網址，因為後者預設受 Vercel 保護。
+`GET /api/health` 回 JSON：`{ status, database, commit }`。`database` 用 service role client 查一次 `courses`（`select id limit 1`）判斷。資料庫不通時回 503。不洩漏錯誤細節與任何金鑰。`commit` 取 `APP_COMMIT_SHA`，沒有（或空字串）則為 `null`。這個值在 `vercel build` 時由 `next.config.ts` 的 `env` 內嵌（deploy.yml 同時也用 `-e` 傳 runtime env，兩條路徑擇一生效即可），不依賴 `--prebuilt` 部署能否帶 runtime env；smoke test 用它確認線上跑的就是剛部署的 commit。Smoke test 打 production 網址（repo variable `PRODUCTION_URL`），不打單次部署的唯一網址，因為後者預設受 Vercel 保護。
 
 ## 設定與密碼
 
@@ -87,7 +89,9 @@ Vercel Production 環境變數（用 `vercel env add`，不進 repo）：`ANTHRO
 - **Migration 必須向下相容**：先加欄位，下一版才移除舊欄位。因為 migration 先於程式碼上線，舊版程式碼會短暫面對新 schema。
 - **Supabase 免費方案沒有自動備份。** 真實講師資料進來之前建議升級到有每日備份的方案；這是 owner 的決定，runbook 只標出風險。
 - **回滾**：程式碼用 Vercel Instant Rollback；migration 只往前，不做 down，要撤回就寫一個新的修正 migration。
-- **`workflow_run` 只在預設分支的 workflow 檔上執行**：`deploy.yml` 合併到 `main` 後才會生效，第一次部署由 `workflow_dispatch` 觸發。
+- **`workflow_run` 只在預設分支的 workflow 檔上執行**，所以 `deploy.yml` 在合併進 `main` 之前跑不起來，無法在 PR 上預演。為了降低「合併後第一次部署就紅」的風險：
+  - `scripts/setup-production.sh` 的最後一關是 **bootstrap 部署**：在 owner 的終端機裡用和 `deploy.yml` 相同的指令做第一次部署並跑 smoke test，所以 `-e`／內嵌 commit、`output: "standalone"` 在 Vercel 上能否運作、production 網域，都在合併前驗證過。這一次會把當時 checkout 的分支部署到全新（空的）production，是一次性的 bootstrap。
+  - 正確順序：**先跑 wizard，再合併 PR**。合併本身就會觸發 Deploy；若 wizard 還沒跑，Deploy 會在 `Check required secrets` 失敗並讓 `main` 顯示紅燈。
 
 ## 不在範圍內
 
