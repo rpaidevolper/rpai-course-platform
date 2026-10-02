@@ -10,6 +10,7 @@ import {
 import {
   ARTIFACT_KINDS,
   ARTIFACT_LABELS,
+  PROJECT_STATUSES,
   type Artifact,
   type ArtifactKind,
   type Course,
@@ -18,6 +19,8 @@ import {
   type Link,
   type Material,
   type Project,
+  type ProjectStatus,
+  type Requirement,
   type Scenario,
   type Session,
 } from "./types";
@@ -232,3 +235,19 @@ export const VENUE_UNSET = "地點未定";
 export const formatTwd = (n: number) => `NT$ ${n.toLocaleString("en-US")}`;
 
 export type { Project, Course, Session, Framework, Scenario };
+
+// ── 專案：狀態、客戶文件與需求條目 ───────────────────────
+
+/** 專案列表依狀態分組，順序固定為洽談中、進行中、封存；沒有專案的狀態也保留空組。 */
+export function projectsByStatus(projects: Project[]): { status: ProjectStatus; projects: Project[] }[] {
+  return PROJECT_STATUSES.map((status) => ({ status, projects: projects.filter((p) => p.status === status) }));
+}
+
+/**
+ * 沒人負責的需求條目：沒指定負責課程，或指定的課程不存在、不屬於這個專案。
+ * courses 由呼叫端傳入（設計稿傳 COURSES）。
+ */
+export function unassignedRequirements(project: Project, courses: Course[]): Requirement[] {
+  const own = new Set(courses.filter((c) => c.projectId === project.id).map((c) => c.id));
+  return project.requirements.filter((r) => r.courseId === null || !own.has(r.courseId));
+}

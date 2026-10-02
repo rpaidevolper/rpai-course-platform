@@ -49,19 +49,75 @@ export interface Scenario {
   materialNames: string[];
 }
 
+/** 客戶品牌：有填就取代 RPAI 預設品牌。 */
+export interface ClientBrand {
+  name: string;
+  /** 主題色，#RRGGBB */
+  primaryColor: string;
+  note: string;
+}
+
 export interface ClientContext {
   company: string;
   industry: string;
   goal: string;
   scenarioId: string;
+  /** 客戶的 IT 限制；新藍圖會把它複製進工具清單 */
+  itConstraints: string[];
+  /** null 表示沿用 RPAI 品牌 */
+  brand: ClientBrand | null;
+}
+
+/** 專案狀態：洽談中就建立；沒成交就封存。 */
+export const PROJECT_STATUSES = ["negotiating", "active", "archived"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  negotiating: "洽談中",
+  active: "進行中",
+  archived: "封存",
+};
+
+export const CLIENT_DOCUMENT_KINDS = ["original_syllabus", "requirements", "planning_template", "feedback"] as const;
+export type ClientDocumentKind = (typeof CLIENT_DOCUMENT_KINDS)[number];
+export const CLIENT_DOCUMENT_LABELS: Record<ClientDocumentKind, string> = {
+  original_syllabus: "原課綱",
+  requirements: "需求",
+  planning_template: "規劃表範本",
+  feedback: "回饋",
+};
+
+/** 客戶文件：客戶給的檔案或回饋。屬於專案，學員永遠看不到。 */
+export interface ClientDocument {
+  id: string;
+  kind: ClientDocumentKind;
+  title: string;
+  fileName: string;
+  receivedAt: IsoTime;
+  /** 回饋回應的是哪一版課程大綱（產物 id）；只有回饋可以填，其餘一律 null */
+  respondsToOutlineId: string | null;
+}
+
+/** 需求條目：從客戶文件整理出的一條要求，由專案底下的一門課程負責。 */
+export interface Requirement {
+  id: string;
+  text: string;
+  /** 出自哪份客戶文件；講師口頭記下的則為 null */
+  sourceDocumentId: string | null;
+  /** 客戶要求的時數（分鐘）；沒指定時數則為 null */
+  minutes: number | null;
+  /** 負責的課程；null 表示還沒人負責 */
+  courseId: string | null;
 }
 
 export interface Project {
   id: string;
   title: string;
+  status: ProjectStatus;
   /** 只是一個資訊欄位，只有講師看得到 */
   priceTwd: number;
   clientContext: ClientContext;
+  clientDocuments: ClientDocument[];
+  requirements: Requirement[];
 }
 
 export interface BlueprintVersion {

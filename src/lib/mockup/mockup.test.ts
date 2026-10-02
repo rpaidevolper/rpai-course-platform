@@ -9,16 +9,20 @@ import {
   SESSIONS,
 } from "./data";
 import {
+  coursesOfProject,
   getCourse,
+  getProject,
   getSession,
   isStale,
   latestArtifact,
   portalState,
   portalView,
+  projectsByStatus,
   readiness,
+  unassignedRequirements,
   upcomingSessions,
 } from "./logic";
-import type { Session } from "./types";
+import type { Project, Session } from "./types";
 
 describe("設計稿 fixture 參照完整", () => {
   it.each(COURSES)("課程 $id 的藍圖通過 BlueprintSchema", (c) => {
@@ -172,5 +176,98 @@ describe("學員入口", () => {
 
   it("找不到代碼回傳 undefined", () => {
     expect(portalView("nope", MOCK_NOW)).toBeUndefined();
+  });
+});
+
+describe("需求條目的負責課程", () => {
+  const project = getProject("p-a-2026")!;
+
+  it("列出沒有指定負責課程的需求條目", () => {
+    expect(unassignedRequirements(project, COURSES).map((r) => r.id)).toEqual(["r-a-security"]);
+  });
+
+  it("負責課程不存在或屬於別的專案，也算沒人負責", () => {
+    const withBadRefs: Project = {
+      ...project,
+      requirements: [
+        ...project.requirements,
+        { id: "r-x-gone", text: "指向已刪除的課程", sourceDocumentId: "doc-a-needs", minutes: null, courseId: "c-deleted" },
+        { id: "r-x-other", text: "指向別的專案的課程", sourceDocumentId: "doc-a-needs", minutes: null, courseId: "c-pa-finance" },
+      ],
+    };
+    expect(unassignedRequirements(withBadRefs, COURSES).map((r) => r.id)).toEqual([
+      "r-a-security",
+      "r-x-gone",
+      "r-x-other",
+    ]);
+  });
+
+  it("每條都有人負責時回傳空陣列", () => {
+    expect(unassignedRequirements(getProject("p-b-2026")!, COURSES)).toEqual([]);
+  });
+});
+
+describe("專案列表依狀態分組", () => {
+  it("洽談中、進行中、封存各自一組，封存不和進行中混在一起", () => {
+    const groups = projectsByStatus(PROJECTS);
+    expect(groups.map((g) => [g.status, g.projects.map((p) => p.id)])).toEqual([
+      ["negotiating", ["p-c-2027"]],
+      ["active", ["p-a-2026", "p-b-2026", "p-e-2026"]],
+      ["archived", ["p-d-2026"]],
+    ]);
+  });
+
+  it("沒有專案的狀態也保留空的一組，畫面上的順序固定", () => {
+    const groups = projectsByStatus([getProject("p-d-2026")!]);
+    expect(groups.map((g) => [g.status, g.projects.length])).toEqual([
+      ["negotiating", 0],
+      ["active", 0],
+      ["archived", 1],
+    ]);
+  });
+});
+
+describe("專案 fixture 參照完整", () => {
+  const docIds = (p: Project) => p.clientDocuments.map((d) => d.id);
+
+  it("有指定負責課程的需求條目，課程存在且屬於同一個專案", () => {
+    for (const p of PROJECTS) {
+      for (const r of p.requirements) {
+        if (r.courseId === null) continue;
+        expect(getCourse(r.courseId)?.projectId).toBe(p.id);
+      }
+    }
+  });
+
+  it("需求條目的來源是同一個專案的客戶文件", () => {
+    for (const p of PROJECTS) {
+      for (const r of p.requirements) {
+        if (r.sourceDocumentId !== null) expect(docIds(p)).toContain(r.sourceDocumentId);
+      }
+    }
+  });
+
+  it("只有回饋會指向課程大綱，且指向同一個專案裡存在的課程大綱", () => {
+    for (const p of PROJECTS) {
+      const outlineIds = coursesOfProject(p.id).flatMap((c) =>
+        c.artifacts.filter((a) => a.kind === "outline").map((a) => a.id),
+      );
+      for (const d of p.clientDocuments) {
+        if (d.respondsToOutlineId === null) continue;
+        expect(d.kind).toBe("feedback");
+        expect(outlineIds).toContain(d.respondsToOutlineId);
+      }
+    }
+  });
+
+  it("客戶文件 id 在所有專案間不重複", () => {
+    const ids = PROJECTS.flatMap(docIds);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("fixture 至少示範一則指向課程大綱的回饋", () => {
+    expect(getProject("p-a-2026")!.clientDocuments.find((d) => d.kind === "feedback")?.respondsToOutlineId).toBe(
+      "a-ci-outline-1",
+    );
   });
 });

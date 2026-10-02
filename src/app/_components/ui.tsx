@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PROJECT_STATUS_LABELS, type ProjectStatus } from "@/lib/mockup/types";
 
 /**
  * 設計稿（#22）共用元件。品牌：介面產品淺色模式 N5。
@@ -61,7 +62,17 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
   );
 }
 
-export type Crumb = { label: string; href?: string };
+const PROJECT_STATUS_TONES: Record<ProjectStatus, Tone> = {
+  negotiating: "warning",
+  active: "outline",
+  archived: "neutral",
+};
+
+export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
+  return <Badge tone={PROJECT_STATUS_TONES[status]}>{PROJECT_STATUS_LABELS[status]}</Badge>;
+}
+
+export type Crumb ={ label: string; href?: string };
 
 /** 專案 › 課程 › 場次 的層級路徑。 */
 export function Breadcrumb({ items }: { items: Crumb[] }) {
