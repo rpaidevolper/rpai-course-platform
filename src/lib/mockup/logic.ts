@@ -11,11 +11,11 @@ import {
   SESSIONS,
 } from "./data";
 import {
-  ARTIFACT_KINDS,
   ARTIFACT_LABELS,
   PROJECT_STATUSES,
   type Artifact,
   type ArtifactKind,
+  type ClientDocument,
   type Course,
   type Framework,
   type IsoTime,
@@ -23,6 +23,7 @@ import {
   type Material,
   type Project,
   type ProjectStatus,
+  type Publication,
   type Requirement,
   type RequirementReview,
   type Scenario,
@@ -66,14 +67,35 @@ export const pendingDrafts = () => KNOWLEDGE_DRAFTS;
 export const latestBlueprintVersion = (course: Course) =>
   Math.max(...course.blueprintHistory.map((v) => v.version));
 
-/** 產物過期：出自比課程最新藍圖更舊的版本（docs/architecture.md） */
-export const isStale = (course: Course, artifact: Artifact) =>
-  artifact.blueprintVersion < latestBlueprintVersion(course);
+/** 產物的一個系列：同一種類（逐頁腳本與簡報再加上同一天）的所有版本是同一份產物。 */
+export interface ArtifactSeries {
+  kind: ArtifactKind;
+  /** 逐頁腳本與簡報是第幾天；其他為 null */
+  day: number | null;
+}
 
-/** 每一種產物目前最新的一版；還沒產過則為 undefined */
-export function latestArtifact(course: Course, kind: ArtifactKind): Artifact | undefined {
+/** 「第 1 天簡報」「學員手冊」；用詞和藍圖面板的「第 N 天」一致。 */
+export const seriesLabel = ({ kind, day }: ArtifactSeries) =>
+  day === null ? ARTIFACT_LABELS[kind] : `第 ${day} 天${ARTIFACT_LABELS[kind]}`;
+
+/** 依藍圖的天數，列出這門課程應有的整條產物鏈，依鏈的順序排列。 */
+export function artifactSeries(course: Course): ArtifactSeries[] {
+  const days = course.blueprint.days.map((_, i) => i + 1);
+  return [
+    { kind: "outline", day: null },
+    { kind: "prep_sheet", day: null },
+    ...days.flatMap((day): ArtifactSeries[] => [
+      { kind: "page_script", day },
+      { kind: "slides", day },
+    ]),
+    { kind: "handbook", day: null },
+  ];
+}
+
+/** 某一份產物目前最新的一版；還沒產過則為 undefined。逐頁腳本與簡報要給第幾天。 */
+export function latestArtifact(course: Course, kind: ArtifactKind, day: number | null = null): Artifact | undefined {
   return course.artifacts
-    .filter((a) => a.kind === kind)
+    .filter((a) => a.kind === kind && a.day === day)
     .sort((a, b) => b.version - a.version)[0];
 }
 
@@ -96,19 +118,103 @@ export function unitWorkCounts(bp: Blueprint): { modify: number; new: number } {
   return counts;
 }
 
+/** 同一份產物（同種類、同一天）的所有版本，新的在前。 */
+export const artifactVersions = (course: Course, series: ArtifactSeries) =>
+  course.artifacts
+    .filter((a) => a.kind === series.kind && a.day === series.day)
+    .sort((a, b) => b.version - a.version);
+
+export type StaleReason =
+  | { kind: "blueprint"; latestVersion: number }
+  | { kind: "upstream"; artifact: ArtifactKind; day: number | null; latestVersion: number };
+
+/**
+ * 產物為什麼過期（ADR 0003）：綁定的藍圖不是最新版，或任一上游產物版本不是該上游的最新版。
+ * 上游一旦換版，下游就過期，所以過期會沿著鏈往下傳。空陣列代表沒有過期。
+ */
+export function staleReasons(course: Course, artifact: Artifact): StaleReason[] {
+  const reasons: StaleReason[] = [];
+  const latestBp = latestBlueprintVersion(course);
+  if (artifact.blueprintVersion < latestBp) reasons.push({ kind: "blueprint", latestVersion: latestBp });
+  for (const id of artifact.upstreamIds) {
+    const upstream = course.artifacts.find((a) => a.id === id);
+    if (!upstream) throw new Error(`產物 ${artifact.id} 的上游 ${id} 不在課程 ${course.id}`);
+    const latest = latestArtifact(course, upstream.kind, upstream.day)!;
+    if (latest.id !== upstream.id) {
+      reasons.push({ kind: "upstream", artifact: upstream.kind, day: upstream.day, latestVersion: latest.version });
+    }
+  }
+  return reasons;
+}
+
+export const isStale = (course: Course, artifact: Artifact) => staleReasons(course, artifact).length > 0;
+
+export function staleReasonText(reason: StaleReason): string {
+  return reason.kind === "blueprint"
+    ? `藍圖已到 v${reason.latestVersion}`
+    : `${seriesLabel({ kind: reason.artifact, day: reason.day })}已到 v${reason.latestVersion}`;
+}
+
+/**
+ * 講師把某個版本改過再上傳：成為同一份產物的下一版（排在目前最新版之後），
+ * 沿用原版本的藍圖與上游綁定，所以過期與否跟著原本的綁定走。
+ */
+export function instructorEdit(course: Course, baseId: string, upload: { id: string; createdAt: IsoTime }): Artifact {
+  const original = course.artifacts.find((a) => a.id === baseId);
+  if (!original) throw new Error(`課程 ${course.id} 沒有產物 ${baseId}`);
+  const latest = latestArtifact(course, original.kind, original.day)!;
+  return {
+    id: upload.id,
+    kind: original.kind,
+    day: original.day,
+    version: latest.version + 1,
+    blueprintVersion: original.blueprintVersion,
+    upstreamIds: [...original.upstreamIds],
+    editedFromId: original.id,
+    sentToClientAt: null,
+    status: "ready",
+    createdAt: upload.createdAt,
+  };
+}
+
+/** 講師準備單是內部文件，永遠不會發布給學員。 */
+export const isPublishable = (artifact: Pick<Artifact, "kind">) => artifact.kind !== "prep_sheet";
+
+export type PublicationProblem =
+  | { kind: "not_publishable"; artifactId: string }
+  | { kind: "foreign_artifact"; artifactId: string }
+  | { kind: "foreign_material"; materialId: string };
+
+/** 一次發布有什麼不允許的內容：講師準備單、或不屬於這門課程的產物與素材。空陣列代表可以發布。 */
+export function publicationProblems(
+  course: Course,
+  publication: Pick<Publication, "artifactIds" | "materialIds">,
+): PublicationProblem[] {
+  const problems: PublicationProblem[] = [];
+  for (const id of publication.artifactIds) {
+    const a = course.artifacts.find((x) => x.id === id);
+    if (!a) problems.push({ kind: "foreign_artifact", artifactId: id });
+    else if (!isPublishable(a)) problems.push({ kind: "not_publishable", artifactId: id });
+  }
+  for (const id of publication.materialIds) {
+    if (!course.materials.some((m) => m.id === id)) problems.push({ kind: "foreign_material", materialId: id });
+  }
+  return problems;
+}
+
 // ── 準備度 ────────────────────────────────────────────
 
 export type ReadinessItem =
   | { kind: "open_questions"; count: number }
   | { kind: "missing_elements"; labels: string[] }
   | { kind: "units_need_work"; modify: number; new: number }
-  | { kind: "artifact_missing"; artifact: ArtifactKind }
-  | { kind: "artifact_stale"; artifact: ArtifactKind; version: number }
+  | { kind: "artifact_missing"; artifact: ArtifactKind; day: number | null }
+  | { kind: "artifact_stale"; artifact: ArtifactKind; day: number | null; version: number }
   | { kind: "no_materials" }
   | { kind: "no_links" }
   | { kind: "venue_unset" }
   | { kind: "unpublished" }
-  | { kind: "publication_outdated"; artifacts: ArtifactKind[] };
+  | { kind: "publication_outdated"; artifacts: ArtifactSeries[] };
 
 /** 一個場次距離可以上課還缺哪些事。空陣列代表準備好了。 */
 export function readiness(session: Session): ReadinessItem[] {
@@ -126,10 +232,10 @@ export function readiness(session: Session): ReadinessItem[] {
   }
   const work = unitWorkCounts(course.blueprint);
   if (work.modify + work.new > 0) items.push({ kind: "units_need_work", ...work });
-  for (const kind of ARTIFACT_KINDS) {
-    const a = latestArtifact(course, kind);
-    if (!a) items.push({ kind: "artifact_missing", artifact: kind });
-    else if (isStale(course, a)) items.push({ kind: "artifact_stale", artifact: kind, version: a.version });
+  for (const { kind, day } of artifactSeries(course)) {
+    const a = latestArtifact(course, kind, day);
+    if (!a) items.push({ kind: "artifact_missing", artifact: kind, day });
+    else if (isStale(course, a)) items.push({ kind: "artifact_stale", artifact: kind, day, version: a.version });
   }
   if (course.materials.length === 0) items.push({ kind: "no_materials" });
   if (session.links.length === 0) items.push({ kind: "no_links" });
@@ -138,10 +244,12 @@ export function readiness(session: Session): ReadinessItem[] {
   if (!session.publication) {
     items.push({ kind: "unpublished" });
   } else {
-    const pinned = new Set(session.publication.artifactIds);
-    const outdated = ARTIFACT_KINDS.filter((kind) => {
-      const latest = latestArtifact(course, kind);
-      return latest && latest.status === "ready" && !pinned.has(latest.id);
+    // 只看這個場次已經發布過的產物有沒有更新的版本；哪些產物該給學員看是 #35 的事
+    const pinned = course.artifacts.filter((a) => session.publication!.artifactIds.includes(a.id));
+    const outdated = artifactSeries(course).filter(({ kind, day }) => {
+      if (!pinned.some((a) => a.kind === kind && a.day === day)) return false;
+      const latest = latestArtifact(course, kind, day);
+      return latest && latest.status === "ready" && !pinned.includes(latest);
     });
     if (outdated.length > 0) items.push({ kind: "publication_outdated", artifacts: outdated });
   }
@@ -157,9 +265,9 @@ export function readinessText(item: ReadinessItem): string {
     case "units_need_work":
       return `還有 ${[item.modify && `${item.modify} 個單元要改`, item.new && `${item.new} 個單元要新做`].filter(Boolean).join("、")}`;
     case "artifact_missing":
-      return `還沒產出${ARTIFACT_LABELS[item.artifact]}`;
+      return `還沒產出${seriesLabel({ kind: item.artifact, day: item.day })}`;
     case "artifact_stale":
-      return `${ARTIFACT_LABELS[item.artifact]} v${item.version} 已過期，藍圖改過了`;
+      return `${seriesLabel({ kind: item.artifact, day: item.day })} v${item.version} 已過期，藍圖或上游改過了`;
     case "no_materials":
       return "還沒上傳素材";
     case "no_links":
@@ -169,7 +277,7 @@ export function readinessText(item: ReadinessItem): string {
     case "unpublished":
       return "還沒發布給學員";
     case "publication_outdated":
-      return `有較新的${item.artifacts.map((k) => ARTIFACT_LABELS[k]).join("、")}還沒發布`;
+      return `有較新的${item.artifacts.map(seriesLabel).join("、")}還沒發布`;
   }
 }
 
@@ -231,7 +339,7 @@ export function portalView(code: string, now: IsoTime): PortalView | undefined {
     artifacts: pub
       ? course.artifacts
           .filter((a) => pub.artifactIds.includes(a.id))
-          .map((a) => ({ id: a.id, label: ARTIFACT_LABELS[a.kind], version: a.version }))
+          .map((a) => ({ id: a.id, label: seriesLabel(a), version: a.version }))
       : [],
     materials: pub ? course.materials.filter((m) => pub.materialIds.includes(m.id)) : [],
     links: pub ? pub.links : [],
@@ -298,4 +406,9 @@ export function requirementMappingOfCourse(course: Course): RequirementMappingRo
     mapping: mappings[i],
     review: REQUIREMENT_REVIEWS.find((r) => r.requirementId === requirement.id) ?? null,
   }));
+}
+
+/** 回應某一版課程大綱的客戶回饋（客戶文件的 respondsToOutlineId）。 */
+export function outlineFeedback(project: Project, outlineId: string): ClientDocument[] {
+  return project.clientDocuments.filter((d) => d.kind === "feedback" && d.respondsToOutlineId === outlineId);
 }

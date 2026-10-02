@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { COURSES } from "@/lib/mockup/data";
 import {
+  artifactVersions,
   formatDate,
   formatDateTime,
   formatTime,
@@ -9,15 +10,18 @@ import {
   getFramework,
   getProject,
   getScenario,
-  isStale,
-  latestArtifact,
   latestBlueprintVersion,
+  outlineFeedback,
   requirementMappingOfCourse,
+  seriesLabel,
   sessionsOfCourse,
+  staleReasonText,
+  staleReasons,
   unitSourceText,
   VENUE_UNSET,
+  type ArtifactSeries,
 } from "@/lib/mockup/logic";
-import { ARTIFACT_KINDS, ARTIFACT_LABELS } from "@/lib/mockup/types";
+import type { Artifact, Course, Project } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
 import { RequirementMappingPanel } from "../../../_components/requirement-mapping-panel";
 import { Badge, Breadcrumb, Card, CARD, Empty, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
@@ -87,48 +91,40 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
 
       <section aria-labelledby="artifacts" className="mb-10">
         <SectionTitle aside="產檔在你自己的 Claude Code 裡跑，用 RPAI 課程 skill">
-          <span id="artifacts">產物</span>
+          <span id="artifacts">產物鏈</span>
         </SectionTitle>
-        <ul className="space-y-3">
-          {ARTIFACT_KINDS.map((kind) => {
-            const label = ARTIFACT_LABELS[kind];
-            const latest = latestArtifact(course, kind);
-            const older = course.artifacts.filter((a) => a.kind === kind && a !== latest).sort((a, b) => b.version - a.version);
-            const stale = latest ? isStale(course, latest) : false;
+        <p className="-mt-1 mb-4 max-w-2xl text-xs text-body-muted">
+          藍圖 → 課程大綱、講師準備單；藍圖 → 每天的逐頁腳本 → 那天的簡報；各天逐頁腳本 → 學員手冊。上游換了新版本，下游就標成過期。
+        </p>
 
-            return (
-              <li key={kind} className={`${CARD} p-5 ${stale ? "border-l-[3px] border-navy" : ""}`}>
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-                  <div className="min-w-0">
-                    <h3 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-navy">
-                      {label}
-                      {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
-                      {latest && <Badge tone={STATUS_TONE[latest.status]}>{STATUS_TEXT[latest.status]}</Badge>}
-                      {stale && <Badge tone="warning">已過期：藍圖已到 v{latestBp}</Badge>}
-                    </h3>
-                    {latest ? (
-                      <p className="mt-1.5 text-sm">
-                        出自藍圖 v{latest.blueprintVersion}，{formatDateTime(latest.createdAt)} 產出
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-sm text-body-muted">還沒產出</p>
-                    )}
-                  </div>
-                  {!latest ? (
-                    <MockAction>產出{label}</MockAction>
-                  ) : stale ? (
-                    <MockAction>從最新藍圖重新產出</MockAction>
-                  ) : null}
-                </div>
-                {older.length > 0 && (
-                  <p className="mt-3 text-xs text-body-muted">
-                    舊版本：{older.map((a) => `v${a.version}（藍圖 v${a.blueprintVersion}）`).join("、")}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-6">
+          <div>
+            <h3 className="mb-2 text-sm font-bold text-navy">課綱討論</h3>
+            <ul className="grid gap-3 md:grid-cols-2">
+              <ArtifactCard course={course} project={project} series={{ kind: "outline", day: null }} />
+              <ArtifactCard course={course} project={project} series={{ kind: "prep_sheet", day: null }} />
+            </ul>
+          </div>
+
+          {course.blueprint.days.map((d, i) => (
+            <div key={i}>
+              <h3 className="mb-2 text-sm font-bold text-navy">
+                第 {i + 1} 天<span className="font-normal">・{d.theme}</span>
+              </h3>
+              <ul className="grid gap-3 md:grid-cols-2">
+                <ArtifactCard course={course} project={project} series={{ kind: "page_script", day: i + 1 }} />
+                <ArtifactCard course={course} project={project} series={{ kind: "slides", day: i + 1 }} />
+              </ul>
+            </div>
+          ))}
+
+          <div>
+            <h3 className="mb-2 text-sm font-bold text-navy">整門課</h3>
+            <ul className="grid gap-3 md:grid-cols-2">
+              <ArtifactCard course={course} project={project} series={{ kind: "handbook", day: null }} />
+            </ul>
+          </div>
+        </div>
       </section>
 
       <section aria-labelledby="requirement-mapping" className="mb-10">
@@ -210,5 +206,87 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
         </section>
       </div>
     </>
+  );
+}
+
+/** 一個版本綁定了什麼：藍圖版本與上游產物版本。 */
+function bindingText(course: Course, a: Artifact): string {
+  const ups = a.upstreamIds
+    .map((id) => course.artifacts.find((x) => x.id === id))
+    .filter((x): x is Artifact => x !== undefined)
+    .map((u) => `${seriesLabel(u)} v${u.version}`);
+  return `出自藍圖 v${a.blueprintVersion}${ups.length > 0 ? `・上游：${ups.join("、")}` : ""}`;
+}
+
+function ArtifactCard({ course, project, series }: { course: Course; project: Project; series: ArtifactSeries }) {
+  const label = seriesLabel(series);
+  const versions = artifactVersions(course, series);
+  const latest = versions[0];
+  const reasons = latest ? staleReasons(course, latest) : [];
+  const stale = reasons.length > 0;
+  const isOutline = series.kind === "outline";
+  const older = isOutline ? versions : versions.slice(1);
+
+  return (
+    <li className={`${CARD} min-w-0 p-5 ${stale ? "border-l-[3px] border-navy" : ""}`}>
+      <h4 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-navy">
+        {label}
+        {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
+        {latest && <Badge tone={STATUS_TONE[latest.status]}>{STATUS_TEXT[latest.status]}</Badge>}
+        {latest?.editedFromId && <Badge tone="outline">講師修改</Badge>}
+        {series.kind === "prep_sheet" && <Badge>內部・永不發布</Badge>}
+      </h4>
+      {latest ? (
+        <>
+          <p className="mt-1.5 text-sm">{bindingText(course, latest)}</p>
+          <p className="text-xs text-body-muted">
+            {formatDateTime(latest.createdAt)} {latest.editedFromId ? "上傳" : "產出"}
+          </p>
+          {stale && (
+            <p className="mt-2">
+              <Badge tone="warning">已過期：{reasons.map(staleReasonText).join("；")}</Badge>
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="mt-1.5 text-sm text-body-muted">還沒產出</p>
+      )}
+
+      {older.length > 0 && (
+        <div className="mt-3">
+          <h5 className="text-xs font-bold text-body-muted">{isOutline ? "各版本與客戶往返" : "舊版本"}</h5>
+          <ol className="mt-1 space-y-1.5 text-xs">
+            {older.map((a) => {
+              const feedback = isOutline ? outlineFeedback(project, a.id) : [];
+              return (
+                <li key={a.id}>
+                  <span className="font-bold text-navy">v{a.version}</span>（藍圖 v{a.blueprintVersion}
+                  {a.editedFromId ? "，講師修改" : ""}）
+                  {a.sentToClientAt && <span className="font-bold text-navy">・{formatDate(a.sentToClientAt)}已寄給客戶</span>}
+                  {feedback.map((d) => (
+                    <span key={d.id}>
+                      ・客戶回饋：
+                      <Link href={`/projects/${project.id}#docs-heading`} className="font-bold text-navy underline underline-offset-2">
+                        {d.title}
+                      </Link>
+                    </span>
+                  ))}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {!latest ? (
+          <MockAction>產出{label}</MockAction>
+        ) : stale ? (
+          <MockAction>依最新藍圖與上游重新產出</MockAction>
+        ) : null}
+        {latest && <MockAction variant="secondary">上傳講師修改版</MockAction>}
+        {isOutline && latest && !latest.sentToClientAt && <MockAction variant="secondary">標記已寄給客戶</MockAction>}
+      </div>
+    </li>
   );
 }
