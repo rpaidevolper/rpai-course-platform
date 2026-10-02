@@ -69,6 +69,46 @@ export const DaySchema = z.object({
   slots: z.array(SlotSchema).min(1).describe("依序排列的時段，通常上午、下午各一個"),
 });
 
+/** 工具的方案等級：免費／付費／企業版。 */
+export const TOOL_PLANS = ["free", "paid", "enterprise"] as const;
+export type ToolPlan = (typeof TOOL_PLANS)[number];
+
+export const TOOL_PLAN_LABELS: Record<ToolPlan, string> = {
+  free: "免費版",
+  paid: "付費版",
+  enterprise: "企業版",
+};
+
+/** 工具：學員上課要用的軟體或服務。 */
+export const ToolSchema = z.object({
+  name: NonEmpty.describe("工具名稱，例如 Claude、Power Automate"),
+  plan: z.enum(TOOL_PLANS).describe("學員需要的方案等級"),
+  confirmedWithClient: z
+    .boolean()
+    .describe("是否已跟客戶確認學員有這個方案；還沒確認就是 false，不要另外寫進 openQuestions"),
+});
+
+/** 待確認事項的對象：問客戶，或講師自己決定。 */
+export const OPEN_QUESTION_AUDIENCES = ["client", "self"] as const;
+export type OpenQuestionAudience = (typeof OPEN_QUESTION_AUDIENCES)[number];
+
+export const OPEN_QUESTION_AUDIENCE_LABELS: Record<OpenQuestionAudience, string> = {
+  client: "問客戶",
+  self: "自己決定",
+};
+
+/** 待確認事項：藍圖裡還沒決定的事。 */
+export const OpenQuestionSchema = z.object({
+  text: NonEmpty.describe("要確認的事，寫成一句可以直接問出口的話"),
+  audience: z
+    .enum(OPEN_QUESTION_AUDIENCES)
+    .describe("client：要客戶回答；self：講師自己決定就好"),
+  unit: z
+    .string()
+    .nullable()
+    .describe("受影響單元的標題，要和 days 裡某個單元的 title 完全一致；不限於某個單元則為 null"),
+});
+
 export const BlueprintSchema = z.object({
   title: NonEmpty,
   oneLiner: NonEmpty.describe("一句話說這場課在做什麼，非目標受眾也聽得懂"),
@@ -102,13 +142,18 @@ export const BlueprintSchema = z.object({
     .min(1)
     .describe("依序排列的天；總時長由各時段長度加總，不另外填"),
   constraints: z.array(NonEmpty).describe("場地、設備、時間、政策等限制"),
-  openQuestions: z.array(NonEmpty).describe("還沒跟講師確認的事"),
+  tools: z.array(ToolSchema).describe("學員上課要用的工具與方案等級"),
+  openQuestions: z
+    .array(OpenQuestionSchema)
+    .describe("待確認事項；未確認的工具已由 tools 表達，不要重複列"),
 });
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 export type Day = z.infer<typeof DaySchema>;
 export type Slot = z.infer<typeof SlotSchema>;
 export type Unit = z.infer<typeof UnitSchema>;
+export type Tool = z.infer<typeof ToolSchema>;
+export type OpenQuestion = z.infer<typeof OpenQuestionSchema>;
 
 /** 五元素裡還是空的那幾格。 */
 export function missingElements(bp: Blueprint): FiveElement[] {
@@ -141,7 +186,8 @@ export type BlueprintIssue =
   | { kind: "missing_element"; element: FiveElement }
   | ({ kind: "duration_mismatch"; planned: number; expected: number } & SlotLocation)
   | ({ kind: "lecture_only"; unit: string } & SlotLocation)
-  | { kind: "open_question"; question: string };
+  | ({ kind: "open_question" } & OpenQuestion)
+  | { kind: "unconfirmed_tool"; tool: string; plan: ToolPlan };
 
 /**
  * 藍圖完整性檢查。回傳空陣列代表可以放心拿去生成教材；
@@ -167,8 +213,11 @@ export function checkBlueprint(bp: Blueprint): BlueprintIssue[] {
     });
   });
 
-  for (const question of bp.openQuestions) {
-    issues.push({ kind: "open_question", question });
+  for (const q of bp.openQuestions) {
+    issues.push({ kind: "open_question", ...q });
+  }
+  for (const tool of bp.tools) {
+    if (!tool.confirmedWithClient) issues.push({ kind: "unconfirmed_tool", tool: tool.name, plan: tool.plan });
   }
 
   return issues;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { openItems } from "@/lib/blueprint/open-items";
 import { BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
 import {
   COURSES,
@@ -41,6 +42,21 @@ describe("設計稿 fixture 參照完整", () => {
       expect(titles.filter((t) => t === unit.carriesFrom), `${title} 承接自 ${unit.carriesFrom}`).toHaveLength(1);
       expect(titles.indexOf(unit.carriesFrom)).toBeLessThan(i);
     });
+  });
+
+  it.each(COURSES)("課程 $id 的待確認事項若指向單元，該單元標題恰好存在一個", (c) => {
+    const titles = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units.map((u) => u.title)));
+    for (const q of c.blueprint.openQuestions) {
+      if (q.unit === null) continue;
+      expect(titles.filter((t) => t === q.unit), q.text).toHaveLength(1);
+    }
+  });
+
+  it("有課程示範問客戶事項掛在單元上、未確認工具、自己決定的事項", () => {
+    const all = COURSES.flatMap((c) => openItems(c.blueprint));
+    expect(all.some((i) => i.audience === "client" && i.unit !== null)).toBe(true);
+    expect(all.some((i) => i.tool !== null)).toBe(true);
+    expect(all.some((i) => i.audience === "self")).toBe(true);
   });
 
   it("有一門多天課程示範天 → 時段 → 單元：至少兩天、每天兩個時段，且有跨天承接", () => {
@@ -110,9 +126,10 @@ describe("準備度", () => {
     expect(kinds("s-ci-1022")).toEqual(expect.arrayContaining(["unpublished", "no_links"]));
   });
 
-  it("藍圖有待確認問題、缺五元素、沒產物、地點未定都列出", () => {
+  it("藍圖有待確認事項、缺五元素、沒產物、地點未定都列出", () => {
     const items = readiness(getSession("s-ca-1105")!);
-    expect(items).toContainEqual({ kind: "open_questions", count: 2 });
+    // 兩件問客戶、一件自己決定；工具都已確認
+    expect(items).toContainEqual({ kind: "open_questions", count: 3 });
     expect(items).toContainEqual({ kind: "missing_elements", labels: ["故事"] });
     expect(items.filter((i) => i.kind === "artifact_missing")).toHaveLength(3);
     expect(items.map((i) => i.kind)).toContain("venue_unset");
