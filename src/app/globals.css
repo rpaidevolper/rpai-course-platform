@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+/*
+ * RPAI 品牌「介面產品」淺色模式 N5（見 rpai-brand-guidelines）。
+ * 單色主義：互動色只有 Navy。Teal 只屬於深色模式，這裡不使用。
+ * 語意色只做小面積徽章與文字，不做大色塊。
+ */
+@theme {
+  --color-ice: #e9f3f5;
+  --color-iced: #dbeaee;
+  --color-navy: #011455;
+  --color-navy-press: #000d3a;
+  --color-navy-tint: #dce4f5;
+  --color-body: #454650;
+  --color-warning: #b26b00;
+  --color-warning-tint: #f7efe0;
+
+  --font-sans: "Trebuchet MS", "Noto Sans TC", "Microsoft JhengHei", Calibri,
+    Arial, sans-serif;
+}
+
+body {
+  background: var(--color-ice);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+}
+
+/* 鍵盤焦點：用 Navy 外框，不靠新色相 */
+:focus-visible {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 2px;
+}
