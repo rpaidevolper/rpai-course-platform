@@ -133,7 +133,8 @@ export const artifactVersions = (course: Course, series: ArtifactSeries) =>
 
 export type StaleReason =
   | { kind: "blueprint"; latestVersion: number }
-  | { kind: "upstream"; artifact: ArtifactKind; day: number | null; latestVersion: number };
+  | { kind: "upstream"; artifact: ArtifactKind; day: number | null; latestVersion: number }
+  | { kind: "upstream_stale"; artifact: ArtifactKind; day: number | null };
 
 /**
  * 產物為什麼過期（ADR 0003）：綁定的藍圖不是最新版，或任一上游產物版本不是該上游的最新版。
@@ -149,6 +150,9 @@ export function staleReasons(course: Course, artifact: Artifact): StaleReason[] 
     const latest = latestReadyArtifact(course, upstream.kind, upstream.day);
     if (latest && latest.version > upstream.version) {
       reasons.push({ kind: "upstream", artifact: upstream.kind, day: upstream.day, latestVersion: latest.version });
+    } else if (staleReasons(course, upstream).length > 0) {
+      // 上游本身已過期（例如它還綁著舊藍圖），從它長出來的下游也不可信
+      reasons.push({ kind: "upstream_stale", artifact: upstream.kind, day: upstream.day });
     }
   }
   return reasons;
@@ -157,9 +161,9 @@ export function staleReasons(course: Course, artifact: Artifact): StaleReason[] 
 export const isStale = (course: Course, artifact: Artifact) => staleReasons(course, artifact).length > 0;
 
 export function staleReasonText(reason: StaleReason): string {
-  return reason.kind === "blueprint"
-    ? `藍圖已到 v${reason.latestVersion}`
-    : `${seriesLabel({ kind: reason.artifact, day: reason.day })}已到 v${reason.latestVersion}`;
+  if (reason.kind === "blueprint") return `藍圖已到 v${reason.latestVersion}`;
+  const label = seriesLabel({ kind: reason.artifact, day: reason.day });
+  return reason.kind === "upstream" ? `${label}已到 v${reason.latestVersion}` : `${label}已過期`;
 }
 
 /**

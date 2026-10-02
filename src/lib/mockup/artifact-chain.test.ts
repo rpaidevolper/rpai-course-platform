@@ -53,6 +53,16 @@ describe("過期沿產物鏈傳遞", () => {
     expect(staleIds(snapshot(FRESH))).toEqual([]);
   });
 
+  it("上游本身已過期：藍圖 v2 時只重產了第 1 天簡報，它的逐頁腳本還是藍圖 v1，簡報也算過期", () => {
+    const course = snapshot(
+      FRESH.map((a) => (a.id === "d1-slides-1" ? { ...a, blueprintVersion: 2 } : a)),
+      [1, 2],
+    );
+    const slides = course.artifacts.find((a) => a.id === "d1-slides-1")!;
+    expect(staleReasons(course, slides)).toEqual([{ kind: "upstream_stale", artifact: "page_script", day: 1 }]);
+    expect(staleIds(course)).toContain("d1-slides-1");
+  });
+
   it.each(["pending", "generating", "failed"] as const)("上游新版還是 %s：還不是可用版本，下游不算過期", (status) => {
     const course = snapshot([...FRESH, v({ id: "d1-script-2", kind: "page_script", day: 1, version: 2, status })]);
     expect(staleIds(course)).toEqual([]);
