@@ -228,6 +228,7 @@ const claudeIntroBlueprint = BlueprintSchema.parse({
     },
   ],
   constraints: ["學員用公司筆電，需事先開通 Claude 帳號", "客訴信需去識別化"],
+  tools: [{ name: "Claude", plan: "paid", confirmedWithClient: true }],
   openQuestions: [],
 });
 
@@ -267,7 +268,12 @@ const claudeAdvancedBlueprint = BlueprintSchema.parse({
     },
   ],
   constraints: ["需在入門課所有場次結束後才能上"],
-  openQuestions: ["場地還沒定：台中廠或台北總部", "要不要讓業務部一起來"],
+  tools: [{ name: "Claude", plan: "paid", confirmedWithClient: true }],
+  openQuestions: [
+    { text: "場地要在台中廠還是台北總部？", audience: "client", unit: null },
+    { text: "要不要讓業務部一起來？", audience: "client", unit: "從個人到部門" },
+    { text: "審核規則的範例用品保還是生管的案例", audience: "self", unit: "審核規則寫成提示詞" },
+  ],
 });
 
 const paFinanceBlueprint = BlueprintSchema.parse({
@@ -313,6 +319,10 @@ const paFinanceBlueprint = BlueprintSchema.parse({
     },
   ],
   constraints: ["需要 Power Automate 授權"],
+  tools: [
+    { name: "Power Automate", plan: "paid", confirmedWithClient: true },
+    { name: "Microsoft Teams", plan: "enterprise", confirmedWithClient: true },
+  ],
   openQuestions: [],
 });
 
@@ -384,7 +394,14 @@ const gasTwoDayBlueprint = BlueprintSchema.parse({
     },
   ],
   constraints: ["學員用公司 Google Workspace 帳號，需事先開放 Apps Script", "檢驗資料需用去識別化的範例料號"],
-  openQuestions: [],
+  tools: [
+    { name: "Google 表單", plan: "free", confirmedWithClient: true },
+    { name: "Google Apps Script", plan: "enterprise", confirmedWithClient: false },
+  ],
+  openQuestions: [
+    { text: "通知信可以寄給供應商窗口的真實信箱嗎？還是只寄內部？", audience: "client", unit: "異常通知信" },
+    { text: "第二天下午要不要留 20 分鐘讓各組展示", audience: "self", unit: "交接與維護" },
+  ],
 });
 
 export const COURSES: Course[] = [

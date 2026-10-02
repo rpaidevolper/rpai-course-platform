@@ -163,7 +163,7 @@
 
 過期判定：`artifact.blueprint_id ≠ course_latest_blueprint.id`（view 已建）。
 
-藍圖 JSON 結構：`src/lib/blueprint/schema.ts`（`title`、`oneLiner`、`audience`、`outcomes`、`format`、`narrative`、`elements`、`days`（天 → 時段 → 單元；總時長由各時段加總）、`constraints`、`openQuestions`）。
+藍圖 JSON 結構：`src/lib/blueprint/schema.ts`（`title`、`oneLiner`、`audience`、`outcomes`、`format`、`narrative`、`elements`、`days`（天 → 時段 → 單元；總時長由各時段加總）、`constraints`、`tools`（名稱、方案等級、是否已跟客戶確認）、`openQuestions`（內容、對象 client／self、受影響單元標題））。
 
 ## 7. MCP 工具契約
 

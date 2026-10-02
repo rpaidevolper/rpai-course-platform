@@ -60,6 +60,7 @@ function sampleBlueprint(overrides: Partial<Blueprint> = {}): Blueprint {
       },
     ],
     constraints: ["教室只有投影機，沒有網路白名單問題"],
+    tools: [{ name: "ChatGPT", plan: "free", confirmedWithClient: true }],
     openQuestions: [],
     ...overrides,
   });
@@ -131,10 +132,45 @@ describe("checkBlueprint", () => {
     expect(checkBlueprint(bp).map((i) => i.kind)).not.toContain("lecture_only");
   });
 
-  it("未確認事項逐條列出", () => {
-    const bp = sampleBlueprint({ openQuestions: ["場地有沒有 Wi-Fi"] });
+  it("待確認事項逐條列出，帶著對象與受影響單元", () => {
+    const bp = sampleBlueprint({
+      openQuestions: [
+        { text: "場地有沒有 Wi-Fi", audience: "client", unit: "第一份草稿" },
+        { text: "範本要不要附評分表", audience: "self", unit: null },
+      ],
+    });
     expect(checkBlueprint(bp)).toEqual([
-      { kind: "open_question", question: "場地有沒有 Wi-Fi" },
+      { kind: "open_question", text: "場地有沒有 Wi-Fi", audience: "client", unit: "第一份草稿" },
+      { kind: "open_question", text: "範本要不要附評分表", audience: "self", unit: null },
     ]);
+  });
+
+  it("拒絕對象不是問客戶或自己決定的待確認事項", () => {
+    expect(() =>
+      sampleBlueprint({ openQuestions: [{ text: "場地", audience: "boss" as "client", unit: null }] }),
+    ).toThrow();
+  });
+
+  it("還沒跟客戶確認的工具列為問客戶的待確認事項", () => {
+    const bp = sampleBlueprint({
+      tools: [
+        { name: "ChatGPT", plan: "free", confirmedWithClient: true },
+        { name: "Copilot", plan: "enterprise", confirmedWithClient: false },
+      ],
+    });
+    expect(checkBlueprint(bp)).toEqual([{ kind: "unconfirmed_tool", tool: "Copilot", plan: "enterprise" }]);
+  });
+
+  it("已確認的工具不提示", () => {
+    const bp = sampleBlueprint({
+      tools: [{ name: "Copilot", plan: "paid", confirmedWithClient: true }],
+    });
+    expect(checkBlueprint(bp)).toEqual([]);
+  });
+
+  it("拒絕方案等級不是 free／paid／enterprise 的工具", () => {
+    expect(() =>
+      sampleBlueprint({ tools: [{ name: "Copilot", plan: "pro" as "paid", confirmedWithClient: false }] }),
+    ).toThrow();
   });
 });

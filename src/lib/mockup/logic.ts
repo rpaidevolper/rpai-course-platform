@@ -1,3 +1,4 @@
+import { openItems } from "@/lib/blueprint/open-items";
 import { missingElements, FIVE_ELEMENT_LABELS } from "@/lib/blueprint/schema";
 import {
   COURSES,
@@ -92,8 +93,9 @@ export function readiness(session: Session): ReadinessItem[] {
   if (!course) throw new Error(`場次 ${session.id} 找不到課程 ${session.courseId}`);
   const items: ReadinessItem[] = [];
 
-  if (course.blueprint.openQuestions.length > 0) {
-    items.push({ kind: "open_questions", count: course.blueprint.openQuestions.length });
+  const open = openItems(course.blueprint);
+  if (open.length > 0) {
+    items.push({ kind: "open_questions", count: open.length });
   }
   const missing = missingElements(course.blueprint);
   if (missing.length > 0) {
@@ -124,7 +126,7 @@ export function readiness(session: Session): ReadinessItem[] {
 export function readinessText(item: ReadinessItem): string {
   switch (item.kind) {
     case "open_questions":
-      return `藍圖還有 ${item.count} 個待確認的問題`;
+      return `藍圖還有 ${item.count} 個待確認事項`;
     case "missing_elements":
       return `藍圖缺五元素：${item.labels.join("、")}`;
     case "artifact_missing":

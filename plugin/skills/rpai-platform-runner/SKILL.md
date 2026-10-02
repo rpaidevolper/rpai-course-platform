@@ -38,7 +38,7 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
    下游 skill 開場都會先找 `*_教學藍圖.md`，找到就不會重問前提。
 
 藍圖 JSON 欄位對應：`audience` → 受眾、`outcomes` → 教學目標、`elements` → 五元素落點、
-`narrative` → 敘事主軸、`days` → 時間骨架、`constraints` → 限制、`openQuestions` → 待確認。
+`narrative` → 敘事主軸、`days` → 時間骨架、`constraints` → 限制、`tools` → 工具、`openQuestions` → 待確認事項。
 
 `days` 是「天 → 時段 → 單元」三層：每一天有 `theme`（主軸）與 `slots`（時段）；時段有 `label`（上午／下午）、
 `minutes`（預設 180，不另排休息）與 `units`（單元）；單元有 `title`、`minutes`、`objective`（學習目標）、
@@ -46,7 +46,10 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 `elements`、`carriesFrom`（承接自哪個較早單元的標題，沒有則 `null`）。總時長是各時段 `minutes` 的加總，
 藍圖不另存；時間骨架照天與時段排，**不要自己加休息**，也不要把第幾天搞混。
 
-`openQuestions` 不是空的 → **先列給使用者**，問要不要先確認。使用者說先做，就在產物裡標「（待確認）」，不要自己編答案。
+`tools` 每一項有 `name`、`plan`（`free`／`paid`／`enterprise`）與 `confirmedWithClient`；`confirmedWithClient` 為 `false` 的工具算一筆**問客戶**的待確認事項。
+`openQuestions` 每一項有 `text`、`audience`（`client` 問客戶／`self` 講師自己決定）與 `unit`（受影響單元的標題，沒有則 `null`）。
+
+有待確認事項（`openQuestions` 不是空的，或有未確認的工具）→ **先列給使用者**，依問客戶／自己決定分開列，問要不要先確認。使用者說先做，就在產物裡受影響的單元標「（待確認）」，不要自己編答案。
 
 ### 3. 依 kind 產檔
 
@@ -78,5 +81,5 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 ## 規則
 
 - 不要跳過認領直接產檔；沒認領的工作平台不會知道有人在做。
-- 不要重問藍圖已經回答的事。真的缺資訊才問，而且先看 `openQuestions`。
+- 不要重問藍圖已經回答的事。真的缺資訊才問，而且先看 `openQuestions` 與未確認的 `tools`。
 - 不要修改 `blueprint.v<版本>.json`；覺得藍圖該改，回報給使用者去後台改，讓它升版。
