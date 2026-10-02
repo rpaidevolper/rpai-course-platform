@@ -93,7 +93,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 
 ### 核心原則（動任何功能前先讀）
 
-1. **藍圖是唯一真相來源。** 對話只是產生／修改藍圖的手段；所有生成一律讀 `Blueprint`，不讀對話紀錄。
+1. **藍圖是唯一真相來源。** 對話只是產生／修改藍圖的手段；所有前提（受眾、時數、工具、情境）一律來自 `Blueprint`，不讀對話紀錄。產物可以另讀一份上游產物（例如簡報讀該天的逐頁腳本），但不能從上游產物取得藍圖沒有的前提（見 `docs/adr/0003-page-script-as-upstream-artifact.md`）。
 2. **藍圖有版本，產物綁版本。** `artifacts.blueprint_id` 指向產生它的那一版；藍圖升版不會自動重生產物，UI 顯示「已過期」讓講師決定。
 3. **五元素完整性**是藍圖 schema 的一部分，缺哪格 UI 要看得到。
 4. **產檔在講師自己的 Claude Code 裡跑。** 後台只排工作、收檔案；plugin 透過 MCP 拉藍圖、用 rpai-* skill 產檔、上傳成品。後台不自己跑 python-pptx。
