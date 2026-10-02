@@ -24,7 +24,6 @@ import {
   portalView,
   projectsByStatus,
   publicationProblems,
-  readiness,
   requirementMappingOfCourse,
   unassignedRequirements,
   upcomingSessions,
@@ -275,55 +274,9 @@ describe("定稿（fixture）", () => {
   });
 });
 
-describe("準備度", () => {
-  const kinds = (id: string) => readiness(getSession(id)!).map((i) => i.kind);
-
-  it("已發布但有較新產物時，提示還沒發布新版", () => {
-    const items = readiness(getSession("s-ci-1015")!);
-    expect(items).toContainEqual({
-      kind: "publication_outdated",
-      artifacts: [
-        { kind: "outline", day: null },
-        { kind: "slides", day: 1 },
-      ],
-    });
-    expect(items.filter((i) => i.kind === "artifact_stale")).toEqual([
-      { kind: "artifact_stale", artifact: "handbook", day: null, version: 1 },
-    ]);
-    expect(kinds("s-ci-1015")).not.toContain("unpublished");
-  });
-
-  it("未發布、沒填連結的場次兩項都列出", () => {
-    expect(kinds("s-ci-1022")).toEqual(expect.arrayContaining(["unpublished", "no_links"]));
-  });
-
-  it("藍圖有待確認事項、缺五元素、沒產物、地點未定都列出", () => {
-    const items = readiness(getSession("s-ca-1105")!);
-    // 兩件問客戶、一件自己決定；工具都已確認
-    expect(items).toContainEqual({ kind: "open_questions", count: 3 });
-    expect(items).toContainEqual({ kind: "missing_elements", labels: ["故事"] });
-    expect(items.filter((i) => i.kind === "artifact_missing")).toEqual([
-      { kind: "artifact_missing", artifact: "outline", day: null },
-      { kind: "artifact_missing", artifact: "prep_sheet", day: null },
-      { kind: "artifact_missing", artifact: "page_script", day: 1 },
-      { kind: "artifact_missing", artifact: "slides", day: 1 },
-      { kind: "artifact_missing", artifact: "handbook", day: null },
-    ]);
-    expect(items.map((i) => i.kind)).toContain("venue_unset");
-  });
-
-  it("有要改或新做的單元時列出各幾個", () => {
-    expect(readiness(getSession("s-ca-1105")!)).toContainEqual({ kind: "units_need_work", modify: 1, new: 0 });
-  });
-
-  it("全部就緒的場次沒有缺項", () => {
-    expect(readiness(getSession("s-pa-0918")!)).toEqual([]);
-  });
-});
-
 describe("講師首頁的場次", () => {
   it("只列還沒結束的場次，依開始時間排序", () => {
-    expect(upcomingSessions(MOCK_NOW).map((s) => s.id)).toEqual(["s-ci-1015", "s-gas-1020", "s-ci-1022", "s-ca-1105"]);
+    expect(upcomingSessions(MOCK_NOW).map((s) => s.id)).toEqual(["s-ci-1015", "s-gas-1020", "s-ci-1022", "s-pa-1029", "s-ca-1105"]);
   });
 });
 

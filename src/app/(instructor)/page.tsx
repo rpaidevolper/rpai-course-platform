@@ -7,10 +7,10 @@ import {
   getProject,
   pendingDrafts,
   readiness,
-  readinessText,
   sessionStartsAt,
   upcomingSessions,
 } from "@/lib/mockup/logic";
+import { ReadinessList } from "../_components/readiness-list";
 import { SessionDays } from "../_components/session-days";
 import { Badge, CARD, PageHeader } from "../_components/ui";
 
@@ -69,14 +69,9 @@ export default function HomePage() {
                 </div>
 
                 {items.length > 0 && (
-                  <ul className="mt-4 space-y-1.5 border-t-2 border-iced pt-4 text-sm">
-                    {items.map((item, j) => (
-                      <li key={j} className="flex gap-2.5">
-                        <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-warning" />
-                        <span>{readinessText(item)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-4 border-t-2 border-iced pt-4">
+                    <ReadinessList session={s} items={items} />
+                  </div>
                 )}
               </article>
             </li>

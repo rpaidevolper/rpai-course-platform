@@ -587,6 +587,7 @@ export const COURSES: Course[] = [
 
 const SLIDO_CI_1015: { label: string; url: string } = { label: "Slido 互動", url: "https://app.sli.do/event/demo-a1015" };
 const SLIDO_PA_0918 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-b0918" };
+const SLIDO_PA_1029 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-b1029" };
 const SLIDO_CA_1105 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-a1105" };
 const SLIDO_GAS_1020 = { label: "Slido 互動", url: "https://app.sli.do/event/demo-e1020" };
 
@@ -632,6 +633,20 @@ export const SESSIONS: Session[] = [
       links: [SLIDO_PA_0918],
     },
     portal: { code: "b0918", closedAt: null, expiresAtOverride: null },
+  },
+  {
+    // 同一門課的第二梯：產物都定稿、沒過期，素材、連結、發布都齊了，示範「準備好了」
+    id: "s-pa-1029",
+    courseId: "c-pa-finance",
+    days: [{ startsAt: "2026-10-29T09:30:00+08:00", endsAt: "2026-10-29T16:30:00+08:00", venue: "B 公司 8F 大會議室", instructorId: "inst-lin" }],
+    links: [SLIDO_PA_1029],
+    publication: {
+      publishedAt: "2026-10-07T17:00:00+08:00",
+      artifactIds: ["a-pa-outline-1", "a-pa-slides-1", "a-pa-handbook-1"],
+      materialIds: ["m-pa-fields"],
+      links: [SLIDO_PA_1029],
+    },
+    portal: { code: "b1029", closedAt: null, expiresAtOverride: null },
   },
   {
     // 兩天課程一個場次：每一天各有日期、地點與授課講師

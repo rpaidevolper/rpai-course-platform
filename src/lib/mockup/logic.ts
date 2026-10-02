@@ -284,43 +284,86 @@ export function publicationProblems(
 // ── 準備度 ────────────────────────────────────────────
 
 export type ReadinessItem =
-  | { kind: "open_questions"; count: number }
+  /** 藍圖的待確認事項（openItems），含未確認的工具；tools 是其中幾個是工具 */
+  | { kind: "open_items"; count: number; tools: number }
   | { kind: "missing_elements"; labels: string[] }
+  /** 時段裡單元分鐘數加總和時段長度對不上 */
+  | { kind: "duration_mismatch"; slots: { day: number; slotLabel: string; planned: number; expected: number }[] }
   | { kind: "units_need_work"; modify: number; new: number }
+  /** 需求對照的缺口：⚠️（只部分涵蓋）與 ❌（字面上找不到）的需求條目原文，依需求對照的順序 */
+  | { kind: "requirement_gaps"; partial: string[]; notFound: string[] }
+  /** 還沒有可用（ready）的版本：沒產過，或只有還在產、產失敗的版本 */
   | { kind: "artifact_missing"; artifact: ArtifactKind; day: number | null }
-  | { kind: "artifact_stale"; artifact: ArtifactKind; day: number | null; version: number }
+  /** 某天最新可用的逐頁腳本還沒定稿 */
+  | { kind: "script_not_finalized"; day: number; version: number }
+  /** 最新可用的版本沿鏈過期（staleReasons） */
+  | { kind: "artifact_stale"; artifact: ArtifactKind; day: number | null; version: number; reasons: StaleReason[] }
+  | { kind: "day_count_mismatch"; sessionDays: number; blueprintDays: number }
+  | { kind: "venue_unset"; days: number[]; totalDays: number }
   | { kind: "no_materials" }
   | { kind: "no_links" }
-  | { kind: "venue_unset"; days: number[]; totalDays: number }
   | { kind: "unpublished" }
   | { kind: "publication_outdated"; artifacts: ArtifactSeries[] };
 
-/** 一個場次距離可以上課還缺哪些事。空陣列代表準備好了。 */
-export function readiness(session: Session): ReadinessItem[] {
-  const course = getCourse(session.courseId);
+/**
+ * 一個場次距離可以上課還缺哪些事（#25 user story 48）。空陣列代表準備好了。
+ * 「最新」一律指最新的可用版本（ready），和定稿閘一致。
+ * 純講述單元（lecture_only）是設計上的提醒、不是缺項，所以不列。
+ * course 預設依場次查；測試可傳入改過的課程。
+ */
+export function readiness(session: Session, course: Course | undefined = getCourse(session.courseId)): ReadinessItem[] {
   if (!course) throw new Error(`場次 ${session.id} 找不到課程 ${session.courseId}`);
+  const bp = course.blueprint;
   const items: ReadinessItem[] = [];
 
-  const open = openItems(course.blueprint);
+  // 藍圖
+  const open = openItems(bp);
   if (open.length > 0) {
-    items.push({ kind: "open_questions", count: open.length });
+    items.push({ kind: "open_items", count: open.length, tools: open.filter((i) => i.tool !== null).length });
   }
-  const missing = missingElements(course.blueprint);
+  const missing = missingElements(bp);
   if (missing.length > 0) {
     items.push({ kind: "missing_elements", labels: missing.map((k) => FIVE_ELEMENT_LABELS[k]) });
   }
-  const work = unitWorkCounts(course.blueprint);
+  const slots = checkBlueprint(bp).flatMap((issue) =>
+    issue.kind === "duration_mismatch"
+      ? [{ day: issue.day, slotLabel: bp.days[issue.day - 1].slots[issue.slot - 1].label, planned: issue.planned, expected: issue.expected }]
+      : [],
+  );
+  if (slots.length > 0) items.push({ kind: "duration_mismatch", slots });
+  const work = unitWorkCounts(bp);
   if (work.modify + work.new > 0) items.push({ kind: "units_need_work", ...work });
+
+  // 需求對照：和課程頁的 ✅／⚠️／❌ 用同一個判斷（mapping.status）
+  const rows = requirementMappingOfCourse(course);
+  const textsOf = (status: RequirementMapping["status"]) =>
+    rows.filter((r) => r.mapping.status === status).map((r) => r.requirement.text);
+  const gaps = { partial: textsOf("partial"), notFound: textsOf("not_found") };
+  if (gaps.partial.length + gaps.notFound.length > 0) items.push({ kind: "requirement_gaps", ...gaps });
+
+  // 產物：沿著鏈的順序
   for (const { kind, day } of artifactSeries(course)) {
-    const a = latestArtifact(course, kind, day);
-    if (!a) items.push({ kind: "artifact_missing", artifact: kind, day });
-    else if (isStale(course, a)) items.push({ kind: "artifact_stale", artifact: kind, day, version: a.version });
+    const a = latestReadyArtifact(course, kind, day);
+    if (!a) {
+      items.push({ kind: "artifact_missing", artifact: kind, day });
+      continue;
+    }
+    if (kind === "page_script" && a.finalizedAt === null) {
+      items.push({ kind: "script_not_finalized", day: day!, version: a.version });
+    }
+    const reasons = staleReasons(course, a);
+    if (reasons.length > 0) items.push({ kind: "artifact_stale", artifact: kind, day, version: a.version, reasons });
   }
-  if (course.materials.length === 0) items.push({ kind: "no_materials" });
-  if (session.links.length === 0) items.push({ kind: "no_links" });
+
+  // 場次安排
+  const mismatch = sessionDayCountMismatch(session, bp);
+  if (mismatch) items.push({ kind: "day_count_mismatch", ...mismatch });
   const noVenue = session.days.flatMap((d, i) => (d.venue === null ? [i + 1] : []));
   if (noVenue.length > 0) items.push({ kind: "venue_unset", days: noVenue, totalDays: session.days.length });
 
+  // 給學員的東西
+  if (course.materials.length === 0) items.push({ kind: "no_materials" });
+  if (session.links.length === 0) items.push({ kind: "no_links" });
   if (!session.publication) {
     items.push({ kind: "unpublished" });
   } else {
@@ -336,31 +379,91 @@ export function readiness(session: Session): ReadinessItem[] {
   return items;
 }
 
+const countText = (parts: [number, string][]) =>
+  parts
+    .filter(([n]) => n > 0)
+    .map(([n, label]) => `${n} ${label}`)
+    .join("、");
+
 export function readinessText(item: ReadinessItem): string {
   switch (item.kind) {
-    case "open_questions":
-      return `藍圖還有 ${item.count} 個待確認事項`;
+    case "open_items":
+      return `藍圖還有 ${item.count} 個待確認事項${item.tools > 0 ? `（含 ${item.tools} 個未確認的工具）` : ""}`;
     case "missing_elements":
       return `藍圖缺五元素：${item.labels.join("、")}`;
+    case "duration_mismatch":
+      return item.slots
+        .map((s) => `第 ${s.day} 天${s.slotLabel}單元排了 ${s.planned} 分鐘，時段是 ${s.expected} 分鐘`)
+        .join("；");
     case "units_need_work":
-      return `還有 ${[item.modify && `${item.modify} 個單元要改`, item.new && `${item.new} 個單元要新做`].filter(Boolean).join("、")}`;
+      return `還有 ${countText([
+        [item.modify, "個單元要改"],
+        [item.new, "個單元要新做"],
+      ])}`;
+    case "requirement_gaps":
+      return `需求對照有 ${countText([
+        [item.notFound.length, "條在藍圖裡找不到"],
+        [item.partial.length, "條只部分涵蓋"],
+      ])}`;
     case "artifact_missing":
-      return `還沒產出${seriesLabel({ kind: item.artifact, day: item.day })}`;
+      return `還沒有可用的${seriesLabel({ kind: item.artifact, day: item.day })}`;
+    case "script_not_finalized":
+      return `${seriesLabel({ kind: "page_script", day: item.day })} v${item.version} 還沒定稿`;
     case "artifact_stale":
-      return `${seriesLabel({ kind: item.artifact, day: item.day })} v${item.version} 已過期，藍圖或上游改過了`;
-    case "no_materials":
-      return "還沒上傳素材";
-    case "no_links":
-      return "還沒填 Slido 等連結";
+      return `${seriesLabel({ kind: item.artifact, day: item.day })} v${item.version} 已過期：${item.reasons.map(staleReasonText).join("、")}`;
+    case "day_count_mismatch":
+      return `場次排了 ${item.sessionDays} 天，藍圖是 ${item.blueprintDays} 天`;
     case "venue_unset":
       return item.totalDays === 1
         ? "地點還沒定"
         : `${item.days.map((d) => `第 ${d} 天`).join("、")}地點還沒定`;
+    case "no_materials":
+      return "還沒上傳素材";
+    case "no_links":
+      return "還沒填 Slido 等連結";
     case "unpublished":
       return "還沒發布給學員";
     case "publication_outdated":
       return `有較新的${item.artifacts.map(seriesLabel).join("、")}還沒發布`;
   }
+}
+
+/** 準備度缺項的來源，依畫面上的顯示順序。 */
+export const READINESS_SOURCES = [
+  { source: "blueprint", label: "藍圖" },
+  { source: "requirements", label: "需求對照" },
+  { source: "artifacts", label: "產物" },
+  { source: "session", label: "場次安排" },
+  { source: "publication", label: "給學員的東西" },
+] as const;
+export type ReadinessSource = (typeof READINESS_SOURCES)[number]["source"];
+
+const SOURCE_OF: Record<ReadinessItem["kind"], ReadinessSource> = {
+  open_items: "blueprint",
+  missing_elements: "blueprint",
+  duration_mismatch: "blueprint",
+  units_need_work: "blueprint",
+  requirement_gaps: "requirements",
+  artifact_missing: "artifacts",
+  script_not_finalized: "artifacts",
+  artifact_stale: "artifacts",
+  day_count_mismatch: "session",
+  venue_unset: "session",
+  no_materials: "publication",
+  no_links: "publication",
+  unpublished: "publication",
+  publication_outdated: "publication",
+};
+
+/** 把準備度缺項依來源分組，順序固定（READINESS_SOURCES）；沒有缺項的來源不出現。 */
+export function readinessGroups(
+  items: ReadinessItem[],
+): { source: ReadinessSource; label: string; items: ReadinessItem[] }[] {
+  return READINESS_SOURCES.map(({ source, label }) => ({
+    source,
+    label,
+    items: items.filter((i) => SOURCE_OF[i.kind] === source),
+  })).filter((g) => g.items.length > 0);
 }
 
 /** 講師首頁：還沒結束的場次（最後一天還沒上完），依第一天開始時間排序。 */
