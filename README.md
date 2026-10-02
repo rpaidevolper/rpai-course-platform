@@ -169,9 +169,38 @@ claude plugin install mattpocock-skills@mattpocock
 | [`CLAUDE.md`](CLAUDE.md) | 給 Claude Code 與人共用的專案規範、skill 分工 |
 | [`docs/spec.md`](docs/spec.md) | 產品規格 |
 | [`docs/architecture.md`](docs/architecture.md) | 資料模型、產檔流程 |
+| [`docs/runbook.md`](docs/runbook.md) | 部署、回滾與故障排除 |
+| `docs/specs/` | 設計文件（例如 [正式環境與自動部署](docs/specs/2026-10-02-production-deployment-design.md)） |
 | `docs/adr/` | 架構與流程決策記錄 |
 | `docs/agents/` | workflow skills 讀的設定（issue tracker、labels、文件位置） |
 | `GLOSSARY.md` | 專案共同語言，由 `/grill-with-docs` 在第一次釐清名詞時建立 |
+
+## 11. 環境與部署
+
+只有兩個環境：
+
+| 環境 | 前後端 | 資料庫 | 怎麼用 |
+|---|---|---|---|
+| 本機 | Dev Container（`pnpm dev`） | 每人各自的本機 Supabase（`pnpm db:start`） | 日常開發，隨時 `pnpm db:reset` |
+| Production | Vercel | 雲端 Supabase 專案 | 合併到 `main` 後自動部署 |
+
+**開發者不需要、也不會拿到 production 的任何金鑰。** 不要把 `.env.local` 指到雲端資料庫。
+
+合併到 `main` 之後會自動執行（`.github/workflows/deploy.yml`）：
+
+1. `main` 上的 CI 通過。
+2. 把新的 migration 套到 production 資料庫。
+3. 部署到 Vercel。
+4. Smoke test：`/api/health`（資料庫連線與 commit）、首頁、`/api/mcp` 未帶權杖回 401。
+
+任何一步失敗就中止，workflow 標紅。到 Actions 頁的 **Deploy** 看紀錄；回滾與手動重跑見 [`docs/runbook.md`](docs/runbook.md)。
+
+寫 migration 時的規則：
+
+- PR 階段 CI 的 `migrations` job 會在全新資料庫上從頭套用所有 migration，壞掉的 SQL 會被擋下。
+- Migration 比程式碼先上線，所以**必須向下相容**：新增欄位可以，移除或改名舊欄位要拆成兩個 PR（先上線不再使用它的程式碼，下一個 PR 才移除）。
+- 有破壞性的 migration 要在 PR 說明標明，並在合併前請 owner 先備份。
+- 本機驗證：`pnpm db:reset`。
 
 ---
 
@@ -182,5 +211,6 @@ claude plugin install mattpocock-skills@mattpocock
 - **GitHub 規則**：ruleset 在 `.github/rulesets/main.json`，labels 在 `.github/labels.json`。修改後走 PR 合併，再執行 `scripts/setup-github.sh` 套用。
 - **Claude 憑證**：GitHub 端的 AI review 與 `@claude` 使用 repo secret `CLAUDE_CODE_OAUTH_TOKEN`。更新方式：執行 `claude setup-token` 取得 token，再執行 `gh secret set CLAUDE_CODE_OAUTH_TOKEN`。
 - **Claude 服務中斷或額度用完**：`ai-review` 是必要 check，會擋住所有合併。執行 `scripts/setup-github.sh --without-ai-review` 暫時解除，恢復後再執行不帶參數的版本。
+- **建立 production 環境（只做一次）**：在 owner 帳號下執行 `scripts/setup-production.sh`。它會帶你建立 Supabase 與 Vercel 專案，並設定 GitHub secrets 與 Vercel 環境變數。最後一關會在你的終端機做第一次（bootstrap）部署並跑 smoke test。**請先跑 wizard，再合併包含 `deploy.yml` 的 PR**：合併本身就會觸發 Deploy，secrets 沒設好會讓 `main` 顯示紅燈。Wizard 要在你自己的終端機執行（密碼是隱藏輸入，不能透過 Claude Code 的 `!`）。
 - **Production image**：`docker build -t rpai-course-platform --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... .`，執行時以 `--env-file` 提供其餘環境變數。兩個 `NEXT_PUBLIC_*` 必須在 build 時給。
 - **新增成員**：Settings → Collaborators 加入對方的 GitHub 帳號。

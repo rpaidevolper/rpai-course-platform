@@ -103,3 +103,23 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 - **藍圖 diff UI**：v2 → v3 改了什麼要讓講師看得到。
 - **多講師／團隊**：目前 schema 只有單一 owner，團隊共享要加 membership 表。
 - **卡住的工作**：`generating` 超過一定時間沒完成要能退回 `pending`（講師關了 Claude Code）。
+
+## 8. 部署架構
+
+兩個環境：本機與 production。設計與取捨見 [`docs/specs/2026-10-02-production-deployment-design.md`](specs/2026-10-02-production-deployment-design.md)，操作見 [`docs/runbook.md`](runbook.md)。
+
+```
+開發者（Dev Container）                    GitHub                         Production
+ pnpm dev ── 本機 Supabase     PR ──► CI：lint / typecheck / test / build / migrations
+                                merge to main
+                                   │
+                                   ▼  deploy.yml（CI 通過後）
+                                supabase db push ─────────────► 雲端 Supabase（production）
+                                vercel build + deploy --prod ─► Vercel（Next.js app + /api/mcp）
+                                smoke-test.sh ──► /api/health、/、/api/mcp
+```
+
+- 部署只由 GitHub Actions 觸發，Vercel 的 Git 自動部署關閉（`vercel.json`）。順序固定：migration 先、程式碼後，任何一步失敗就中止。
+- 所以 migration 必須向下相容。
+- 沒有 staging、沒有 PR preview。Production 資料庫的金鑰只在 Vercel 與 GitHub secrets，開發者不持有。
+- `Dockerfile` 與 `output: "standalone"` 保留給日後搬離 Vercel，目前部署用不到。

@@ -61,3 +61,33 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+
+  # 在全新的本機 Supabase 上從頭套用所有 migration；壞掉的 SQL 在 PR 階段就會被擋下。
+  # 不是 required check（見 docs/specs/2026-10-02-production-deployment-design.md）。
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply all migrations to a fresh local Supabase
+        run: pnpm db:start
+      - name: Schema is what the app expects
+        run: |
+          set -euo pipefail
+          set -a && . ./.env.local && set +a
+          auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          for table in courses blueprints artifacts api_tokens; do
+            curl --fail --silent --show-error "${auth[@]}" \
+              "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/$table?select=id&limit=1" >/dev/null
+            echo "table $table: ok"
+          done
+          curl --fail --silent --show-error "${auth[@]}" \
+            "$NEXT_PUBLIC_SUPABASE_URL/storage/v1/bucket/artifacts" >/dev/null
+          echo "bucket artifacts: ok"
+      - if: failure()
+        run: pnpm exec supabase status || true

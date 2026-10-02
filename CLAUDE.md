@@ -119,6 +119,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 | 測試 | `pnpm test`（單檔：`pnpm test src/lib/blueprint/schema.test.ts`） |
 | Build | `pnpm build` |
 | 本機 Supabase | `pnpm db:start`（啟動並把連線資訊寫入 `.env.local`）、`pnpm db:stop`、`pnpm db:reset`（清空並重套 migrations） |
+| 部署後 smoke test | `scripts/smoke-test.sh <url> [commit]` |
 | 建講師權杖 | `pnpm token:create --user <auth.users.id> --label 名稱` |
 | 測 plugin | `claude --plugin-dir ./plugin` |
 
@@ -136,8 +137,8 @@ supabase/migrations/  SQL migration，只新增不改舊檔
 plugin/               講師端 Claude Code plugin（.mcp.json、runner skill、打包的 rpai-* skill）
 .claude-plugin/       marketplace.json，讓 `claude plugin marketplace add rpaidevolper/rpai-course-platform` 找得到 plugin
 .devcontainer/        開發環境（Dev Container）；改了工具鏈版本要同步改 `Dockerfile` 與 `.github/workflows/ci.yml`
-Dockerfile            production image（Next.js standalone）
-scripts/              一次性維運腳本
+Dockerfile            production image（Next.js standalone；目前部署在 Vercel，未使用）
+scripts/              維運腳本（`setup-production.sh` 建 production 環境、`smoke-test.sh` 部署後檢查）
 docs/                 架構與決策記錄
 ```
 
@@ -164,6 +165,7 @@ docs/                 架構與決策記錄
 - `blueprints.content` 寫入前必須通過 `BlueprintSchema.parse()`。
 - 新增欄位 = 新增一個 migration 檔（`supabase/migrations/NNNN_*.sql`），並同步更新 zod schema 與 `docs/architecture.md`。
 - 所有表都開 RLS；資料只有 `owner_id` 本人可讀寫。
+- Migration 必須向下相容：合併後 CI 會先把 migration 套到 production、再部署程式碼，所以舊版程式碼會短暫面對新 schema。新增欄位可以；移除或改名要拆成兩個 PR（先上線不再使用它的程式碼，下一個 PR 才移除）。有破壞性的 migration 要在 PR 說明標明。
 
 ### 環境變數
 
