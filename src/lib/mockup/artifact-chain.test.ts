@@ -53,6 +53,11 @@ describe("過期沿產物鏈傳遞", () => {
     expect(staleIds(snapshot(FRESH))).toEqual([]);
   });
 
+  it.each(["pending", "generating", "failed"] as const)("上游新版還是 %s：還不是可用版本，下游不算過期", (status) => {
+    const course = snapshot([...FRESH, v({ id: "d1-script-2", kind: "page_script", day: 1, version: 2, status })]);
+    expect(staleIds(course)).toEqual([]);
+  });
+
   it("藍圖升版：逐頁腳本、簡報、學員手冊，以及課程大綱與講師準備單全部過期", () => {
     expect(staleIds(snapshot(FRESH, [1, 2]))).toEqual([
       "d1-script-1",

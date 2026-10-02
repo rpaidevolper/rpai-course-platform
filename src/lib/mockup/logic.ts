@@ -99,6 +99,13 @@ export function latestArtifact(course: Course, kind: ArtifactKind, day: number |
     .sort((a, b) => b.version - a.version)[0];
 }
 
+/** 同一份產物最新的「可用」版本（status 為 ready）；還在產或產失敗的新版不算。 */
+export function latestReadyArtifact(course: Course, kind: ArtifactKind, day: number | null = null): Artifact | undefined {
+  return course.artifacts
+    .filter((a) => a.kind === kind && a.day === day && a.status === "ready")
+    .sort((a, b) => b.version - a.version)[0];
+}
+
 /** 單元來源的顯示文字：「Claude 入門」藍圖 v3・提示詞的四個零件 */
 export function unitSourceText(source: UnitSource): string {
   if (source.kind === "course") {
@@ -130,7 +137,7 @@ export type StaleReason =
 
 /**
  * 產物為什麼過期（ADR 0003）：綁定的藍圖不是最新版，或任一上游產物版本不是該上游的最新版。
- * 上游一旦換版，下游就過期，所以過期會沿著鏈往下傳。空陣列代表沒有過期。
+ * 上游一旦有更新的可用版本（ready），下游就過期，所以過期會沿著鏈往下傳；還在產或產失敗的新版不算。空陣列代表沒有過期。
  */
 export function staleReasons(course: Course, artifact: Artifact): StaleReason[] {
   const reasons: StaleReason[] = [];
@@ -139,8 +146,8 @@ export function staleReasons(course: Course, artifact: Artifact): StaleReason[] 
   for (const id of artifact.upstreamIds) {
     const upstream = course.artifacts.find((a) => a.id === id);
     if (!upstream) throw new Error(`產物 ${artifact.id} 的上游 ${id} 不在課程 ${course.id}`);
-    const latest = latestArtifact(course, upstream.kind, upstream.day)!;
-    if (latest.id !== upstream.id) {
+    const latest = latestReadyArtifact(course, upstream.kind, upstream.day);
+    if (latest && latest.version > upstream.version) {
       reasons.push({ kind: "upstream", artifact: upstream.kind, day: upstream.day, latestVersion: latest.version });
     }
   }
