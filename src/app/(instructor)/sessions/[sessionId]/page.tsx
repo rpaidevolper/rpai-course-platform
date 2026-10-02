@@ -15,10 +15,10 @@ import {
   portalState,
   readiness,
   readinessText,
+  seriesLabel,
   type PortalState,
   VENUE_UNSET,
 } from "@/lib/mockup/logic";
-import { ARTIFACT_LABELS } from "@/lib/mockup/types";
 import { Badge, Breadcrumb, Card, CARD, Empty, Facts, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
 
 export function generateStaticParams() {
@@ -100,12 +100,12 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[sess
                   <h3 className="mb-2 text-xs font-bold text-body-muted">學員看到的產物</h3>
                   <ul className="space-y-3 text-sm">
                     {lockedArtifacts.map((a) => {
-                      const latest = latestArtifact(course, a.kind);
+                      const latest = latestArtifact(course, a.kind, a.day);
                       const newer = latest && latest.status === "ready" && latest.version > a.version ? latest : null;
                       return (
                         <li key={a.id}>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-bold text-navy">{ARTIFACT_LABELS[a.kind]}</span>
+                            <span className="font-bold text-navy">{seriesLabel(a)}</span>
                             <Badge tone="outline">v{a.version}</Badge>
                           </div>
                           {newer && (

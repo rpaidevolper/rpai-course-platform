@@ -21,6 +21,7 @@ import {
   portalState,
   portalView,
   projectsByStatus,
+  publicationProblems,
   readiness,
   requirementMappingOfCourse,
   unassignedRequirements,
@@ -138,12 +139,68 @@ describe("設計稿 fixture 參照完整", () => {
     }
   });
 
-  it("發布只鎖定同一門課程的產物與素材", () => {
+  it("產物 id 在所有課程間不重複；同一份產物的版本號不重複", () => {
+    const ids = COURSES.flatMap((c) => c.artifacts.map((a) => a.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const c of COURSES) {
+      const keys = c.artifacts.map((a) => `${a.kind}/${a.day}/${a.version}`);
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
+
+  it.each(COURSES)("課程 $id：逐頁腳本與簡報帶藍圖範圍內的天，其他產物不帶天", (c) => {
+    for (const a of c.artifacts) {
+      if (a.kind === "page_script" || a.kind === "slides") {
+        expect(a.day, a.id).not.toBeNull();
+        expect(a.day! >= 1 && a.day! <= c.blueprint.days.length, a.id).toBe(true);
+      } else {
+        expect(a.day, a.id).toBeNull();
+      }
+    }
+  });
+
+  it.each(COURSES)("課程 $id：上游都存在於同一門課程，且符合產物鏈", (c) => {
+    const byId = (id: string) => c.artifacts.find((a) => a.id === id);
+    for (const a of c.artifacts) {
+      const ups = a.upstreamIds.map(byId);
+      expect(ups.every(Boolean), a.id).toBe(true);
+      if (a.kind === "slides") {
+        expect(ups.map((u) => [u!.kind, u!.day]), a.id).toEqual([["page_script", a.day]]);
+      } else if (a.kind === "handbook") {
+        expect(ups.map((u) => [u!.kind, u!.day]), a.id).toEqual(
+          c.blueprint.days.map((_, i) => ["page_script", i + 1]),
+        );
+      } else {
+        expect(a.upstreamIds, a.id).toEqual([]);
+      }
+    }
+  });
+
+  it.each(COURSES)("課程 $id：講師修改的版本改自同一份產物的較早版本，並沿用它的綁定", (c) => {
+    for (const a of c.artifacts) {
+      if (a.editedFromId === null) continue;
+      const original = c.artifacts.find((x) => x.id === a.editedFromId)!;
+      expect(original, a.id).toBeDefined();
+      expect([original.kind, original.day, original.blueprintVersion, original.upstreamIds]).toEqual([
+        a.kind,
+        a.day,
+        a.blueprintVersion,
+        a.upstreamIds,
+      ]);
+      expect(original.version).toBeLessThan(a.version);
+    }
+  });
+
+  it("只有課程大綱會標已寄給客戶", () => {
+    for (const a of COURSES.flatMap((c) => c.artifacts)) {
+      if (a.kind !== "outline") expect(a.sentToClientAt, a.id).toBeNull();
+    }
+  });
+
+  it("發布只鎖定同一門課程的產物與素材，且不含講師準備單", () => {
     for (const s of SESSIONS) {
       if (!s.publication) continue;
-      const c = getCourse(s.courseId)!;
-      for (const id of s.publication.artifactIds) expect(c.artifacts.map((a) => a.id)).toContain(id);
-      for (const id of s.publication.materialIds) expect(c.materials.map((m) => m.id)).toContain(id);
+      expect(publicationProblems(getCourse(s.courseId)!, s.publication), s.id).toEqual([]);
     }
   });
 
@@ -157,12 +214,18 @@ describe("設計稿 fixture 參照完整", () => {
   });
 });
 
-describe("產物過期", () => {
-  const course = getCourse("c-claude-intro")!;
-
+describe("產物過期（fixture 示範）", () => {
   it("出自舊版藍圖的產物算過期，出自最新版的不算", () => {
+    const course = getCourse("c-claude-intro")!;
     expect(isStale(course, latestArtifact(course, "handbook")!)).toBe(true);
-    expect(isStale(course, latestArtifact(course, "slides")!)).toBe(false);
+    expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(false);
+  });
+
+  it("兩天課程只改了第一天逐頁腳本：第一天簡報與學員手冊過期，第二天簡報沒有", () => {
+    const course = getCourse("c-gas-two-day")!;
+    expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(true);
+    expect(isStale(course, latestArtifact(course, "handbook")!)).toBe(true);
+    expect(isStale(course, latestArtifact(course, "slides", 2)!)).toBe(false);
   });
 });
 
@@ -171,8 +234,16 @@ describe("準備度", () => {
 
   it("已發布但有較新產物時，提示還沒發布新版", () => {
     const items = readiness(getSession("s-ci-1015")!);
-    expect(items).toContainEqual({ kind: "publication_outdated", artifacts: ["outline", "slides"] });
-    expect(items).toContainEqual({ kind: "artifact_stale", artifact: "handbook", version: 1 });
+    expect(items).toContainEqual({
+      kind: "publication_outdated",
+      artifacts: [
+        { kind: "outline", day: null },
+        { kind: "slides", day: 1 },
+      ],
+    });
+    expect(items.filter((i) => i.kind === "artifact_stale")).toEqual([
+      { kind: "artifact_stale", artifact: "handbook", day: null, version: 1 },
+    ]);
     expect(kinds("s-ci-1015")).not.toContain("unpublished");
   });
 
@@ -185,7 +256,13 @@ describe("準備度", () => {
     // 兩件問客戶、一件自己決定；工具都已確認
     expect(items).toContainEqual({ kind: "open_questions", count: 3 });
     expect(items).toContainEqual({ kind: "missing_elements", labels: ["故事"] });
-    expect(items.filter((i) => i.kind === "artifact_missing")).toHaveLength(3);
+    expect(items.filter((i) => i.kind === "artifact_missing")).toEqual([
+      { kind: "artifact_missing", artifact: "outline", day: null },
+      { kind: "artifact_missing", artifact: "prep_sheet", day: null },
+      { kind: "artifact_missing", artifact: "page_script", day: 1 },
+      { kind: "artifact_missing", artifact: "slides", day: 1 },
+      { kind: "artifact_missing", artifact: "handbook", day: null },
+    ]);
     expect(items.map((i) => i.kind)).toContain("venue_unset");
   });
 

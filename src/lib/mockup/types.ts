@@ -12,13 +12,20 @@ export const TOPICS = [
 ] as const;
 export type TopicId = (typeof TOPICS)[number]["id"];
 
-export const ARTIFACT_KINDS = ["outline", "slides", "handbook"] as const;
+/**
+ * 設計稿的產物種類（ADR 0003）。和 `src/lib/artifacts.ts`（MCP／plugin 用的真實種類）是兩回事。
+ * 鏈：藍圖 → 課程大綱、講師準備單；藍圖 → 逐頁腳本（每天）→ 簡報（每天）；各天逐頁腳本 → 學員手冊。
+ */
+export const ARTIFACT_KINDS = ["outline", "prep_sheet", "page_script", "slides", "handbook"] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 export const ARTIFACT_LABELS: Record<ArtifactKind, string> = {
   outline: "課程大綱",
+  prep_sheet: "講師準備單",
+  page_script: "逐頁腳本",
   slides: "簡報",
   handbook: "學員手冊",
 };
+
 
 /** ISO 8601，一律帶 +08:00。 */
 export type IsoTime = string;
@@ -141,11 +148,21 @@ export interface BlueprintVersion {
   note: string;
 }
 
+/** 產物的一個版本。同一種類（逐頁腳本與簡報再加上同一天）的各版本是同一份產物。 */
 export interface Artifact {
   id: string;
   kind: ArtifactKind;
+  /** 第幾天（從 1 起算）；只有逐頁腳本與簡報有，其他一律 null */
+  day: number | null;
   version: number;
+  /** 出自哪一版藍圖 */
   blueprintVersion: number;
+  /** 上游產物版本的 id：簡報 → 該天逐頁腳本；學員手冊 → 各天逐頁腳本；其他為空陣列 */
+  upstreamIds: string[];
+  /** 講師修改後上傳的版本：指向它改自哪個版本，並沿用那個版本的藍圖與上游綁定；AI 產出的為 null */
+  editedFromId: string | null;
+  /** 已寄給客戶的時間；只有課程大綱會有，其他一律 null */
+  sentToClientAt: IsoTime | null;
   status: "pending" | "generating" | "ready" | "failed";
   createdAt: IsoTime;
 }
