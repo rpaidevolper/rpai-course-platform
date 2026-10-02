@@ -26,6 +26,13 @@ export function CoursePrototype() {
   const userTurns = messages.filter((m) => m.role === "user").length;
 
   function selectTopic(next: TopicId) {
+    if (next === topic) return;
+    if (
+      userTurns > 0 &&
+      !window.confirm("換主題會清空目前的對話與藍圖，確定要換嗎？")
+    ) {
+      return;
+    }
     setTopic(next);
     setMessages([openingMessage(next)]);
     setBlueprint(null);
@@ -115,7 +122,7 @@ export function CoursePrototype() {
               onChange={(e) => setDraft(e.target.value)}
               disabled={!topic}
               placeholder={topic ? "輸入你的想法…" : "請先選擇主題"}
-              className="min-w-0 flex-1 rounded-md bg-iced px-3 py-2 text-sm text-navy placeholder:text-body/60 disabled:cursor-not-allowed"
+              className="min-w-0 flex-1 rounded-md bg-iced px-3 py-2 text-sm text-navy placeholder:text-body-muted disabled:cursor-not-allowed"
             />
             <button type="submit" disabled={!topic || !draft.trim()} className={PRIMARY}>
               送出
@@ -152,7 +159,7 @@ export function CoursePrototype() {
           </div>
 
           <div className="mt-6">
-            <h3 className="text-xs font-bold tracking-wide text-body/70">
+            <h3 className="text-xs font-bold tracking-wide text-body-muted">
               從這份藍圖產出
             </h3>
             <div className="mt-2 flex flex-wrap gap-2">

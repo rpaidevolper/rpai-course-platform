@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <header className="mb-8">
-        <p className="text-xs font-bold tracking-wide text-body/70">
+        <p className="text-xs font-bold tracking-wide text-body-muted">
           RPAI 數位優化器
         </p>
         <h1 className="mt-1 text-2xl font-bold text-navy">

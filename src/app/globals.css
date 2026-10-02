@@ -12,7 +12,10 @@
   --color-navy-press: #000d3a;
   --color-navy-tint: #dce4f5;
   --color-body: #454650;
-  --color-warning: #b26b00;
+  /* 取代「Body 70% 透明」的 Label 色：透明度疊出來的對比只有 ~4.0，改用實色 */
+  --color-body-muted: #5f606b;
+  /* 品牌語意色 #b26b00 在 warning-tint／iced 上不到 AA（3.4–3.7），為小字加深 */
+  --color-warning: #8a5200;
   --color-warning-tint: #f7efe0;
 
   --font-sans: "Trebuchet MS", "Noto Sans TC", "Microsoft JhengHei", Calibri,

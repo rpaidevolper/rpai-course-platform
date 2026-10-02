@@ -17,7 +17,7 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
       </header>
 
       <section>
-        <h4 className="text-xs font-bold tracking-wide text-body/70">受眾</h4>
+        <h4 className="text-xs font-bold tracking-wide text-body-muted">受眾</h4>
         <p className="mt-1 text-sm">
           {blueprint.audience.who}
           {blueprint.audience.size ? `（約 ${blueprint.audience.size} 人）` : ""}
@@ -25,7 +25,7 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
       </section>
 
       <section>
-        <h4 className="text-xs font-bold tracking-wide text-body/70">
+        <h4 className="text-xs font-bold tracking-wide text-body-muted">
           學習成果
         </h4>
         <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
@@ -36,7 +36,7 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
       </section>
 
       <section>
-        <h4 className="text-xs font-bold tracking-wide text-body/70">五元素</h4>
+        <h4 className="text-xs font-bold tracking-wide text-body-muted">五元素</h4>
         <ul className="mt-2 grid gap-2 sm:grid-cols-2">
           {FIVE_ELEMENTS.map((key) => {
             const items = blueprint.elements[key];
@@ -67,7 +67,7 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
 
       <section>
         <div className="flex items-baseline justify-between">
-          <h4 className="text-xs font-bold tracking-wide text-body/70">單元</h4>
+          <h4 className="text-xs font-bold tracking-wide text-body-muted">單元</h4>
           <span className="text-xs">
             共 {blueprint.format.durationMinutes} 分鐘
           </span>
@@ -95,7 +95,7 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
 
       {blueprint.openQuestions.length > 0 && (
         <section>
-          <h4 className="text-xs font-bold tracking-wide text-body/70">
+          <h4 className="text-xs font-bold tracking-wide text-body-muted">
             待確認（{blueprint.openQuestions.length}）
           </h4>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
