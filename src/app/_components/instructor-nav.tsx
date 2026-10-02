@@ -14,7 +14,7 @@ export function InstructorNav() {
   const pathname = usePathname();
   return (
     <nav aria-label="主要導覽">
-      <ul className="flex flex-wrap gap-1 lg:flex-col">
+      <ul className="flex flex-wrap gap-1">
         {NAV.map((item) => {
           const active = item.match(pathname);
           return (
