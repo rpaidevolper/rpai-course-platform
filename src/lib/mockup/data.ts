@@ -285,7 +285,7 @@ export const SESSIONS: Session[] = [
     courseId: "c-claude-advanced",
     startsAt: "2026-11-05T13:30:00+08:00",
     endsAt: "2026-11-05T16:30:00+08:00",
-    venue: "地點未定",
+    venue: null,
     links: [SLIDO_CA_1105],
     publication: null,
     portal: { code: "a1105", closedAt: null, expiresAtOverride: null },

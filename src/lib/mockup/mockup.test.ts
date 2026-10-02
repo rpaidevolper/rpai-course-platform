@@ -114,6 +114,12 @@ describe("學員入口", () => {
     expect(json).not.toMatch(/price|360000|A 公司 2026 AI 培訓/);
   });
 
+  it("欄位固定，新增欄位要先改這個測試（避免悄悄帶出專案或價格）", () => {
+    expect(Object.keys(portalView("a1015", MOCK_NOW)!).sort()).toEqual(
+      ["artifacts", "courseTitle", "endsAt", "expiresAt", "links", "materials", "startsAt", "state", "venue"],
+    );
+  });
+
   it("未發布時不給任何教材", () => {
     const view = portalView("a1022", MOCK_NOW)!;
     expect(view.state).toBe("unpublished");

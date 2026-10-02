@@ -12,6 +12,7 @@ import {
   latestArtifact,
   latestBlueprintVersion,
   sessionsOfCourse,
+  VENUE_UNSET,
 } from "@/lib/mockup/logic";
 import { ARTIFACT_KINDS, ARTIFACT_LABELS } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
@@ -178,7 +179,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
                     </Link>
                     {s.publication ? <Badge tone="success">已發布</Badge> : <Badge tone="warning">還沒發布</Badge>}
                   </div>
-                  <p className={`mt-1 text-sm ${s.venue === "地點未定" ? "font-bold text-warning" : ""}`}>{s.venue}</p>
+                  <p className={`mt-1 text-sm ${s.venue === null ? "font-bold text-warning" : ""}`}>{s.venue ?? VENUE_UNSET}</p>
                 </li>
               ))}
             </ul>

@@ -10,6 +10,7 @@ import {
   readiness,
   readinessText,
   upcomingSessions,
+  VENUE_UNSET,
 } from "@/lib/mockup/logic";
 import { Badge, CARD, PageHeader } from "../_components/ui";
 
@@ -72,7 +73,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex gap-2">
                     <dt className="text-body-muted">地點</dt>
-                    <dd className={s.venue === "地點未定" ? "font-bold text-warning" : "text-navy"}>{s.venue}</dd>
+                    <dd className={s.venue === null ? "font-bold text-warning" : "text-navy"}>{s.venue ?? VENUE_UNSET}</dd>
                   </div>
                 </dl>
 

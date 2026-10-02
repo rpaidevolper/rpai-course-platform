@@ -16,6 +16,7 @@ import {
   readiness,
   readinessText,
   type PortalState,
+  VENUE_UNSET,
 } from "@/lib/mockup/logic";
 import { ARTIFACT_LABELS } from "@/lib/mockup/types";
 import { Badge, Breadcrumb, Card, CARD, Empty, Facts, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
@@ -200,8 +201,8 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[sess
                   ["時間", `${formatTime(session.startsAt)}–${formatTime(session.endsAt)}`],
                   [
                     "地點",
-                    session.venue === "地點未定" ? (
-                      <span key="v" className="font-bold text-warning">{session.venue}</span>
+                    session.venue === null ? (
+                      <span key="v" className="font-bold text-warning">{VENUE_UNSET}</span>
                     ) : (
                       session.venue
                     ),

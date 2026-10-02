@@ -116,7 +116,8 @@ export interface Session {
   courseId: string;
   startsAt: IsoTime;
   endsAt: IsoTime;
-  venue: string;
+  /** null 表示地點還沒定 */
+  venue: string | null;
   links: Link[];
   publication: Publication | null;
   portal: {

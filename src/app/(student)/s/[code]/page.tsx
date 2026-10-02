@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MOCK_NOW, SESSIONS } from "@/lib/mockup/data";
-import { formatDate, formatDateTime, formatTime, portalView } from "@/lib/mockup/logic";
+import { formatDate, formatDateTime, formatTime, portalView, VENUE_UNSET } from "@/lib/mockup/logic";
 import { Badge, CARD, MockAction } from "../../../_components/ui";
 
 export function generateStaticParams() {
@@ -12,7 +12,8 @@ export const dynamicParams = false;
 export async function generateMetadata({ params }: PageProps<"/s/[code]">): Promise<Metadata> {
   const { code } = await params;
   const view = portalView(code, MOCK_NOW);
-  return { title: view?.courseTitle ?? "上課資料" };
+  // 學員入口是不需登入的公開頁，不讓搜尋引擎收錄
+  return { title: view?.courseTitle ?? "上課資料", robots: { index: false, follow: false } };
 }
 
 const formatSize = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
@@ -43,7 +44,7 @@ export default async function PortalPage({ params }: PageProps<"/s/[code]">) {
           </div>
           <div className="flex gap-3">
             <dt className="w-10 shrink-0 text-body-muted">地點</dt>
-            <dd className={view.venue === "地點未定" ? "font-bold text-warning" : "text-navy"}>{view.venue}</dd>
+            <dd className={view.venue === null ? "font-bold text-warning" : "text-navy"}>{view.venue ?? VENUE_UNSET}</dd>
           </div>
         </dl>
       </header>

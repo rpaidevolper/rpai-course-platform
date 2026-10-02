@@ -103,7 +103,7 @@ export function readiness(session: Session): ReadinessItem[] {
   }
   if (course.materials.length === 0) items.push({ kind: "no_materials" });
   if (session.links.length === 0) items.push({ kind: "no_links" });
-  if (session.venue === "地點未定") items.push({ kind: "venue_unset" });
+  if (session.venue === null) items.push({ kind: "venue_unset" });
 
   if (!session.publication) {
     items.push({ kind: "unpublished" });
@@ -175,7 +175,7 @@ export interface PortalView {
   courseTitle: string;
   startsAt: IsoTime;
   endsAt: IsoTime;
-  venue: string;
+  venue: string | null;
   expiresAt: IsoTime;
   artifacts: { id: string; label: string; version: number }[];
   materials: Material[];
@@ -225,6 +225,9 @@ export function dateParts(t: IsoTime): { day: string; month: string } {
   const get = (type: string) => parts.find((p) => p.type === type)!.value;
   return { day: get("day"), month: `${get("month")} 月` };
 }
+
+/** 地點還沒定時顯示的文字 */
+export const VENUE_UNSET = "地點未定";
 
 export const formatTwd = (n: number) => `NT$ ${n.toLocaleString("en-US")}`;
 
