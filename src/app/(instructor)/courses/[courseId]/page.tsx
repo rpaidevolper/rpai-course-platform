@@ -5,7 +5,6 @@ import {
   artifactVersions,
   formatDate,
   formatDateTime,
-  formatTime,
   gateBlockText,
   generationGate,
   getCourse,
@@ -16,16 +15,17 @@ import {
   outlineFeedback,
   requirementMappingOfCourse,
   seriesLabel,
+  sessionDateRange,
   sessionsOfCourse,
   staleReasonText,
   staleReasons,
   unitSourceText,
-  VENUE_UNSET,
   type ArtifactSeries,
 } from "@/lib/mockup/logic";
 import type { Artifact, Course, Project } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
 import { RequirementMappingPanel } from "../../../_components/requirement-mapping-panel";
+import { SessionDays } from "../../../_components/session-days";
 import { Badge, Breadcrumb, Card, CARD, Empty, GatedAction, MockAction, PageHeader, SectionTitle } from "../../../_components/ui";
 
 export function generateStaticParams() {
@@ -204,11 +204,13 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
                 <li key={s.id} className={`${CARD} p-4`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <Link href={`/sessions/${s.id}`} className="font-bold text-navy underline-offset-2 hover:underline">
-                      {formatDate(s.startsAt)} {formatTime(s.startsAt)}–{formatTime(s.endsAt)}
+                      {sessionDateRange(s)}
                     </Link>
                     {s.publication ? <Badge tone="success">已發布</Badge> : <Badge tone="warning">還沒發布</Badge>}
                   </div>
-                  <p className={`mt-1 text-sm ${s.venue === null ? "font-bold text-warning" : ""}`}>{s.venue ?? VENUE_UNSET}</p>
+                  <div className="mt-2">
+                    <SessionDays session={s} />
+                  </div>
                 </li>
               ))}
             </ul>

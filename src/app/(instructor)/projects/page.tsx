@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MOCK_NOW, PROJECTS } from "@/lib/mockup/data";
-import { coursesOfProject, formatDate, formatTwd, projectsByStatus, upcomingSessions } from "@/lib/mockup/logic";
+import { coursesOfProject, formatDate, formatTwd, projectsByStatus, sessionStartsAt, upcomingSessions } from "@/lib/mockup/logic";
 import { PROJECT_STATUS_LABELS, type Project, type ProjectStatus } from "@/lib/mockup/types";
 import { CARD, Empty, MockAction, PageHeader, ProjectStatusBadge, SectionTitle } from "../../_components/ui";
 
@@ -72,7 +72,7 @@ function ProjectRow({ project: p, upcoming }: { project: Project; upcoming: Retu
         </div>
         <div>
           <dt className="text-xs font-bold text-body-muted">下一場</dt>
-          <dd className="mt-0.5 text-navy">{next ? formatDate(next.startsAt) : "沒有排定"}</dd>
+          <dd className="mt-0.5 text-navy">{next ? formatDate(sessionStartsAt(next)) : "沒有排定"}</dd>
         </div>
         <div>
           <dt className="text-xs font-bold text-body-muted">價格</dt>

@@ -5,13 +5,13 @@ import { ARTIFACT_LABELS, CLIENT_DOCUMENT_LABELS } from "@/lib/mockup/types";
 import {
   coursesOfProject,
   formatDate,
-  formatTime,
   formatTwd,
   getFramework,
   getProject,
   getScenario,
   latestBlueprintVersion,
   readiness,
+  sessionDateRange,
   sessionsOfCourse,
   unassignedRequirements,
 } from "@/lib/mockup/logic";
@@ -255,7 +255,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[proj
                       {sessions.map((s) => (
                         <li key={s.id}>
                           <Link href={`/sessions/${s.id}`} className="text-navy underline-offset-2 hover:underline">
-                            {formatDate(s.startsAt)} {formatTime(s.startsAt)}–{formatTime(s.endsAt)}
+                            {sessionDateRange(s)}
                           </Link>
                         </li>
                       ))}

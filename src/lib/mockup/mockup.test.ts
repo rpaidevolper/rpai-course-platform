@@ -323,7 +323,7 @@ describe("準備度", () => {
 
 describe("講師首頁的場次", () => {
   it("只列還沒結束的場次，依開始時間排序", () => {
-    expect(upcomingSessions(MOCK_NOW).map((s) => s.id)).toEqual(["s-ci-1015", "s-ci-1022", "s-ca-1105"]);
+    expect(upcomingSessions(MOCK_NOW).map((s) => s.id)).toEqual(["s-ci-1015", "s-gas-1020", "s-ci-1022", "s-ca-1105"]);
   });
 });
 
@@ -341,7 +341,7 @@ describe("學員入口", () => {
 
   it("欄位固定，新增欄位要先改這個測試（避免悄悄帶出專案或價格）", () => {
     expect(Object.keys(portalView("a1015", MOCK_NOW)!).sort()).toEqual(
-      ["artifacts", "courseTitle", "endsAt", "expiresAt", "links", "materials", "startsAt", "state", "venue"],
+      ["artifacts", "courseTitle", "day", "days", "expiresAt", "links", "materials", "state"],
     );
   });
 

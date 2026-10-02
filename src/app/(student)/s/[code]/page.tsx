@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MOCK_NOW, SESSIONS } from "@/lib/mockup/data";
-import { formatDate, formatDateTime, formatTime, portalView, VENUE_UNSET } from "@/lib/mockup/logic";
+import { dayTimeText, formatDate, formatDateTime, portalView, VENUE_UNSET } from "@/lib/mockup/logic";
 import { Badge, CARD, MockAction } from "../../../_components/ui";
 
 export function generateStaticParams() {
@@ -22,6 +22,7 @@ export default async function PortalPage({ params }: PageProps<"/s/[code]">) {
   const { code } = await params;
   const view = portalView(code, MOCK_NOW);
   if (!view) notFound();
+  const multiDay = view.days.length > 1;
 
   const closedMessage = {
     unpublished: "講師還在準備，發布後這裡就會出現上課需要的東西。",
@@ -35,18 +36,22 @@ export default async function PortalPage({ params }: PageProps<"/s/[code]">) {
       <header className="mb-8">
         <p className="text-xs font-bold text-body-muted">RPAI 數位優化器</p>
         <h1 className="mt-2 text-2xl font-bold text-navy">{view.courseTitle}</h1>
-        <dl className="mt-3 space-y-1 text-sm">
-          <div className="flex gap-3">
-            <dt className="w-10 shrink-0 text-body-muted">時間</dt>
-            <dd className="text-navy">
-              {formatDate(view.startsAt)} {formatTime(view.startsAt)}–{formatTime(view.endsAt)}
-            </dd>
-          </div>
-          <div className="flex gap-3">
-            <dt className="w-10 shrink-0 text-body-muted">地點</dt>
-            <dd className={view.venue === null ? "font-bold text-warning" : "text-navy"}>{view.venue ?? VENUE_UNSET}</dd>
-          </div>
-        </dl>
+        <ol className="mt-3 space-y-1.5 text-sm">
+          {view.days.map((d) => {
+            const current = multiDay && d.day === view.day;
+            return (
+              <li
+                key={d.day}
+                aria-current={current ? "date" : undefined}
+                className={`flex flex-wrap gap-x-3 gap-y-0.5 ${current ? "border-l-[3px] border-navy pl-2" : ""}`}
+              >
+                {multiDay && <span className="shrink-0 font-bold text-navy">第 {d.day} 天</span>}
+                <span className="text-navy">{dayTimeText(d)}</span>
+                <span className={d.venue === null ? "font-bold text-warning" : "text-navy"}>{d.venue ?? VENUE_UNSET}</span>
+              </li>
+            );
+          })}
+        </ol>
       </header>
 
       {view.state !== "open" ? (
@@ -83,8 +88,9 @@ export default async function PortalPage({ params }: PageProps<"/s/[code]">) {
 
           <section aria-labelledby="artifacts">
             <h2 id="artifacts" className="mb-3 text-lg font-bold text-navy">
-              上課教材
+              {multiDay ? `第 ${view.day} 天的上課教材` : "上課教材"}
             </h2>
+            {multiDay && <p className="mb-3 text-sm">每一天的簡報會在那一天出現；學員手冊整門課共用一份。</p>}
             <ul className="space-y-2">
               {view.artifacts.map((a) => (
                 <li key={a.id} className={`${CARD} flex items-center justify-between gap-3 px-5 py-4`}>

@@ -52,7 +52,7 @@ export const coursesOfProject = (projectId: string) =>
   COURSES.filter((c) => c.projectId === projectId);
 
 export const sessionsOfCourse = (courseId: string) =>
-  SESSIONS.filter((s) => s.courseId === courseId).sort((a, b) => ms(a.startsAt) - ms(b.startsAt));
+  SESSIONS.filter((s) => s.courseId === courseId).sort((a, b) => ms(sessionStartsAt(a)) - ms(sessionStartsAt(b)));
 
 export const latestFrameworkVersion = (f: Framework) =>
   Math.max(...f.versions.map((v) => v.version));
@@ -291,7 +291,7 @@ export type ReadinessItem =
   | { kind: "artifact_stale"; artifact: ArtifactKind; day: number | null; version: number }
   | { kind: "no_materials" }
   | { kind: "no_links" }
-  | { kind: "venue_unset" }
+  | { kind: "venue_unset"; days: number[]; totalDays: number }
   | { kind: "unpublished" }
   | { kind: "publication_outdated"; artifacts: ArtifactSeries[] };
 
@@ -318,7 +318,8 @@ export function readiness(session: Session): ReadinessItem[] {
   }
   if (course.materials.length === 0) items.push({ kind: "no_materials" });
   if (session.links.length === 0) items.push({ kind: "no_links" });
-  if (session.venue === null) items.push({ kind: "venue_unset" });
+  const noVenue = session.days.flatMap((d, i) => (d.venue === null ? [i + 1] : []));
+  if (noVenue.length > 0) items.push({ kind: "venue_unset", days: noVenue, totalDays: session.days.length });
 
   if (!session.publication) {
     items.push({ kind: "unpublished" });
@@ -352,7 +353,9 @@ export function readinessText(item: ReadinessItem): string {
     case "no_links":
       return "還沒填 Slido 等連結";
     case "venue_unset":
-      return "地點還沒定";
+      return item.totalDays === 1
+        ? "地點還沒定"
+        : `${item.days.map((d) => `第 ${d} 天`).join("、")}地點還沒定`;
     case "unpublished":
       return "還沒發布給學員";
     case "publication_outdated":
@@ -360,19 +363,58 @@ export function readinessText(item: ReadinessItem): string {
   }
 }
 
-/** 講師首頁：還沒結束的場次，依開始時間排序。 */
+/** 講師首頁：還沒結束的場次（最後一天還沒上完），依第一天開始時間排序。 */
 export function upcomingSessions(now: IsoTime): Session[] {
-  return SESSIONS.filter((s) => ms(s.endsAt) >= ms(now)).sort(
-    (a, b) => ms(a.startsAt) - ms(b.startsAt),
+  return SESSIONS.filter((s) => ms(sessionEndsAt(s)) >= ms(now)).sort(
+    (a, b) => ms(sessionStartsAt(a)) - ms(sessionStartsAt(b)),
   );
+}
+
+// ── 場次 ──────────────────────────────────────────────
+
+/** 場次第一天的開始時間 */
+export const sessionStartsAt = (session: Pick<Session, "days">): IsoTime => session.days[0].startsAt;
+/** 場次最後一天的結束時間 */
+export const sessionEndsAt = (session: Pick<Session, "days">): IsoTime => session.days[session.days.length - 1].endsAt;
+
+/**
+ * 場次的天數必須等於藍圖的天數（場次的每一天一對一對應藍圖的天；時程不同的版本另開一門課程）。
+ * 相符回傳 null。
+ */
+export function sessionDayCountMismatch(
+  session: Pick<Session, "days">,
+  blueprint: Blueprint,
+): { sessionDays: number; blueprintDays: number } | null {
+  const sessionDays = session.days.length;
+  const blueprintDays = blueprint.days.length;
+  return sessionDays === blueprintDays ? null : { sessionDays, blueprintDays };
 }
 
 // ── 學員入口 ──────────────────────────────────────────
 
+/** 台灣時間的日曆日期，"2026-10-20"；字串可直接比大小。 */
+const taipeiDate = (t: IsoTime) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(
+    new Date(t),
+  );
+
+/**
+ * 學員入口現在要顯示場次的第幾天（從 1 起算），以台灣時間的日期判斷：
+ * - 今天是場次的某一天 → 那一天（整天都是，下課後也還是，方便學員當晚複習）
+ * - 第一天之前、或兩天之間 → 下一個要上的那天
+ * - 最後一天之後 → 最後一天
+ */
+export function portalDay(session: Pick<Session, "days">, now: IsoTime): number {
+  const today = taipeiDate(now);
+  const dates = session.days.map((d) => taipeiDate(d.startsAt));
+  const upcoming = dates.findIndex((date) => date >= today);
+  return upcoming === -1 ? dates.length : upcoming + 1;
+}
+
 export function portalExpiresAt(session: Session): IsoTime {
   return (
     session.portal.expiresAtOverride ??
-    new Date(ms(session.endsAt) + PORTAL_VALID_DAYS * DAY_MS).toISOString()
+    new Date(ms(sessionEndsAt(session)) + PORTAL_VALID_DAYS * DAY_MS).toISOString()
   );
 }
 
@@ -388,13 +430,15 @@ export function portalState(session: Session, now: IsoTime): PortalState {
 /**
  * 學員入口看得到的東西。型別上刻意不含專案與價格，學員入口頁只能用這個函式取資料。
  * 只回傳發布時鎖定的內容，講師之後的修改不會出現。
+ * 產物只給「今天」（portalDay）那一天的（簡報），加上整門課一份的（學員手冊等）。
  */
 export interface PortalView {
   state: PortalState;
   courseTitle: string;
-  startsAt: IsoTime;
-  endsAt: IsoTime;
-  venue: string | null;
+  /** 現在顯示的是第幾天（portalDay） */
+  day: number;
+  /** 每一天的日期、時間與地點 */
+  days: { day: number; startsAt: IsoTime; endsAt: IsoTime; venue: string | null }[];
   expiresAt: IsoTime;
   artifacts: { id: string; label: string; version: number }[];
   materials: Material[];
@@ -407,17 +451,17 @@ export function portalView(code: string, now: IsoTime): PortalView | undefined {
   const course = getCourse(session.courseId)!;
   const state = portalState(session, now);
   const pub = state === "open" ? session.publication : null;
+  const day = portalDay(session, now);
 
   return {
     state,
     courseTitle: course.title,
-    startsAt: session.startsAt,
-    endsAt: session.endsAt,
-    venue: session.venue,
+    day,
+    days: session.days.map((d, i) => ({ day: i + 1, startsAt: d.startsAt, endsAt: d.endsAt, venue: d.venue })),
     expiresAt: portalExpiresAt(session),
     artifacts: pub
       ? course.artifacts
-          .filter((a) => pub.artifactIds.includes(a.id))
+          .filter((a) => pub.artifactIds.includes(a.id) && (a.day === null || a.day === day))
           .map((a) => ({ id: a.id, label: seriesLabel(a), version: a.version }))
       : [],
     materials: pub ? course.materials.filter((m) => pub.materialIds.includes(m.id)) : [],
@@ -444,6 +488,17 @@ export function dateParts(t: IsoTime): { day: string; month: string } {
   const get = (type: string) => parts.find((p) => p.type === type)!.value;
   return { day: get("day"), month: `${get("month")} 月` };
 }
+
+/** 場次的日期：單天「10月15日 週四」，多天「10月20日 週二–10月27日 週二」 */
+export function sessionDateRange(session: Pick<Session, "days">): string {
+  const first = formatDate(sessionStartsAt(session));
+  const last = formatDate(session.days[session.days.length - 1].startsAt);
+  return first === last ? first : `${first}–${last}`;
+}
+
+/** 一天的日期與時間：「10月20日 週二 09:00–16:00」 */
+export const dayTimeText = (d: { startsAt: IsoTime; endsAt: IsoTime }) =>
+  `${formatDate(d.startsAt)} ${formatTime(d.startsAt)}–${formatTime(d.endsAt)}`;
 
 /** 地點還沒定時顯示的文字 */
 export const VENUE_UNSET = "地點未定";

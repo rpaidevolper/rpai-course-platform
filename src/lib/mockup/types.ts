@@ -208,13 +208,24 @@ export interface Publication {
   links: Link[];
 }
 
-export interface Session {
-  id: string;
-  courseId: string;
+/** 場次裡的一天：一對一對應藍圖裡的同一天（days[i] ↔ blueprint.days[i]）。 */
+export interface SessionDay {
   startsAt: IsoTime;
   endsAt: IsoTime;
   /** null 表示地點還沒定 */
   venue: string | null;
+  /** 這一天的授課講師（instructor.ts 的講師 id） */
+  instructorId: string;
+}
+
+/**
+ * 場次：一群學員把一門課程從頭上完的一次交付。多天的課程是一個場次，
+ * days 的長度必須等於藍圖的天數（見 sessionDayCountMismatch）；開始與結束時間由 days 推得。
+ */
+export interface Session {
+  id: string;
+  courseId: string;
+  days: SessionDay[];
   links: Link[];
   publication: Publication | null;
   portal: {
