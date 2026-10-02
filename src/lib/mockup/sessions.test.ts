@@ -3,6 +3,9 @@ import { COURSES, SESSIONS } from "./data";
 import { getInstructor } from "./instructor";
 import { getCourse, getSession, portalDay, portalView, readiness, readinessText, sessionDayCountMismatch } from "./logic";
 import type { SessionDay } from "./types";
+import { initialState } from "./state";
+
+const st = initialState();
 
 const day = (date: string, instructorId = "inst-lin"): SessionDay => ({
   startsAt: `${date}T09:00:00+08:00`,
@@ -11,7 +14,7 @@ const day = (date: string, instructorId = "inst-lin"): SessionDay => ({
   instructorId,
 });
 
-const twoDayBlueprint = getCourse("c-gas-two-day")!.blueprint;
+const twoDayBlueprint = getCourse(st, "c-gas-two-day")!.blueprint;
 
 describe("場次天數必須等於藍圖天數", () => {
   it("天數相同時沒有問題", () => {
@@ -34,7 +37,7 @@ describe("場次天數必須等於藍圖天數", () => {
 
 describe("場次 fixture", () => {
   it.each(SESSIONS)("場次 $id 的天數等於藍圖天數", (s) => {
-    expect(sessionDayCountMismatch(s, getCourse(s.courseId)!.blueprint)).toBeNull();
+    expect(sessionDayCountMismatch(s, getCourse(st, s.courseId)!.blueprint)).toBeNull();
   });
 
   it.each(SESSIONS)("場次 $id 每一天的授課講師都存在", (s) => {
@@ -99,10 +102,10 @@ describe("學員入口依日期選天", () => {
 
 describe("多天場次的學員入口", () => {
   // s-gas-1020：第一天 10/20（林予晴）、第二天 10/27（周明遠），發布了兩天的簡報與學員手冊
-  const ids = (now: string) => portalView("e1020", now)!.artifacts.map((a) => a.id);
+  const ids = (now: string) => portalView(st, "e1020", now)!.artifacts.map((a) => a.id);
 
   it("第一天之前就先看到第一天的簡報與整門課的學員手冊", () => {
-    const view = portalView("e1020", "2026-10-08T10:00:00+08:00")!;
+    const view = portalView(st, "e1020", "2026-10-08T10:00:00+08:00")!;
     expect(view.state).toBe("open");
     expect(view.day).toBe(1);
     expect(ids("2026-10-08T10:00:00+08:00")).toEqual(["a-gas-slides-d1-1", "a-gas-handbook-1"]);
@@ -118,12 +121,12 @@ describe("多天場次的學員入口", () => {
   });
 
   it("最後一天之後停在最後一天", () => {
-    expect(portalView("e1020", "2026-11-10T10:00:00+08:00")!.day).toBe(2);
+    expect(portalView(st, "e1020", "2026-11-10T10:00:00+08:00")!.day).toBe(2);
     expect(ids("2026-11-10T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-1"]);
   });
 
   it("列出每一天的日期與地點", () => {
-    const view = portalView("e1020", "2026-10-20T10:00:00+08:00")!;
+    const view = portalView(st, "e1020", "2026-10-20T10:00:00+08:00")!;
     expect(view.days).toEqual([
       { day: 1, startsAt: "2026-10-20T09:00:00+08:00", endsAt: "2026-10-20T16:00:00+08:00", venue: "E 公司新竹廠 2F 會議室" },
       { day: 2, startsAt: "2026-10-27T09:00:00+08:00", endsAt: "2026-10-27T16:00:00+08:00", venue: "E 公司新竹廠 2F 會議室" },
@@ -133,19 +136,19 @@ describe("多天場次的學員入口", () => {
 
 describe("多天場次的地點", () => {
   it("哪一天地點還沒定就列出哪一天", () => {
-    const base = getSession("s-gas-1020")!;
+    const base = getSession(st, "s-gas-1020")!;
     const session = { ...base, days: [base.days[0], { ...base.days[1], venue: null }] };
-    const item = readiness(session).find((i) => i.kind === "venue_unset")!;
+    const item = readiness(st, session).find((i) => i.kind === "venue_unset")!;
     expect(item).toEqual({ kind: "venue_unset", days: [2], totalDays: 2 });
     expect(readinessText(item)).toBe("第 2 天地點還沒定");
   });
 
   it("單天場次不標第幾天", () => {
-    const item = readiness(getSession("s-ca-1105")!).find((i) => i.kind === "venue_unset")!;
+    const item = readiness(st, getSession(st, "s-ca-1105")!).find((i) => i.kind === "venue_unset")!;
     expect(readinessText(item)).toBe("地點還沒定");
   });
 
   it("每一天都有地點時不列", () => {
-    expect(readiness(getSession("s-gas-1020")!).map((i) => i.kind)).not.toContain("venue_unset");
+    expect(readiness(st, getSession(st, "s-gas-1020")!).map((i) => i.kind)).not.toContain("venue_unset");
   });
 });

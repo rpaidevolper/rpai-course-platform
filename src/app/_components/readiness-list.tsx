@@ -2,12 +2,15 @@ import Link from "next/link";
 import { readinessGroups, readinessText, type ReadinessItem, type ReadinessSource } from "@/lib/mockup/logic";
 import type { Session } from "@/lib/mockup/types";
 
-/** 每一組缺項要去哪裡處理：藍圖、需求對照、產物在課程頁；場次安排與發布在場次頁。 */
+/**
+ * 每一組缺項要去哪裡處理：藍圖缺口（待確認事項、缺的五元素、時數、要改的單元）都是跟 AI 談藍圖補，直接去對話；
+ * 需求對照、產物在課程頁；場次安排與發布在場次頁。
+ */
 function sourceHref(source: ReadinessSource, session: Session): string {
   const course = `/courses/${session.courseId}`;
   switch (source) {
     case "blueprint":
-      return `${course}#blueprint`;
+      return `${course}/chat`;
     case "requirements":
       return `${course}#requirement-mapping`;
     case "artifacts":
@@ -72,6 +75,18 @@ export function ReadinessList({
                 <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-warning" />
                 <div className="min-w-0">
                   <span>{readinessText(item)}</span>
+                  {/* 素材屬於課程，在課程頁上傳；其餘「給學員的東西」在場次頁處理 */}
+                  {item.kind === "no_materials" && (
+                    <>
+                      {" "}
+                      <Link
+                        href={`/courses/${session.courseId}#materials`}
+                        className="text-xs font-bold text-navy underline underline-offset-2"
+                      >
+                        到課程頁上傳
+                      </Link>
+                    </>
+                  )}
                   {detailed && item.kind === "requirement_gaps" && <RequirementGapDetail item={item} />}
                 </div>
               </li>

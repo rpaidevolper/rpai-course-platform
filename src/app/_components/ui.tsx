@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { PROJECT_STATUS_LABELS, type ProjectStatus } from "@/lib/mockup/types";
 
 /**
@@ -112,6 +112,71 @@ export function ButtonLink({ href, children, variant = "primary" }: { href: stri
   );
 }
 
+const DANGER = `${BTN} bg-white text-danger ring-[1.5px] ring-inset ring-danger hover:bg-danger-tint`;
+const BUTTON_VARIANTS = { primary: PRIMARY, secondary: SECONDARY, danger: DANGER } as const;
+const DISABLED = "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-[inherit]";
+
+/** 真的會動的按鈕（#48）。在 client component 裡用。 */
+export function Button({
+  children,
+  onClick,
+  variant = "primary",
+  type = "button",
+  disabled = false,
+  title,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  variant?: keyof typeof BUTTON_VARIANTS;
+  type?: "button" | "submit";
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button type={type} onClick={onClick} disabled={disabled} title={title} className={`${BUTTON_VARIANTS[variant]} ${DISABLED}`}>
+      {children}
+    </button>
+  );
+}
+
+/** 文字樣式的小按鈕，用在清單項目旁邊（例如「移除」）。 */
+export function TextButton({ children, onClick, tone = "navy" }: { children: ReactNode; onClick: () => void; tone?: "navy" | "danger" }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-xs font-bold underline underline-offset-2 ${tone === "danger" ? "text-danger" : "text-navy"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+const INPUT = "mt-1 block w-full rounded-md bg-white px-3 py-2 text-sm text-navy ring-1 ring-inset ring-body-muted focus:ring-2 focus:ring-navy focus:outline-none";
+
+/** 表單欄位：label 包住輸入框。hint 顯示在下方。 */
+export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-bold text-body-muted">{label}</span>
+      {children}
+      {hint && <span className="mt-1 block text-xs text-body-muted">{hint}</span>}
+    </label>
+  );
+}
+
+export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...props} className={INPUT} />;
+}
+
+export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea rows={3} {...props} className={INPUT} />;
+}
+
+export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select {...props} className={INPUT} />;
+}
+
 /**
  * 設計稿裡還沒接上的動作：看得到、按不下去，滑過說明原因。
  * 用 aria-disabled 而不是 disabled，鍵盤仍可聚焦讀到說明。
@@ -125,14 +190,30 @@ export function MockAction({ children, variant = "primary", reason = "設計稿�
 }
 
 /**
- * 受定稿閘管的產檔按鈕。blocks 為空時看起來可以按（設計稿仍未接上）；
+ * 受定稿閘管的產檔按鈕。blocks 為空時可以按（onClick）；
  * 被擋時變暗、aria-disabled，原因用看得到的文字列在按鈕下方（手機沒有 hover），並以 aria-describedby 綁定。
+ * onClick 只能在 client component 裡傳。
  */
-export function GatedAction({ id, children, blocks, variant = "primary" }: { id: string; children: ReactNode; blocks: string[]; variant?: "primary" | "secondary" }) {
+export function GatedAction({
+  id,
+  children,
+  blocks,
+  variant = "primary",
+  onClick,
+  busy = false,
+}: {
+  id: string;
+  children: ReactNode;
+  blocks: string[];
+  variant?: "primary" | "secondary";
+  onClick?: () => void;
+  /** 這份產物正在排隊或產出中：暫時不能再排 */
+  busy?: boolean;
+}) {
   const fill = variant === "primary" ? PRIMARY : SECONDARY;
   if (blocks.length === 0) {
     return (
-      <button type="button" title="設計稿：這個動作還沒接上" className={fill}>
+      <button type="button" onClick={onClick} disabled={busy} title={busy ? "這一版還在產出中" : undefined} className={`${fill} ${DISABLED}`}>
         {children}
       </button>
     );
@@ -171,4 +252,23 @@ export function Facts({ items }: { items: [label: string, value: ReactNode][] })
 
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="rounded-md bg-iced px-4 py-3 text-sm">{children}</p>;
+}
+
+/**
+ * demo 中找不到資料時的畫面（#48）。用法：hydration 前（useHydrated() 為 false）傳 loading，
+ * 之後仍找不到才顯示「找不到」，避免 demo 中新建的頁面閃一下 404。
+ */
+export function DemoMissing({ what, loading, backHref = "/", backLabel = "回首頁" }: { what: string; loading: boolean; backHref?: string; backLabel?: string }) {
+  if (loading) return <p className="text-sm text-body-muted">載入中…</p>;
+  return (
+    <div className={`${CARD} p-6`}>
+      <h1 className="text-lg font-bold text-navy">找不到這個{what}</h1>
+      <p className="mt-2 text-sm">可能是 demo 已經重置，或連結打錯了。</p>
+      <div className="mt-4">
+        <ButtonLink href={backHref} variant="secondary">
+          {backLabel}
+        </ButtonLink>
+      </div>
+    </div>
+  );
 }
