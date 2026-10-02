@@ -31,6 +31,8 @@ const PAIRS: [text: string, backgrounds: string[]][] = [
   ["body", [WHITE, token("ice"), token("iced"), token("navy-tint"), token("warning-tint")]],
   ["body-muted", [WHITE, token("ice"), token("iced")]],
   ["warning", [WHITE, token("warning-tint")]],
+  ["success", [WHITE, token("success-tint")]],
+  ["danger", [WHITE, token("danger-tint")]],
 ];
 
 describe("品牌文字色對比（WCAG AA 小字 4.5:1）", () => {

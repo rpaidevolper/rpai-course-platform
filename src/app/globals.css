@@ -17,6 +17,10 @@
   /* 品牌語意色 #b26b00 在 warning-tint／iced 上不到 AA（3.4–3.7），為小字加深 */
   --color-warning: #8a5200;
   --color-warning-tint: #f7efe0;
+  --color-success: #1e7a4e;
+  --color-success-tint: #e7f2ec;
+  --color-danger: #b3352e;
+  --color-danger-tint: #f7e7e6;
 
   --font-sans: "Trebuchet MS", "Noto Sans TC", "Microsoft JhengHei", Calibri,
     Arial, sans-serif;
