@@ -212,7 +212,7 @@ describe("專案列表依狀態分組", () => {
     const groups = projectsByStatus(PROJECTS);
     expect(groups.map((g) => [g.status, g.projects.map((p) => p.id)])).toEqual([
       ["negotiating", ["p-c-2027"]],
-      ["active", ["p-a-2026", "p-b-2026"]],
+      ["active", ["p-a-2026", "p-b-2026", "p-e-2026"]],
       ["archived", ["p-d-2026"]],
     ]);
   });

@@ -165,15 +165,20 @@ export const PROJECTS: Project[] = [
     requirements: [],
   },
   {
-    id: "p-c-2026",
-    title: "C 公司品保自動化兩天實戰營",
+    id: "p-e-2026",
+    title: "E 公司品保自動化兩天實戰營",
+    status: "active",
     priceTwd: 168000,
     clientContext: {
-      company: "C 公司",
+      company: "E 公司",
       industry: "電子零件製造",
       goal: "品保與生管用 Google 表單與 Apps Script，把進料檢驗回報從紙本改成當天彙整、自動通知。",
       scenarioId: "sc-manufacturing",
+      itConstraints: [],
+      brand: null,
     },
+    clientDocuments: [],
+    requirements: [],
   },
 ];
 
@@ -316,13 +321,13 @@ const gasTwoDayBlueprint = BlueprintSchema.parse({
   title: "Apps Script 兩天實戰營：進料檢驗回報自動化",
   oneLiner: "讓品保與生管兩天內，把紙本進料檢驗單改成表單回報、自動彙整與異常通知。",
   audience: {
-    who: "C 公司品保、生管與資材人員",
+    who: "E 公司品保、生管與資材人員",
     size: 18,
     priorKnowledge: "熟悉 Google 試算表的篩選與樞紐分析，沒寫過程式",
     painPoints: ["進料檢驗單紙本傳遞，異常隔天才知道", "每週彙整檢驗結果要花半天"],
   },
   outcomes: ["建立一份進料檢驗回報表單並自動彙整到試算表", "寫出一支異常時自動寄信通知的 Apps Script", "把流程交接給同事並能自行維護"],
-  format: { mode: "workshop", venue: "C 公司新竹廠 2F 會議室" },
+  format: { mode: "workshop", venue: "E 公司新竹廠 2F 會議室" },
   narrative: {
     model: "SCQA",
     arc: ["情境：異常隔天才知道", "衝突：表單有了，但還是要人去看", "提問：能不能一有異常就通知對的人", "解答：表單觸發器加上寄送前的安全網"],
@@ -437,7 +442,7 @@ export const COURSES: Course[] = [
   },
   {
     id: "c-gas-two-day",
-    projectId: "p-c-2026",
+    projectId: "p-e-2026",
     title: "Apps Script 兩天實戰營",
     source: { frameworkId: "fw-gas-forms", frameworkVersion: 1, scenarioId: "sc-manufacturing" },
     blueprint: gasTwoDayBlueprint,
