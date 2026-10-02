@@ -53,7 +53,7 @@
 驗收：
 - 對話逐字串流顯示；重新整理頁面後歷史仍在。
 - 講師說「差不多了」或按「更新藍圖」後，系統產生藍圖 v1，並顯示：標題、受眾、學習成果、五元素每格的內容、單元表、待確認事項。
-- 五元素有空格時，該格明顯標示「缺」；單元分鐘加總與課程長度不符時提示差多少。
+- 五元素有空格時，該格明顯標示「缺」；每個時段的單元分鐘加總與時段長度不符時提示差多少；純講述單元（沒有動手環節）標出來。
 - 藍圖 JSON 通過 `BlueprintSchema` 驗證才存；驗證失敗時顯示錯誤並保留對話，不寫入。
 
 ### U2 修改藍圖（升版）
@@ -163,7 +163,7 @@
 
 過期判定：`artifact.blueprint_id ≠ course_latest_blueprint.id`（view 已建）。
 
-藍圖 JSON 結構：`src/lib/blueprint/schema.ts`（`title`、`oneLiner`、`audience`、`outcomes`、`format`、`narrative`、`elements`、`modules`、`constraints`、`openQuestions`）。
+藍圖 JSON 結構：`src/lib/blueprint/schema.ts`（`title`、`oneLiner`、`audience`、`outcomes`、`format`、`narrative`、`elements`、`days`（天 → 時段 → 單元；總時長由各時段加總）、`constraints`、`openQuestions`）。
 
 ## 7. MCP 工具契約
 

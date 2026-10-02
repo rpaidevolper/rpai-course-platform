@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BlueprintSchema } from "@/lib/blueprint/schema";
+import { BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
 import {
   COURSES,
   FRAMEWORKS,
@@ -23,6 +23,29 @@ import type { Session } from "./types";
 describe("設計稿 fixture 參照完整", () => {
   it.each(COURSES)("課程 $id 的藍圖通過 BlueprintSchema", (c) => {
     expect(() => BlueprintSchema.parse(c.blueprint)).not.toThrow();
+  });
+
+  it.each(COURSES)("課程 $id 每個時段的單元分鐘數都等於時段長度", (c) => {
+    expect(checkBlueprint(c.blueprint).filter((i) => i.kind === "duration_mismatch")).toEqual([]);
+  });
+
+  it.each(COURSES)("課程 $id 的單元「承接自」都指向一個較早的單元", (c) => {
+    const titles = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units.map((u) => u.title)));
+    titles.forEach((title, i) => {
+      const unit = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units))[i];
+      if (unit.carriesFrom === null) return;
+      expect(titles.filter((t) => t === unit.carriesFrom), `${title} 承接自 ${unit.carriesFrom}`).toHaveLength(1);
+      expect(titles.indexOf(unit.carriesFrom)).toBeLessThan(i);
+    });
+  });
+
+  it("有一門多天課程示範天 → 時段 → 單元：至少兩天、每天兩個時段，且有跨天承接", () => {
+    const multiDay = getCourse("c-gas-two-day")!;
+    expect(multiDay.blueprint.days.length).toBeGreaterThanOrEqual(2);
+    for (const d of multiDay.blueprint.days) expect(d.slots).toHaveLength(2);
+    const day1Titles = multiDay.blueprint.days[0].slots.flatMap((s) => s.units.map((u) => u.title));
+    const day2Units = multiDay.blueprint.days[1].slots.flatMap((s) => s.units);
+    expect(day2Units.some((u) => u.carriesFrom !== null && day1Titles.includes(u.carriesFrom))).toBe(true);
   });
 
   it("課程指向存在的專案、框架版本與情境", () => {
