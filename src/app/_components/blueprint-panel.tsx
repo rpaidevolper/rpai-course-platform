@@ -5,17 +5,33 @@ import {
   FIVE_ELEMENTS,
   isLectureOnly,
   TOOL_PLAN_LABELS,
+  REUSE_LABELS,
   totalMinutes,
   type Blueprint,
   type BlueprintIssue,
+  type ReuseLevel,
+  type UnitSource,
 } from "@/lib/blueprint/schema";
 import { CopyButton } from "./copy-button";
 import { Badge } from "./ui";
 
 type DurationIssue = Extract<BlueprintIssue, { kind: "duration_mismatch" }>;
 
-/** 藍圖面板：單元依天、時段分組。 */
-export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
+const REUSE_TONE = { reuse: "outline", modify: "warning", new: "warning" } as const satisfies Record<ReuseLevel, string>;
+
+const defaultSourceLabel = (s: UnitSource) => `${s.id} v${s.version}「${s.unit}」`;
+
+/**
+ * 藍圖面板：單元依天、時段分組，每個單元標出來源與沿用程度。
+ * 藍圖只存來源的 id；要顯示課程或框架名稱，由呼叫端傳 `sourceLabel`。
+ */
+export function BlueprintPanel({
+  blueprint,
+  sourceLabel = defaultSourceLabel,
+}: {
+  blueprint: Blueprint;
+  sourceLabel?: (source: UnitSource) => string;
+}) {
   const issues = checkBlueprint(blueprint);
   const durationIssues = issues.filter((i): i is DurationIssue => i.kind === "duration_mismatch");
   const lectureOnlyCount = issues.filter((i) => i.kind === "lecture_only").length;
@@ -23,6 +39,8 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
   const clientItems = items.filter((i) => i.audience === "client");
   const selfItems = items.filter((i) => i.audience === "self");
   const emailText = clientEmailText(blueprint);
+  const modifyCount = issues.filter((i) => i.kind === "unit_needs_work" && i.reuse === "modify").length;
+  const newCount = issues.filter((i) => i.kind === "unit_needs_work" && i.reuse === "new").length;
 
   return (
     <div className="space-y-6">
@@ -87,6 +105,17 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
             {blueprint.days.length} 天，共 {totalMinutes(blueprint)} 分鐘
           </span>
         </div>
+        <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+          {modifyCount + newCount === 0 ? (
+            <span>每個單元都沿用既有內容。</span>
+          ) : (
+            <>
+              <span>還要準備：</span>
+              <Badge tone="warning">要改 {modifyCount}</Badge>
+              <Badge tone="warning">新做 {newCount}</Badge>
+            </>
+          )}
+        </p>
         {lectureOnlyCount > 0 && (
           <p className="mt-1 text-xs">
             有 {lectureOnlyCount} 個純講述單元（沒有動手環節），看看要不要補互動。
@@ -119,6 +148,7 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
                             <div className="flex justify-between gap-2">
                               <span className="flex flex-wrap items-center gap-2 font-bold text-navy">
                                 {u.title}
+                                <Badge tone={REUSE_TONE[u.reuse]}>{REUSE_LABELS[u.reuse]}</Badge>
                                 {isLectureOnly(u) && <Badge tone="warning">純講述</Badge>}
                               </span>
                               <span className="shrink-0 text-xs">{u.minutes} 分</span>
@@ -129,6 +159,8 @@ export function BlueprintPanel({ blueprint }: { blueprint: Blueprint }) {
                               <dd>{u.method}</dd>
                               <dt className="font-bold">成果</dt>
                               <dd>{u.outcome}</dd>
+                              <dt className="font-bold">來源</dt>
+                              <dd className="min-w-0 break-words">{u.source ? sourceLabel(u.source) : "新做，沒有來源"}</dd>
                               {u.carriesFrom && (
                                 <>
                                   <dt className="font-bold">承接自</dt>

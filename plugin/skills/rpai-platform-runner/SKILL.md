@@ -43,7 +43,9 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 `days` 是「天 → 時段 → 單元」三層：每一天有 `theme`（主軸）與 `slots`（時段）；時段有 `label`（上午／下午）、
 `minutes`（預設 180，不另排休息）與 `units`（單元）；單元有 `title`、`minutes`、`objective`（學習目標）、
 `method`（教學方式）、`outcome`（成果）、`keyPoints`、`activity`（動手環節，`null` 代表純講述單元）、
-`elements`、`carriesFrom`（承接自哪個較早單元的標題，沒有則 `null`）。總時長是各時段 `minutes` 的加總，
+`elements`、`carriesFrom`（承接自哪個較早單元的標題，沒有則 `null`）、`source`（出自哪門過去課程或框架的哪個單元：
+`{ kind: "course" | "framework", id, version, unit }`；新做則為 `null`）、`reuse`（沿用程度：`reuse` 沿用、`modify` 要改、`new` 新做）。
+`reuse` 是 `modify` 或 `new` 的單元，產檔時要依藍圖重寫，不要照搬來源的舊內容。總時長是各時段 `minutes` 的加總，
 藍圖不另存；時間骨架照天與時段排，**不要自己加休息**，也不要把第幾天搞混。
 
 `tools` 每一項有 `name`、`plan`（`free`／`paid`／`enterprise`）與 `confirmedWithClient`；`confirmedWithClient` 為 `false` 的工具算一筆**問客戶**的待確認事項。

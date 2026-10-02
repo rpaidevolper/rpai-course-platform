@@ -12,6 +12,8 @@ const unit = (title: string, minutes: number) => ({
   activity: "動手做一次",
   elements: ["handsOn" as const],
   carriesFrom: null,
+  source: null,
+  reuse: "new" as const,
 });
 
 /** 兩天的小藍圖，只有待確認事項與工具由測試決定。 */

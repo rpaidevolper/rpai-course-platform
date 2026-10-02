@@ -226,7 +226,12 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[proj
                       </h3>
                       <p className="mt-0.5 text-sm">
                         藍圖 v{latestBlueprintVersion(c)}
-                        {c.source && fw && (
+                        {c.copiedFrom ? (
+                          <>
+                            ，複製自「{courses.find((x) => x.id === c.copiedFrom!.courseId)?.title ?? c.copiedFrom.courseId}」藍圖 v
+                            {c.copiedFrom.blueprintVersion}
+                          </>
+                        ) : c.source && fw && (
                           <>
                             ，來自{" "}
                             <Link href={`/knowledge#${fw.id}`} className="text-navy underline underline-offset-2">

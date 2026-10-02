@@ -1,5 +1,5 @@
 import { openItems } from "@/lib/blueprint/open-items";
-import { missingElements, FIVE_ELEMENT_LABELS } from "@/lib/blueprint/schema";
+import { checkBlueprint, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
 import {
   COURSES,
   FRAMEWORKS,
@@ -74,11 +74,31 @@ export function latestArtifact(course: Course, kind: ArtifactKind): Artifact | u
     .sort((a, b) => b.version - a.version)[0];
 }
 
+/** 單元來源的顯示文字：「Claude 入門」藍圖 v3・提示詞的四個零件 */
+export function unitSourceText(source: UnitSource): string {
+  if (source.kind === "course") {
+    const title = getCourse(source.id)?.title ?? source.id;
+    return `課程「${title}」藍圖 v${source.version}・${source.unit}`;
+  }
+  const title = getFramework(source.id)?.title ?? source.id;
+  return `框架「${title}」v${source.version}・${source.unit}`;
+}
+
+/** 要改與新做的單元各幾個，由藍圖完整性檢查推得。 */
+export function unitWorkCounts(bp: Blueprint): { modify: number; new: number } {
+  const counts = { modify: 0, new: 0 };
+  for (const issue of checkBlueprint(bp)) {
+    if (issue.kind === "unit_needs_work") counts[issue.reuse] += 1;
+  }
+  return counts;
+}
+
 // ── 準備度 ────────────────────────────────────────────
 
 export type ReadinessItem =
   | { kind: "open_questions"; count: number }
   | { kind: "missing_elements"; labels: string[] }
+  | { kind: "units_need_work"; modify: number; new: number }
   | { kind: "artifact_missing"; artifact: ArtifactKind }
   | { kind: "artifact_stale"; artifact: ArtifactKind; version: number }
   | { kind: "no_materials" }
@@ -101,6 +121,8 @@ export function readiness(session: Session): ReadinessItem[] {
   if (missing.length > 0) {
     items.push({ kind: "missing_elements", labels: missing.map((k) => FIVE_ELEMENT_LABELS[k]) });
   }
+  const work = unitWorkCounts(course.blueprint);
+  if (work.modify + work.new > 0) items.push({ kind: "units_need_work", ...work });
   for (const kind of ARTIFACT_KINDS) {
     const a = latestArtifact(course, kind);
     if (!a) items.push({ kind: "artifact_missing", artifact: kind });
@@ -129,6 +151,8 @@ export function readinessText(item: ReadinessItem): string {
       return `藍圖還有 ${item.count} 個待確認事項`;
     case "missing_elements":
       return `藍圖缺五元素：${item.labels.join("、")}`;
+    case "units_need_work":
+      return `還有 ${[item.modify && `${item.modify} 個單元要改`, item.new && `${item.new} 個單元要新做`].filter(Boolean).join("、")}`;
     case "artifact_missing":
       return `還沒產出${ARTIFACT_LABELS[item.artifact]}`;
     case "artifact_stale":

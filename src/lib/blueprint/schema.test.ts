@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import {
   BlueprintSchema,
   checkBlueprint,
   missingElements,
   totalMinutes,
   type Blueprint,
+  type Unit,
 } from "./schema";
 
 const unit = (title: string, minutes: number, carriesFrom: string | null = null) => ({
@@ -17,6 +19,8 @@ const unit = (title: string, minutes: number, carriesFrom: string | null = null)
   activity: "用自己的資料做一次" as string | null,
   elements: ["handsOn" as const],
   carriesFrom,
+  source: { kind: "framework" as const, id: "fw-weekly-report", version: 1, unit: title } as Unit["source"],
+  reuse: "reuse" as Unit["reuse"],
 });
 
 /** 兩天、每天上午下午各一個 180 分鐘時段，每個時段的單元分鐘數都剛好加滿。 */
@@ -78,6 +82,30 @@ describe("BlueprintSchema", () => {
   it("拒絕沒有任何一天的藍圖", () => {
     expect(() => sampleBlueprint({ days: [] })).toThrow();
   });
+
+  it("單元記錄來源與沿用程度；新做的單元來源為 null", () => {
+    const bp = sampleBlueprint();
+    bp.days[0].slots[0].units[0] = { ...bp.days[0].slots[0].units[0], source: null, reuse: "new" };
+    bp.days[0].slots[0].units[1] = {
+      ...bp.days[0].slots[0].units[1],
+      source: { kind: "course", id: "c-weekly-staff", version: 3, unit: "第一份草稿" },
+      reuse: "modify",
+    };
+    expect(() => BlueprintSchema.parse(bp)).not.toThrow();
+  });
+
+  it("拒絕不認得的沿用程度與來源種類", () => {
+    const bp = sampleBlueprint();
+    const u = bp.days[0].slots[0].units[0];
+    expect(() => BlueprintSchema.parse({ ...bp, days: [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, reuse: "copy" }] }] }] })).toThrow();
+    expect(() =>
+      BlueprintSchema.parse({ ...bp, days: [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, source: { ...u.source, kind: "scenario" } }] }] }] }),
+    ).toThrow();
+  });
+
+  it("仍可轉成 Claude 結構化輸出的格式", () => {
+    expect(() => zodOutputFormat(BlueprintSchema)).not.toThrow();
+  });
 });
 
 describe("totalMinutes", () => {
@@ -130,6 +158,26 @@ describe("checkBlueprint", () => {
     const bp = sampleBlueprint();
     bp.days[0].slots[1].units[0].activity = "兩人一組互相挑錯";
     expect(checkBlueprint(bp).map((i) => i.kind)).not.toContain("lecture_only");
+  });
+
+  it("要改的單元列出位置與沿用程度", () => {
+    const bp = sampleBlueprint();
+    bp.days[1].slots[0].units[0].reuse = "modify";
+    expect(checkBlueprint(bp)).toEqual([
+      { kind: "unit_needs_work", day: 2, slot: 1, unit: "部門版範本", reuse: "modify" },
+    ]);
+  });
+
+  it("新做的單元也列出", () => {
+    const bp = sampleBlueprint();
+    bp.days[0].slots[1].units[1] = { ...bp.days[0].slots[1].units[1], source: null, reuse: "new" };
+    expect(checkBlueprint(bp)).toEqual([
+      { kind: "unit_needs_work", day: 1, slot: 2, unit: "做成範本", reuse: "new" },
+    ]);
+  });
+
+  it("沿用的單元不列出", () => {
+    expect(checkBlueprint(sampleBlueprint()).map((i) => i.kind)).not.toContain("unit_needs_work");
   });
 
   it("待確認事項逐條列出，帶著對象與受影響單元", () => {
