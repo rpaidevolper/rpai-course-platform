@@ -38,7 +38,13 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
    下游 skill 開場都會先找 `*_教學藍圖.md`，找到就不會重問前提。
 
 藍圖 JSON 欄位對應：`audience` → 受眾、`outcomes` → 教學目標、`elements` → 五元素落點、
-`narrative` → 敘事主軸、`modules` → 時間骨架、`constraints` → 限制、`openQuestions` → 待確認。
+`narrative` → 敘事主軸、`days` → 時間骨架、`constraints` → 限制、`openQuestions` → 待確認。
+
+`days` 是「天 → 時段 → 單元」三層：每一天有 `theme`（主軸）與 `slots`（時段）；時段有 `label`（上午／下午）、
+`minutes`（預設 180，不另排休息）與 `units`（單元）；單元有 `title`、`minutes`、`objective`（學習目標）、
+`method`（教學方式）、`outcome`（成果）、`keyPoints`、`activity`（動手環節，`null` 代表純講述單元）、
+`elements`、`carriesFrom`（承接自哪個較早單元的標題，沒有則 `null`）。總時長是各時段 `minutes` 的加總，
+藍圖不另存；時間骨架照天與時段排，**不要自己加休息**，也不要把第幾天搞混。
 
 `openQuestions` 不是空的 → **先列給使用者**，問要不要先確認。使用者說先做，就在產物裡標「（待確認）」，不要自己編答案。
 

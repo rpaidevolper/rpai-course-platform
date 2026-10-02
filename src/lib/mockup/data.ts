@@ -104,6 +104,17 @@ export const PROJECTS: Project[] = [
       scenarioId: "sc-finance-approval",
     },
   },
+  {
+    id: "p-c-2026",
+    title: "C 公司品保自動化兩天實戰營",
+    priceTwd: 168000,
+    clientContext: {
+      company: "C 公司",
+      industry: "電子零件製造",
+      goal: "品保與生管用 Google 表單與 Apps Script，把進料檢驗回報從紙本改成當天彙整、自動通知。",
+      scenarioId: "sc-manufacturing",
+    },
+  },
 ];
 
 const claudeIntroBlueprint = BlueprintSchema.parse({
@@ -116,7 +127,7 @@ const claudeIntroBlueprint = BlueprintSchema.parse({
     painPoints: ["客訴信要整理成 8D 報告很花時間", "週會決議沒人追，下週又重講一次"],
   },
   outcomes: ["用 Claude 把一封客訴信整理成 8D 報告草稿", "建立一個帶有部門規範的 Project", "列出三件明天就能交給 AI 的工作"],
-  format: { durationMinutes: 360, mode: "workshop", venue: "A 公司台中廠 3F 訓練教室" },
+  format: { mode: "workshop", venue: "A 公司台中廠 3F 訓練教室" },
   narrative: {
     model: "SCQA",
     arc: ["情境：每天被文書追著跑", "衝突：AI 用過，但結果不穩定", "提問：怎樣讓 AI 每次都給對的格式", "解答：提示詞零件加上 Project"],
@@ -128,11 +139,28 @@ const claudeIntroBlueprint = BlueprintSchema.parse({
     quote: [],
     story: ["品保課長把 8D 報告從兩小時縮到二十分鐘"],
   },
-  modules: [
-    { title: "AI 能做什麼、不能做什麼", minutes: 60, objective: "分辨哪些工作適合交給 AI", keyPoints: ["生成、整理、比對三種用途", "哪些資料不能上傳"], activity: null, elements: ["theory", "story"] },
-    { title: "提示詞的四個零件", minutes: 90, objective: "寫出能穩定產出 8D 草稿的提示詞", keyPoints: ["格式要寫死", "給一個範例勝過十句說明"], activity: "拿一封客訴信改三次提示詞並比較", elements: ["theory", "handsOn"] },
-    { title: "用 Project 記住工作脈絡", minutes: 120, objective: "建立一個帶有部門規範與範本的 Project", keyPoints: ["指示與知識檔的分工", "範本放在哪裡"], activity: "建立自己部門的 Project，用它回覆一封供應商來信", elements: ["handsOn", "takeaway"] },
-    { title: "找出自己的三件事", minutes: 90, objective: "列出明天就能交給 AI 的三件工作", keyPoints: ["頻率 × 耗時 × 出錯成本", "先做最小的一個"], activity: "填三件事清單並兩兩互評", elements: ["takeaway"] },
+  days: [
+    {
+      theme: "從一封客訴信到自己的 Project",
+      slots: [
+        {
+          label: "上午",
+          minutes: 180,
+          units: [
+            { title: "AI 能做什麼、不能做什麼", minutes: 60, objective: "分辨哪些工作適合交給 AI", method: "講述＋案例", outcome: "一張「可交給 AI／不可上傳」對照表", keyPoints: ["生成、整理、比對三種用途", "哪些資料不能上傳"], activity: null, elements: ["theory", "story"], carriesFrom: null },
+            { title: "提示詞的四個零件", minutes: 120, objective: "寫出能穩定產出 8D 草稿的提示詞", method: "示範後個人實作", outcome: "一份可重複使用的 8D 草稿提示詞", keyPoints: ["格式要寫死", "給一個範例勝過十句說明"], activity: "拿一封客訴信改三次提示詞並比較", elements: ["theory", "handsOn"], carriesFrom: null },
+          ],
+        },
+        {
+          label: "下午",
+          minutes: 180,
+          units: [
+            { title: "用 Project 記住工作脈絡", minutes: 120, objective: "建立一個帶有部門規範與範本的 Project", method: "示範後個人實作", outcome: "自己部門的 Project", keyPoints: ["指示與知識檔的分工", "範本放在哪裡"], activity: "建立自己部門的 Project，用它回覆一封供應商來信", elements: ["handsOn", "takeaway"], carriesFrom: "提示詞的四個零件" },
+            { title: "找出自己的三件事", minutes: 60, objective: "列出明天就能交給 AI 的三件工作", method: "個人填寫＋兩兩互評", outcome: "三件事清單", keyPoints: ["頻率 × 耗時 × 出錯成本", "先做最小的一個"], activity: "填三件事清單並兩兩互評", elements: ["takeaway"], carriesFrom: null },
+          ],
+        },
+      ],
+    },
   ],
   constraints: ["學員用公司筆電，需事先開通 Claude 帳號", "客訴信需去識別化"],
   openQuestions: [],
@@ -148,7 +176,7 @@ const claudeAdvancedBlueprint = BlueprintSchema.parse({
     painPoints: ["個人用得好，但同事接不起來", "不知道哪些規則該寫進共用 Project"],
   },
   outcomes: ["把一個個人流程寫成部門可交接的說明", "建立部門共用的審核規則提示詞"],
-  format: { durationMinutes: 180, mode: "workshop", venue: null },
+  format: { mode: "workshop", venue: null },
   narrative: { model: "PDCA", arc: ["盤點入門課後的用法", "挑一個流程擴大到部門", "寫成規則並試跑", "訂出維護方式"] },
   elements: {
     theory: ["流程交接的三個層次"],
@@ -157,10 +185,21 @@ const claudeAdvancedBlueprint = BlueprintSchema.parse({
     quote: ["流程不是寫給 AI 看的，是寫給下一個同事看的"],
     story: [],
   },
-  modules: [
-    { title: "從個人到部門", minutes: 40, objective: "盤點入門課後各自的用法", keyPoints: ["誰在用、用在哪"], activity: "分組分享一個成功與一個失敗", elements: ["theory"] },
-    { title: "審核規則寫成提示詞", minutes: 90, objective: "寫出部門共用的審核規則", keyPoints: ["規則要能被驗證"], activity: "兩組互相測對方的規則", elements: ["handsOn", "quote"] },
-    { title: "流程上線與維護", minutes: 50, objective: "訂出流程的負責人與更新方式", keyPoints: ["誰改規則、多久檢查一次"], activity: null, elements: ["takeaway"] },
+  days: [
+    {
+      theme: "把個人用法擴大成部門流程",
+      slots: [
+        {
+          label: "下午",
+          minutes: 180,
+          units: [
+            { title: "從個人到部門", minutes: 40, objective: "盤點入門課後各自的用法", method: "分組分享", outcome: "部門用法盤點表", keyPoints: ["誰在用、用在哪"], activity: "分組分享一個成功與一個失敗", elements: ["theory"], carriesFrom: null },
+            { title: "審核規則寫成提示詞", minutes: 90, objective: "寫出部門共用的審核規則", method: "分組實作＋互測", outcome: "一份部門共用的審核規則提示詞", keyPoints: ["規則要能被驗證"], activity: "兩組互相測對方的規則", elements: ["handsOn", "quote"], carriesFrom: "從個人到部門" },
+            { title: "流程上線與維護", minutes: 50, objective: "訂出流程的負責人與更新方式", method: "講述＋討論", outcome: "流程負責人與檢查週期", keyPoints: ["誰改規則、多久檢查一次"], activity: null, elements: ["takeaway"], carriesFrom: null },
+          ],
+        },
+      ],
+    },
   ],
   constraints: ["需在入門課所有場次結束後才能上"],
   openQuestions: ["場地還沒定：台中廠或台北總部", "要不要讓業務部一起來"],
@@ -176,7 +215,7 @@ const paFinanceBlueprint = BlueprintSchema.parse({
     painPoints: ["紙本請款單常卡在主管桌上", "月結時要一張張對單"],
   },
   outcomes: ["建立含核准與退回分支的請款流程", "設定逾期三天自動提醒"],
-  format: { durationMinutes: 360, mode: "workshop", venue: "B 公司 8F 大會議室" },
+  format: { mode: "workshop", venue: "B 公司 8F 大會議室" },
   narrative: { model: "SCQA", arc: ["情境：月結前的對單地獄", "衝突：紙本卡在主管桌上", "提問：能不能讓主管在手機上核准", "解答：Teams 簽核流程"] },
   elements: {
     theory: ["觸發、動作、條件"],
@@ -185,13 +224,101 @@ const paFinanceBlueprint = BlueprintSchema.parse({
     quote: ["簽核慢，從來不是主管懶，是單子找不到主管"],
     story: ["一張請款單在三個樓層之間走了九天"],
   },
-  modules: [
-    { title: "雲端流程上手", minutes: 60, objective: "建立第一個雲端流程", keyPoints: ["觸發、動作、條件"], activity: "收到郵件就存附件", elements: ["theory", "handsOn"] },
-    { title: "核准與退回分支", minutes: 120, objective: "建立含退回原因的簽核流程", keyPoints: ["Approvals 動作", "退回要帶原因"], activity: "兩人一組互相送單核准", elements: ["handsOn", "story"] },
-    { title: "逾期提醒", minutes: 90, objective: "逾期三天自動提醒主管", keyPoints: ["排程流程"], activity: "設定提醒並用假資料測試", elements: ["handsOn"] },
-    { title: "上線檢查表", minutes: 90, objective: "確認流程可以正式上線", keyPoints: ["權限、例外、負責人"], activity: null, elements: ["takeaway", "quote"] },
+  days: [
+    {
+      theme: "把差旅請款改成 Teams 一鍵核准",
+      slots: [
+        {
+          label: "上午",
+          minutes: 180,
+          units: [
+            { title: "雲端流程上手", minutes: 60, objective: "建立第一個雲端流程", method: "示範後跟做", outcome: "一個收信存附件的流程", keyPoints: ["觸發、動作、條件"], activity: "收到郵件就存附件", elements: ["theory", "handsOn"], carriesFrom: null },
+            { title: "核准與退回分支", minutes: 120, objective: "建立含退回原因的簽核流程", method: "兩人一組實作", outcome: "差旅請款簽核流程", keyPoints: ["Approvals 動作", "退回要帶原因"], activity: "兩人一組互相送單核准", elements: ["handsOn", "story"], carriesFrom: "雲端流程上手" },
+          ],
+        },
+        {
+          label: "下午",
+          minutes: 180,
+          units: [
+            { title: "逾期提醒", minutes: 90, objective: "逾期三天自動提醒主管", method: "個人實作＋假資料測試", outcome: "逾期提醒排程流程", keyPoints: ["排程流程"], activity: "設定提醒並用假資料測試", elements: ["handsOn"], carriesFrom: "核准與退回分支" },
+            { title: "上線檢查表", minutes: 90, objective: "確認流程可以正式上線", method: "講述＋逐項檢查", outcome: "填好的上線檢查表", keyPoints: ["權限、例外、負責人"], activity: null, elements: ["takeaway", "quote"], carriesFrom: null },
+          ],
+        },
+      ],
+    },
   ],
   constraints: ["需要 Power Automate 授權"],
+  openQuestions: [],
+});
+
+/** 多天課程的範例：兩天、每天上午下午各一個 180 分鐘時段，第二天承接第一天的成果。 */
+const gasTwoDayBlueprint = BlueprintSchema.parse({
+  title: "Apps Script 兩天實戰營：進料檢驗回報自動化",
+  oneLiner: "讓品保與生管兩天內，把紙本進料檢驗單改成表單回報、自動彙整與異常通知。",
+  audience: {
+    who: "C 公司品保、生管與資材人員",
+    size: 18,
+    priorKnowledge: "熟悉 Google 試算表的篩選與樞紐分析，沒寫過程式",
+    painPoints: ["進料檢驗單紙本傳遞，異常隔天才知道", "每週彙整檢驗結果要花半天"],
+  },
+  outcomes: ["建立一份進料檢驗回報表單並自動彙整到試算表", "寫出一支異常時自動寄信通知的 Apps Script", "把流程交接給同事並能自行維護"],
+  format: { mode: "workshop", venue: "C 公司新竹廠 2F 會議室" },
+  narrative: {
+    model: "SCQA",
+    arc: ["情境：異常隔天才知道", "衝突：表單有了，但還是要人去看", "提問：能不能一有異常就通知對的人", "解答：表單觸發器加上寄送前的安全網"],
+  },
+  elements: {
+    theory: ["觸發器與執行權限", "寄送前的三道安全網"],
+    handsOn: ["建立進料檢驗表單", "寫異常通知腳本", "互相送異常單測試"],
+    takeaway: ["腳本範本與維護清單"],
+    quote: ["自動化不是少做事，是讓對的人在對的時間知道"],
+    story: ["一批不良電容在倉庫放了三天才被發現"],
+  },
+  days: [
+    {
+      theme: "從紙本到表單：讓檢驗結果當天就彙整",
+      slots: [
+        {
+          label: "上午",
+          minutes: 180,
+          units: [
+            { title: "為什麼異常總是晚一天", minutes: 40, objective: "說出目前檢驗流程的三個延遲點", method: "案例講述＋小組討論", outcome: "一張現況流程圖", keyPoints: ["紙本傳遞的延遲", "誰需要在什麼時候知道"], activity: null, elements: ["story", "theory"], carriesFrom: null },
+            { title: "進料檢驗表單", minutes: 140, objective: "建立一份欄位完整、可驗證的檢驗回報表單", method: "示範後個人實作", outcome: "自己部門的進料檢驗表單", keyPoints: ["必填與驗證規則", "料號用下拉選單"], activity: "把一張紙本檢驗單改成表單並互填", elements: ["handsOn"], carriesFrom: "為什麼異常總是晚一天" },
+          ],
+        },
+        {
+          label: "下午",
+          minutes: 180,
+          units: [
+            { title: "第一支 Apps Script", minutes: 90, objective: "讀懂並修改一支彙整腳本", method: "跟做＋改寫", outcome: "能每天彙整檢驗結果的腳本", keyPoints: ["編輯器與執行紀錄", "變數與迴圈只學用得到的"], activity: "改寫範例腳本，彙整自己表單的回覆", elements: ["theory", "handsOn"], carriesFrom: "進料檢驗表單" },
+            { title: "每日彙整報表", minutes: 90, objective: "產出一份每天自動更新的檢驗彙整表", method: "個人實作＋兩兩檢查", outcome: "每日檢驗彙整報表", keyPoints: ["時間觸發器", "樞紐分析接在彙整結果後面"], activity: "設定每天早上 8 點自動彙整", elements: ["handsOn", "takeaway"], carriesFrom: "第一支 Apps Script" },
+          ],
+        },
+      ],
+    },
+    {
+      theme: "從彙整到通知：一有異常就讓對的人知道",
+      slots: [
+        {
+          label: "上午",
+          minutes: 180,
+          units: [
+            { title: "表單觸發器", minutes: 100, objective: "在表單送出時立即判斷是否異常", method: "示範後個人實作", outcome: "送出即判斷異常的觸發器", keyPoints: ["onFormSubmit", "執行權限與授權畫面"], activity: "接上第一天的表單，送出不良品時寫入異常分頁", elements: ["theory", "handsOn"], carriesFrom: "每日彙整報表" },
+            { title: "異常通知信", minutes: 80, objective: "異常時自動寄信給品保主管與供應商窗口", method: "個人實作", outcome: "異常通知信腳本", keyPoints: ["收件人從對照表取", "信件內容帶料號與照片連結"], activity: "寫通知信並寄給自己測試", elements: ["handsOn"], carriesFrom: "表單觸發器" },
+          ],
+        },
+        {
+          label: "下午",
+          minutes: 180,
+          units: [
+            { title: "寄送前的安全網", minutes: 90, objective: "避免誤寄、重寄與額度用完", method: "講述＋找碴練習", outcome: "加上三道檢查的通知腳本", keyPoints: ["測試模式開關", "重複寄送檢查", "每日寄信額度"], activity: "互相送異常單，找出對方腳本會誤寄的情況", elements: ["theory", "handsOn", "quote"], carriesFrom: "異常通知信" },
+            { title: "交接與維護", minutes: 90, objective: "讓同事能接手維護這個流程", method: "分組撰寫＋互評", outcome: "流程交接說明與維護清單", keyPoints: ["誰改對照表", "腳本壞掉先看哪裡"], activity: "寫交接說明，讓隔壁組照著操作一次", elements: ["takeaway"], carriesFrom: "寄送前的安全網" },
+          ],
+        },
+      ],
+    },
+  ],
+  constraints: ["學員用公司 Google Workspace 帳號，需事先開放 Apps Script", "檢驗資料需用去識別化的範例料號"],
   openQuestions: [],
 });
 
@@ -247,6 +374,19 @@ export const COURSES: Course[] = [
       { id: "a-pa-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, status: "ready", createdAt: "2026-09-13T20:00:00+08:00" },
     ],
     materials: [{ id: "m-pa-fields", name: "請款單欄位對照.xlsx", sizeKb: 36 }],
+  },
+  {
+    id: "c-gas-two-day",
+    projectId: "p-c-2026",
+    title: "Apps Script 兩天實戰營",
+    source: { frameworkId: "fw-gas-forms", frameworkVersion: 1, scenarioId: "sc-manufacturing" },
+    blueprint: gasTwoDayBlueprint,
+    blueprintHistory: [
+      { version: 1, createdAt: "2026-09-22T10:00:00+08:00", note: "由框架 v1 與製造業情境談出初版，一天" },
+      { version: 2, createdAt: "2026-10-01T15:30:00+08:00", note: "拆成兩天：第一天彙整、第二天通知，每天上午下午各 180 分鐘" },
+    ],
+    artifacts: [],
+    materials: [],
   },
 ];
 

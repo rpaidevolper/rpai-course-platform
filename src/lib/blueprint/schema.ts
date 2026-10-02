@@ -28,15 +28,45 @@ export const FIVE_ELEMENT_LABELS: Record<FiveElement, string> = {
 
 const NonEmpty = z.string().trim().min(1);
 
-export const ModuleSchema = z.object({
+/** 時段預設長度：講師以「三小時一段、不另排休息」排課。 */
+export const DEFAULT_SLOT_MINUTES = 180;
+
+/** 單元：時段裡的一段教學。 */
+export const UnitSchema = z.object({
   title: NonEmpty,
   minutes: z.number().int().positive(),
-  objective: NonEmpty.describe("學員上完這段能做到什麼，動詞開頭"),
+  objective: NonEmpty.describe("學習目標：學員上完這段能做到什麼，動詞開頭"),
+  method: NonEmpty.describe("教學方式，例如講述＋示範、分組實作、互評"),
+  outcome: NonEmpty.describe("成果：學員上完這段手上會多出什麼"),
   keyPoints: z.array(NonEmpty).min(1),
-  activity: z.string().nullable().describe("動手環節的做法；純講述則為 null"),
+  activity: z
+    .string()
+    .nullable()
+    .describe("動手環節的做法；沒有動手環節（純講述單元）則為 null"),
   elements: z
     .array(z.enum(FIVE_ELEMENTS))
     .describe("這一段覆蓋了五元素中的哪幾個"),
+  carriesFrom: z
+    .string()
+    .nullable()
+    .describe("承接自哪個較早單元的標題（前一單元的成果是這個單元的輸入）；沒有則為 null"),
+});
+
+/** 時段：一天裡連續上課、不另排休息的一段。 */
+export const SlotSchema = z.object({
+  label: NonEmpty.describe("時段名稱，例如上午、下午"),
+  minutes: z
+    .number()
+    .int()
+    .positive()
+    .describe(`時段長度（分鐘），講師沒特別說就用 ${DEFAULT_SLOT_MINUTES}；不另排休息`),
+  units: z.array(UnitSchema).min(1),
+});
+
+/** 天：藍圖裡的一天課；系列課的一堂也算一天。 */
+export const DaySchema = z.object({
+  theme: NonEmpty.describe("這一天的主軸"),
+  slots: z.array(SlotSchema).min(1).describe("依序排列的時段，通常上午、下午各一個"),
 });
 
 export const BlueprintSchema = z.object({
@@ -53,7 +83,6 @@ export const BlueprintSchema = z.object({
     .min(1)
     .describe("學員離場時能做到的事，動詞開頭、可驗證"),
   format: z.object({
-    durationMinutes: z.number().int().positive(),
     mode: z.enum(["lecture", "workshop", "online", "hybrid"]),
     venue: z.string().nullable(),
   }),
@@ -68,26 +97,50 @@ export const BlueprintSchema = z.object({
     quote: z.array(NonEmpty),
     story: z.array(NonEmpty),
   }),
-  modules: z.array(ModuleSchema).min(1),
+  days: z
+    .array(DaySchema)
+    .min(1)
+    .describe("依序排列的天；總時長由各時段長度加總，不另外填"),
   constraints: z.array(NonEmpty).describe("場地、設備、時間、政策等限制"),
   openQuestions: z.array(NonEmpty).describe("還沒跟講師確認的事"),
 });
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
+export type Day = z.infer<typeof DaySchema>;
+export type Slot = z.infer<typeof SlotSchema>;
+export type Unit = z.infer<typeof UnitSchema>;
 
 /** 五元素裡還是空的那幾格。 */
 export function missingElements(bp: Blueprint): FiveElement[] {
   return FIVE_ELEMENTS.filter((e) => bp.elements[e].length === 0);
 }
 
-/** 各單元分鐘數加總。 */
-export function plannedMinutes(bp: Blueprint): number {
-  return bp.modules.reduce((sum, m) => sum + m.minutes, 0);
+/** 總時長：各天各時段長度加總。藍圖不另存總時長。 */
+export function totalMinutes(bp: Blueprint): number {
+  return bp.days.reduce(
+    (sum, d) => sum + d.slots.reduce((s, slot) => s + slot.minutes, 0),
+    0,
+  );
+}
+
+/** 一個時段裡各單元分鐘數加總。 */
+export function plannedMinutes(slot: Slot): number {
+  return slot.units.reduce((sum, u) => sum + u.minutes, 0);
+}
+
+/** 純講述單元：沒有動手環節。 */
+export const isLectureOnly = (unit: Unit) => unit.activity === null;
+
+/** 天與時段的位置，皆從 1 起算（第 1 天、第 1 個時段）。 */
+export interface SlotLocation {
+  day: number;
+  slot: number;
 }
 
 export type BlueprintIssue =
   | { kind: "missing_element"; element: FiveElement }
-  | { kind: "duration_mismatch"; planned: number; expected: number }
+  | ({ kind: "duration_mismatch"; planned: number; expected: number } & SlotLocation)
+  | ({ kind: "lecture_only"; unit: string } & SlotLocation)
   | { kind: "open_question"; question: string };
 
 /**
@@ -101,14 +154,18 @@ export function checkBlueprint(bp: Blueprint): BlueprintIssue[] {
     issues.push({ kind: "missing_element", element });
   }
 
-  const planned = plannedMinutes(bp);
-  if (planned !== bp.format.durationMinutes) {
-    issues.push({
-      kind: "duration_mismatch",
-      planned,
-      expected: bp.format.durationMinutes,
+  bp.days.forEach((d, di) => {
+    d.slots.forEach((slot, si) => {
+      const at = { day: di + 1, slot: si + 1 };
+      const planned = plannedMinutes(slot);
+      if (planned !== slot.minutes) {
+        issues.push({ kind: "duration_mismatch", ...at, planned, expected: slot.minutes });
+      }
+      for (const unit of slot.units) {
+        if (isLectureOnly(unit)) issues.push({ kind: "lecture_only", ...at, unit: unit.title });
+      }
     });
-  }
+  });
 
   for (const question of bp.openQuestions) {
     issues.push({ kind: "open_question", question });

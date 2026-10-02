@@ -47,6 +47,7 @@ ApiToken（講師的 Claude Code 權杖；只存 sha256）
 - **產物不自動重生。** 藍圖升版後 UI 標示過期產物；講師決定要不要重生。
 - **`artifacts` 同時是佇列。** `pending` 等認領、`generating` 有人在做（`claimed_by`、`claimed_at`）、`ready` 有檔案、`failed` 有錯誤訊息。不另外開 jobs 表。
 - **五元素是 schema 的一部分。** `elements.{theory, handsOn, takeaway, quote, story}` 哪一格是空的，`missingElements()` 直接算得出來。
+- **時間骨架是天 → 時段 → 單元。** `days[].slots[].units[]`；時段預設 180 分鐘、不另排休息。總時長由 `totalMinutes()` 從時段推得，不另存。`checkBlueprint()` 逐時段比對單元分鐘加總，並標出純講述單元（`activity` 為 null）。`blueprints.content` 只是 jsonb，形狀改了不需要 migration，但改版前存的藍圖不符合新 schema。
 
 zod schema：`src/lib/blueprint/schema.ts`。DB schema：`supabase/migrations/`。
 
