@@ -1,0 +1,86 @@
+name: Deploy
+
+# main 上的 CI 通過後部署到 production：先套 migration，再部署，最後 smoke test。
+# 任何一步失敗就中止。流程與取捨見 docs/specs/2026-10-02-production-deployment-design.md，
+# 回滾與故障排除見 docs/runbook.md。
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+# 同時間只允許一個部署，且不取消進行中的（migration 做到一半被砍比排隊更危險）
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_CLI: vercel@62.1.0
+
+jobs:
+  deploy:
+    # 手動觸發只允許在 main 上；自動觸發只在 CI 成功時
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # workflow_run 預設 checkout 預設分支最新，這裡釘在剛通過 CI 的那個 commit
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check required secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          missing=0
+          for name in VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
+            if [ -z "${!name:-}" ]; then echo "::error::缺少 secret $name（執行 scripts/setup-production.sh）"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Apply migrations to production
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          pnpm exec supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
+          pnpm exec supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Deploy to Vercel
+        id: vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # NEXT_PUBLIC_* 會在 build 時寫進前端 bundle，所以 build 前一定要先 pull
+          npx --yes "$VERCEL_CLI" pull --yes --environment=production --token "$VERCEL_TOKEN"
+          npx --yes "$VERCEL_CLI" build --prod --token "$VERCEL_TOKEN"
+          url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token "$VERCEL_TOKEN" -e APP_COMMIT_SHA="$COMMIT_SHA")
+          echo "url=$url" >>"$GITHUB_OUTPUT"
+          echo "Deployed: $url" >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke test
+        env:
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # production 網址（repo variable）；沒設就用這次部署的網址
+          TARGET_URL: ${{ vars.PRODUCTION_URL || steps.vercel.outputs.url }}
+        run: scripts/smoke-test.sh "$TARGET_URL" "$COMMIT_SHA"
