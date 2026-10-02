@@ -122,7 +122,10 @@ export default async function PortalPage({ params }: PageProps<"/s/[code]">) {
       )}
 
       {view.state === "open" && (
-        <footer className="mt-10 text-xs text-body-muted">此頁可用到 {formatDateTime(view.expiresAt)}</footer>
+        <footer className="mt-10 space-y-1 text-xs text-body-muted">
+          <p>此頁可用到 {formatDateTime(view.expiresAt)}</p>
+          <p>設計稿：下載按鈕還沒接上檔案。</p>
+        </footer>
       )}
     </>
   );

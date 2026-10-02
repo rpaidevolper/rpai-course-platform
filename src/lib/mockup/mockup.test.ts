@@ -141,6 +141,12 @@ describe("學員入口", () => {
     expect(portalState(extended, "2026-11-30T00:00:00+08:00")).toBe("open");
   });
 
+  it("還沒發布時一律是未發布，即使講師已經關閉", () => {
+    const base = getSession("s-ci-1022")!;
+    const closed: Session = { ...base, portal: { ...base.portal, closedAt: "2026-10-01T00:00:00+08:00" } };
+    expect(portalState(closed, MOCK_NOW)).toBe("unpublished");
+  });
+
   it("找不到代碼回傳 undefined", () => {
     expect(portalView("nope", MOCK_NOW)).toBeUndefined();
   });
