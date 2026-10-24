@@ -327,16 +327,34 @@ export interface Session {
 
 export interface KnowledgeDraft {
   id: string;
-  /** 匯入過往講義產生的草稿沒有來源課程，為 null */
+  /** 結案產生的草稿指向那門課程；匯入過往講義產生的沒有來源課程，為 null */
   fromCourseId: string | null;
   /** 匯入時的檔名；其他來源為 null */
   importedFileName: string | null;
   createdAt: IsoTime;
-  trigger: "auto" | "manual" | "import";
+  /** closing＝課程結案後；manual＝講師手動；import＝匯入過往講義 */
+  trigger: "closing" | "manual" | "import";
+  /** 結案草稿是依哪一版藍圖與哪些最終版拆出來的（追溯用）；其他來源為 null */
+  basis: { blueprintVersion: number; finalArtifactIds: string[] } | null;
   proposal: DraftProposal;
 }
 
+/** 模組卡新版本的一條改動；unitCardId 指向造成這條改動的單元卡提案（排除該單元時一併拿掉），沒有則為 null。 */
+export interface ModuleCardChange {
+  text: string;
+  unitCardId: string | null;
+}
+
+/**
+ * 知識庫草稿的四種提案。單元卡的內容只存在「新單元卡」提案裡（課程配方只引用它的 id），
+ * 所以改寫、排除都只改一處。用過的課程配方數由配方推得（recipesUsingUnit），「更新既有單元卡」
+ * 不存計數：它的 +1 來自收進課程配方，接受提案本身只補上這門課帶來的新標籤。
+ */
 export type DraftProposal =
-  | { kind: "module_card_version"; moduleId: ModuleId; changes: string[] }
-  | { kind: "new_course_recipe"; recipe: Omit<CourseRecipe, "id" | "unitIds">; unitCards: Omit<UnitCard, "id">[] }
-  | { kind: "new_industry_pack"; industryPack: Omit<IndustryPack, "id"> };
+  /** 新單元卡：id 在產生草稿時就定好，課程配方用它引用 */
+  | { kind: "new_unit_card"; unitCard: UnitCard }
+  /** 更新既有單元卡：這門課用了它，補上它還沒有的對象、工具與應用場景 */
+  | { kind: "update_unit_card"; unitCardId: string; addTags: Pick<TagSet, "audiences" | "tools" | "scenarios"> }
+  /** 新課程配方：id 同樣預先定好；unitCardIds 依序引用既有單元卡或待收進的新單元卡 */
+  | { kind: "new_course_recipe"; recipe: Omit<CourseRecipe, "unitIds">; unitCardIds: string[] }
+  | { kind: "module_card_version"; moduleId: ModuleId; changes: ModuleCardChange[] };

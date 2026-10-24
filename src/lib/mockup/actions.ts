@@ -1,11 +1,12 @@
 import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
+import { closingDrafts } from "./closing-drafts";
 import { closingGate, isCourseClosed } from "./closing";
+import { acceptDraft, discardDraft, excludeUnit, rewriteDraft, type DraftRewrite } from "./draft-review";
 import { CURRENT_INSTRUCTOR_ID } from "./instructor";
 import {
   artifactSeries,
   generationGate,
   getIndustryPack,
-  getModuleCard,
   instructorEdit,
   isPublishable,
   latestArtifact,
@@ -23,7 +24,6 @@ import type {
   ClientContext,
   ClientDocumentKind,
   Course,
-  CourseRecipe,
   DraftProposal,
   IndustryPack,
   TagSet,
@@ -77,14 +77,14 @@ export type DemoAction =
   | { type: "portal/close"; sessionId: string }
   | { type: "portal/reopen"; sessionId: string }
   | { type: "portal/extend"; sessionId: string; days: number }
-  // 知識庫
-  | { type: "draft/import"; id: string; fileName: string; proposal: DraftProposal }
-  /**
-   * newId：收進新課程配方或新產業素材包時的 id（配方的單元卡會以它為前綴，例如 `${newId}-u1`）；
-   * 模組卡升版時不用。
-   */
-  | { type: "draft/accept"; draftId: string; newId: string }
-  | { type: "draft/discard"; draftId: string };
+  // 知識庫草稿：結案時產生（course/close），其餘來自匯入；審核時可以排除單元、改寫文字
+  /** proposals 的第 i 份草稿 id 是 `${id}-${i + 1}` */
+  | { type: "draft/import"; id: string; fileName: string; proposals: DraftProposal[] }
+  | { type: "draft/accept"; draftId: string }
+  | { type: "draft/discard"; draftId: string }
+  /** 排除課程配方草稿裡的某個單元（連同它的單元卡草稿、更新草稿與模組卡改動） */
+  | { type: "draft/excludeUnit"; draftId: string; unitCardId: string }
+  | { type: "draft/rewrite"; draftId: string; patch: DraftRewrite };
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -118,7 +118,6 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     ...st,
     sessions: st.sessions.map((s) => (s.id === id ? fn(s) : s)),
   });
-  const withoutDraft = (s: DemoState, id: string): DemoState => ({ ...s, drafts: s.drafts.filter((d) => d.id !== id) });
   const findCourse = (id: string) => st.courses.find((c) => c.id === id);
 
   switch (action.type) {
@@ -302,7 +301,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       const course = findCourse(action.courseId);
       // 結案閘沒過、或已經結案：不動（closedAt 保留第一次結案的時間）
       if (!course || isCourseClosed(course) || !closingGate(st, course, now).canClose) return state;
-      return mapCourse(course.id, (c) => ({ ...c, closedAt: now }));
+      // 結案同時把課程拆成待審核的知識庫草稿（closing-drafts.ts）
+      const closedState = mapCourse(course.id, (c) => ({ ...c, closedAt: now }));
+      return { ...closedState, drafts: [...closingDrafts(closedState, course), ...closedState.drafts] };
     }
 
     case "session/create": {
@@ -369,45 +370,29 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       }));
 
     case "draft/import": {
-      const draft: KnowledgeDraft = {
-        id: action.id,
+      const drafts: KnowledgeDraft[] = action.proposals.map((proposal, i) => ({
+        id: `${action.id}-${i + 1}`,
         fromCourseId: null,
         importedFileName: action.fileName,
         createdAt: now,
         trigger: "import",
-        proposal: action.proposal,
-      };
-      return { ...st, drafts: [draft, ...st.drafts] };
+        basis: null,
+        proposal,
+      }));
+      return { ...st, drafts: [...drafts, ...st.drafts] };
     }
 
-    case "draft/accept": {
-      const draft = st.drafts.find((d) => d.id === action.draftId);
-      if (!draft) return state;
-      const p = draft.proposal;
-      if (p.kind === "module_card_version") {
-        const card = getModuleCard(st, p.moduleId);
-        if (!card) return state;
-        const next: ModuleCard = {
-          ...card,
-          versions: [
-            ...card.versions,
-            { version: latestModuleCardVersion(card) + 1, createdAt: now, note: p.changes.join("；"), fromCourseId: draft.fromCourseId },
-          ],
-        };
-        return withoutDraft({ ...st, moduleCards: st.moduleCards.map((c) => (c.moduleId === card.moduleId ? next : c)) }, draft.id);
-      }
-      if (p.kind === "new_course_recipe") {
-        // 單元卡依提案的順序編號：newId-u1、newId-u2…；配方照同一組 id 引用它們
-        const unitCards: UnitCard[] = p.unitCards.map((u, i) => ({ ...u, id: `${action.newId}-u${i + 1}` }));
-        const recipe: CourseRecipe = { ...p.recipe, id: action.newId, unitIds: unitCards.map((u) => u.id) };
-        return withoutDraft({ ...st, unitCards: [...st.unitCards, ...unitCards], recipes: [...st.recipes, recipe] }, draft.id);
-      }
-      const industryPack: IndustryPack = { ...p.industryPack, id: action.newId };
-      return withoutDraft({ ...st, industryPacks: [...st.industryPacks, industryPack] }, draft.id);
-    }
+    case "draft/accept":
+      return acceptDraft(st, action.draftId, now);
 
     case "draft/discard":
-      return withoutDraft(st, action.draftId);
+      return discardDraft(st, action.draftId);
+
+    case "draft/excludeUnit":
+      return excludeUnit(st, action.draftId, action.unitCardId);
+
+    case "draft/rewrite":
+      return rewriteDraft(st, action.draftId, action.patch);
   }
 }
 

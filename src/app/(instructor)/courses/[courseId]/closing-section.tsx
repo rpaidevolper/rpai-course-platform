@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { closingGate, isCourseClosed } from "@/lib/mockup/closing";
 import { formatDateTime, seriesLabel } from "@/lib/mockup/logic";
 import { dispatch } from "@/lib/mockup/store";
@@ -11,7 +12,7 @@ import { Badge, Button, CARD, SectionTitle } from "../../../_components/ui";
 /**
  * 結案：每天的最終版逐頁腳本與簡報（課後由講師上傳）都齊了、所有場次都已結束，才能按。
  * 缺哪一天、缺哪一種，以及還有沒有場次沒結束，都列在按鈕上方。
- * 結案後內容才會回存知識庫（草稿的產生是另一張票，這裡只負責結案）。
+ * 結案時內容會拆成待審核的知識庫草稿（新單元卡、更新單元卡、新課程配方、模組卡新版本），到知識庫審核後才收進去。
  */
 export function ClosingSection({ st, course }: { st: DemoState; course: Course }) {
   const closed = isCourseClosed(course);
@@ -19,7 +20,7 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
 
   const close = () => {
     dispatch({ type: "course/close", courseId: course.id });
-    toast(`「${course.title}」已結案，不能再新增場次`);
+    toast(`「${course.title}」已結案，內容已拆成知識庫草稿，等你審核`);
   };
 
   return (
@@ -33,6 +34,13 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
             <Badge tone="success">已結案</Badge>
             <p className="mt-2 text-body-muted">
               {formatDateTime(course.closedAt!)} 結案。結案後不能再新增場次；要再開同樣的課，請複製這門課程。
+            </p>
+            <p className="mt-2">
+              結案時內容已拆成待審核的知識庫草稿，
+              <Link href="/knowledge" className="font-bold text-navy underline underline-offset-2">
+                到知識庫審核
+              </Link>
+              ；審核時可以排除單元，也可以改寫含客戶機密的文字。
             </p>
           </>
         ) : (

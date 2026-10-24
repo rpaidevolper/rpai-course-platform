@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
 import { filterRecipes, filterUnitCards, hasFilter, noFilter } from "@/lib/mockup/browse";
-import { IMPORT_ACCEPT, importProposal } from "@/lib/mockup/import-script";
+import { IMPORT_ACCEPT, importProposals } from "@/lib/mockup/import-script";
 import {
   getModule,
   getModuleCard,
@@ -63,7 +63,7 @@ export function KnowledgeView() {
     setImporting(fileName);
     importTimer.current = setTimeout(() => {
       importTimer.current = null;
-      dispatch({ type: "draft/import", id: makeId("d"), fileName, proposal: importProposal(fileName, moduleId) });
+      dispatch({ type: "draft/import", id: makeId("d"), fileName, proposals: importProposals(fileName, moduleId, makeId("rc")) });
       setImporting(null);
       toast("已產生草稿，等你審核");
     }, IMPORT_MS);

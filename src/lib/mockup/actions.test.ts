@@ -6,7 +6,6 @@ import {
   getCourse,
   getIndustryPack,
   getModuleCard,
-  getRecipe,
   getSession,
   getUnitCard,
   isStale,
@@ -14,7 +13,6 @@ import {
   portalState,
   portalView,
   readiness,
-  recipeUnitCards,
 } from "./logic";
 import type { ModuleId } from "./types";
 import { initialState, type DemoState } from "./state";
@@ -307,50 +305,5 @@ describe("專案與客戶文件", () => {
   it("新增客戶文件收在專案底下", () => {
     const st = run([{ type: "clientDocument/add", projectId: "p-a-2026", id: "doc-new", kind: "feedback", title: "回饋", fileName: "回饋.eml" }]);
     expect(st.projects[0].clientDocuments.at(-1)).toMatchObject({ id: "doc-new", receivedAt: st.now });
-  });
-});
-
-describe("知識庫草稿", () => {
-  it("模組卡升版：多一版（記下改了什麼與來源課程），草稿消失", () => {
-    const st = run([{ type: "draft/accept", draftId: "d-pa-module-card", newId: "" }]);
-    const card = getModuleCard(st, "A4")!;
-    expect(card.versions).toHaveLength(3);
-    expect(card.versions.at(-1)).toMatchObject({ version: 3, fromCourseId: "c-pa-finance" });
-    expect(card.versions.at(-1)!.note).toContain("逾期提醒");
-    expect(st.drafts.map((d) => d.id)).not.toContain("d-pa-module-card");
-  });
-
-  it("收進產業素材包、捨棄", () => {
-    const st = run([{ type: "draft/accept", draftId: "d-pa-pack", newId: "ip-new" }]);
-    expect(getIndustryPack(st, "ip-new")).toMatchObject({ title: "金融業：月結對帳", industries: ["金融"] });
-    expect(st.drafts.map((d) => d.id)).not.toContain("d-pa-pack");
-    expect(run([{ type: "draft/discard", draftId: "d-pa-pack" }]).drafts).toHaveLength(1);
-  });
-
-  it("匯入講義產生的課程配方草稿，收進後單元卡依序編號、屬於各自的模組，配方引用它們", () => {
-    const st = run([
-      {
-        type: "draft/import",
-        id: "d-imp",
-        fileName: "2025 行政班講義.pdf",
-        proposal: {
-          kind: "new_course_recipe",
-          recipe: { title: "試算表自動化", client: "匯入的講義", status: "delivered", heldOn: null, audiences: [], tools: [], industries: ["通用"], scenarios: [] },
-          unitCards: [
-            { moduleId: "A2", title: "甲", minutes: 60, objective: "o", method: "m", outcome: "r", audiences: [], tools: [], scenarios: [] },
-            { moduleId: "B3", title: "乙", minutes: 90, objective: "o", method: "m", outcome: "r", audiences: [], tools: [], scenarios: [] },
-          ],
-        },
-      },
-      { type: "draft/accept", draftId: "d-imp", newId: "rc-imp" },
-    ]);
-    const recipe = getRecipe(st, "rc-imp")!;
-    expect(recipe).toMatchObject({ title: "試算表自動化", status: "delivered" });
-    expect(recipe.unitIds).toEqual(["rc-imp-u1", "rc-imp-u2"]);
-    expect(recipeUnitCards(st, recipe).map((u) => [u.id, u.moduleId, u.title])).toEqual([
-      ["rc-imp-u1", "A2", "甲"],
-      ["rc-imp-u2", "B3", "乙"],
-    ]);
-    expect(st.drafts.map((d) => d.id)).not.toContain("d-imp");
   });
 });

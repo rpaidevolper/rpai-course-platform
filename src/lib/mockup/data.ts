@@ -533,6 +533,34 @@ const paFinanceBlueprint = BlueprintSchema.parse({
   openQuestions: [],
 });
 
+/**
+ * 先導班的藍圖（#60）：從請款簽核工作坊改來，示範結案草稿的四種情況——
+ * 骨架單元「雲端流程上手」改過（要改）、「核准與退回分支」與「上線檢查表」照用（沿用）、
+ * 「逾期提醒」換成新做的單元，而且標題與目標帶著客戶代號（審核時要改寫）。
+ */
+const paPilotBlueprint = (() => {
+  const bp = structuredClone(paFinanceBlueprint);
+  const [morning, afternoon] = bp.days[0].slots;
+  morning.units[0] = { ...morning.units[0], title: "雲端流程上手（請款版）", reuse: "modify", objective: "建立第一個收請款單的雲端流程" };
+  morning.units[1] = { ...morning.units[1], carriesFrom: "雲端流程上手（請款版）" };
+  afternoon.units[0] = {
+    title: "F 公司請款單逾期對帳",
+    minutes: 90,
+    module: "A4",
+    level: "L5",
+    objective: "把 F 公司財務部逾期三天的請款單自動對帳並提醒",
+    method: "個人實作＋假資料測試",
+    outcome: "F 公司財務部的逾期對帳流程",
+    keyPoints: ["排程流程", "對帳欄位"],
+    activity: "用假資料跑一次對帳",
+    elements: ["handsOn"],
+    carriesFrom: "核准與退回分支",
+    source: null,
+    reuse: "new",
+  };
+  return BlueprintSchema.parse(bp);
+})();
+
 /** 多天課程的範例：兩天、每天上午下午各一個 180 分鐘時段，第二天承接第一天的成果。 */
 const gasTwoDayBlueprint = BlueprintSchema.parse({
   title: "Apps Script 兩天實戰營：進料檢驗回報自動化",
@@ -810,7 +838,7 @@ export const COURSES: Course[] = [
     source: { moduleIds: ["A4", "B3"], industryPackId: "ip-finance-approval" },
     copiedFrom: null,
     closedAt: null,
-    blueprint: paFinanceBlueprint,
+    blueprint: paPilotBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-08-10T10:00:00+08:00", note: "由模組卡與金融業的產業素材包談出初版", finalizedAt: null },
       { version: 2, createdAt: "2026-08-18T09:30:00+08:00", note: "先導班只留差旅請款一條流程", finalizedAt: "2026-08-19T09:00:00+08:00" },
@@ -919,37 +947,5 @@ export const SESSIONS: Session[] = [
   },
 ];
 
-/** 知識庫草稿：課後從課程整理出來、等講師收進或捨棄的兩筆（一筆模組卡升版、一筆產業素材包）。 */
-export const KNOWLEDGE_DRAFTS: KnowledgeDraft[] = [
-  {
-    id: "d-pa-module-card",
-    fromCourseId: "c-pa-finance",
-    importedFileName: null,
-    createdAt: "2026-09-18T17:00:00+08:00",
-    trigger: "auto",
-    proposal: {
-      kind: "module_card_version",
-      moduleId: "A4",
-      changes: ["「逾期提醒」從核准單元拆出，獨立 90 分鐘", "上線前加一段「例外金額由誰核准」的檢查"],
-    },
-  },
-  {
-    id: "d-pa-pack",
-    fromCourseId: "c-pa-finance",
-    importedFileName: null,
-    createdAt: "2026-09-18T17:00:00+08:00",
-    trigger: "auto",
-    proposal: {
-      kind: "new_industry_pack",
-      industryPack: {
-        title: "金融業：月結對帳",
-        audiences: ["財務"],
-        tools: ["Excel"],
-        industries: ["金融"],
-        scenarios: ["數據分析"],
-        cases: ["一張請款單在三個樓層之間走了九天", "月結前兩天的對單地獄"],
-        materialNames: ["請款單欄位對照.xlsx"],
-      },
-    },
-  },
-];
+/** 知識庫草稿：一開始沒有，課程結案時才會產生（closing-drafts.ts）。 */
+export const KNOWLEDGE_DRAFTS: KnowledgeDraft[] = [];
