@@ -11,7 +11,7 @@ import type { KnowledgeDraft, UnitCard } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
 import { TagList } from "../../_components/tags";
-import { Badge, Button, CARD, Field, FieldLabel, TextArea, TextButton, TextInput } from "../../_components/ui";
+import { Badge, Button, CARD, EMPHASIS, Field, FieldLabel, TextArea, TextButton, TextInput } from "../../_components/ui";
 
 const TRIGGER_TEXT: Record<KnowledgeDraft["trigger"], string> = {
   closing: "課程結案後產生",
@@ -64,7 +64,7 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
   );
 
   return (
-    <article className={`${CARD} border-l-[3px] border-accent p-5`}>
+    <article className={`${CARD} ${EMPHASIS} p-5`}>
       <p className="text-xs text-body-muted">
         <Badge tone="outline">{KIND_LABEL[p.kind]}</Badge>{" "}
         {draft.fromCourseId === null && draft.importedFileName ? (

@@ -14,7 +14,7 @@ import {
 import { useDemoState } from "@/lib/mockup/store";
 import { ReadinessList } from "../_components/readiness-list";
 import { SessionDays } from "../_components/session-days";
-import { Badge, CARD, Empty, PageHeader } from "../_components/ui";
+import { Badge, CARD, EMPHASIS, Empty, PageHeader } from "../_components/ui";
 
 /** 講師首頁：接下來的場次，依日期排在一條日程軸上，每場列出準備度缺項，每組附「去處理」連結。 */
 export function HomeView() {
@@ -48,15 +48,16 @@ export function HomeView() {
             const next = i === 0;
 
             return (
-              <li key={s.id} className="grid grid-cols-[3.75rem_1fr] gap-4 sm:grid-cols-[5.5rem_1fr] sm:gap-6">
-                <div className="pt-3 text-right">
-                  <div className={`font-bold leading-none text-ink ${next ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"}`}>
+              // 手機上日期放在卡片上方，卡片才有整個寬度；平板以上日期在左欄
+              <li key={s.id} className="grid gap-2 sm:grid-cols-[5.5rem_1fr] sm:gap-6">
+                <div className="flex items-baseline gap-1.5 sm:block sm:pt-3 sm:text-right">
+                  <div className={`font-bold leading-none text-ink ${next ? "text-4xl sm:text-6xl" : "text-3xl sm:text-5xl"}`}>
                     {day}
                   </div>
-                  <div className="mt-1.5 text-xs font-bold text-body-muted">{month}</div>
+                  <div className="text-xs font-bold text-body-muted sm:mt-1.5">{month}</div>
                 </div>
 
-                <article className={`${CARD} min-w-0 p-5 ${next ? "border-l-[3px] border-accent" : ""}`}>
+                <article className={`${CARD} min-w-0 p-5 ${next ? EMPHASIS : ""}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h2 className="text-lg font-bold text-ink">

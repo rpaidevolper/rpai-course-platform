@@ -638,7 +638,15 @@ const TZ = "Asia/Taipei";
 const fmt = (opts: Intl.DateTimeFormatOptions) => (t: IsoTime) =>
   new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, ...opts }).format(new Date(t)).replace(/\s/g, " ");
 
-export const formatDate = fmt({ month: "long", day: "numeric", weekday: "short" });
+/**
+ * 「10月15日 週四」。不直接用 format()：Node 的 ICU 在日與星期之間放空白、Chromium 不放，
+ * 整頁會 hydration mismatch（#121），所以拆成 parts 自己拼。
+ */
+export function formatDate(t: IsoTime): string {
+  const parts = new Intl.DateTimeFormat("zh-TW", { timeZone: TZ, month: "numeric", day: "numeric", weekday: "short" }).formatToParts(new Date(t));
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)!.value;
+  return `${get("month")}月${get("day")}日 ${get("weekday")}`;
+}
 
 export const formatTime = fmt({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 

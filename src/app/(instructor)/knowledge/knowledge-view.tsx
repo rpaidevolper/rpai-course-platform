@@ -23,7 +23,7 @@ import { MODULES, RECIPE_STATUS_LABELS, type ModuleId, type UnitCard } from "@/l
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
 import { TagList } from "../../_components/tags";
-import { Badge, Button, Card, CARD, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
+import { Badge, Button, Card, CARD, EMPHASIS, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
 import { CardDetailDialog, type OpenCard } from "./card-details";
 import { BrowseFilter } from "./browse-filter";
 import { DraftCard } from "./draft-card";
@@ -94,7 +94,7 @@ export function KnowledgeView() {
         </SectionTitle>
         <div aria-live="polite">
           {importing && (
-            <p className={`${CARD} mb-4 border-l-[3px] border-accent p-5 text-sm font-bold text-ink`}>
+            <p className={`${CARD} ${EMPHASIS} mb-4 p-5 text-sm font-bold text-ink`}>
               <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent align-middle" aria-hidden />
               AI 正在拆解講義「{importing}」…
             </p>
@@ -161,7 +161,7 @@ export function KnowledgeView() {
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
             {recipes.map((r) => (
-              <li key={r.id} id={r.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === r.id ? HIGHLIGHT : ""}`}>
+              <li key={r.id} id={r.id} className={`rounded-lg transition-shadow ${highlight === r.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <h3 className="min-w-0 text-base font-bold text-ink">{r.title}</h3>
@@ -195,7 +195,7 @@ export function KnowledgeView() {
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
             {st.industryPacks.map((s) => (
-              <li key={s.id} id={s.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === s.id ? HIGHLIGHT : ""}`}>
+              <li key={s.id} id={s.id} className={`rounded-lg transition-shadow ${highlight === s.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
                   <h3 className="text-base font-bold text-ink">{s.title}</h3>
                   <div className="mt-2">
@@ -287,7 +287,7 @@ function ModuleSection({ st, moduleId, units, filtered, highlighted, onOpen }: {
   const mod = getModule(moduleId);
   const card = getModuleCard(st, moduleId);
   return (
-    <section id={`module-${moduleId}`} aria-labelledby={`module-title-${moduleId}`} className="scroll-mt-6">
+    <section id={`module-${moduleId}`} aria-labelledby={`module-title-${moduleId}`}>
       <h3 id={`module-title-${moduleId}`} className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold text-ink">
         {moduleLabel(moduleId)}
         <Badge tone="outline">{mod.kind === "A" ? "A 學員打開的環境" : "B 方法"}</Badge>

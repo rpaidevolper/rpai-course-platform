@@ -45,9 +45,11 @@ import {
   Card,
   CARD,
   DemoMissing,
+  EMPHASIS,
   Empty,
   GatedAction,
   PageHeader,
+  SectionNav,
   SectionTitle,
   TextButton,
 } from "../../../_components/ui";
@@ -57,6 +59,16 @@ import { NewSessionButton } from "./new-session-dialog";
 
 const STATUS_TEXT = { pending: "排隊中", generating: "產出中", ready: "可用", failed: "產出失敗" } as const;
 const STATUS_TONE = { pending: "neutral", generating: "neutral", ready: "success", failed: "danger" } as const;
+
+/** 課程頁的區塊，依頁面順序；id 是各區塊標題的 id */
+const COURSE_SECTIONS: [id: string, text: string][] = [
+  ["artifacts", "產物鏈"],
+  ["requirement-mapping", "需求對照"],
+  ["blueprint", "藍圖"],
+  ["materials", "素材"],
+  ["sessions", "場次"],
+  ["closing", "結案"],
+];
 
 const formatSize = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
 
@@ -125,7 +137,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
   return (
     <>
-      <Breadcrumb items={[{ label: project.title, href: `/projects/${project.id}` }, { label: course.title }]} />
+      <Breadcrumb items={[{ label: "專案", href: "/projects" }, { label: project.title, href: `/projects/${project.id}` }, { label: course.title }]} />
       <PageHeader
         title={course.title}
         description={
@@ -177,7 +189,7 @@ export function CourseView({ courseId }: { courseId: string }) {
       </PageHeader>
 
       {closed && (
-        <div role="note" className={`${CARD} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 border-l-[3px] border-accent p-4 text-sm`}>
+        <div role="note" className={`${CARD} ${EMPHASIS} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 p-4 text-sm`}>
           <p>
             <span className="font-bold text-ink">{CLOSED_FROZEN_REASON}。</span>
             場次、產物、藍圖和素材都已凍結，查看、下載與管理學員入口仍可以。
@@ -186,9 +198,11 @@ export function CourseView({ courseId }: { courseId: string }) {
         </div>
       )}
 
-      <div className="-mt-4 mb-8">
+      <div className="-mt-4 mb-6">
         <CourseTags course={course} />
       </div>
+
+      <SectionNav label="課程頁區塊" items={COURSE_SECTIONS} />
 
       <section aria-labelledby="artifacts" className="mb-10">
         <SectionTitle aside="產檔在你自己的 Claude Code 裡跑，用 RPAI 課程 skill">
@@ -247,7 +261,7 @@ export function CourseView({ courseId }: { courseId: string }) {
             <h3 className="text-sm font-bold text-ink">版本紀錄</h3>
             <ol className="mt-3 space-y-4">
               {history.map((v) => (
-                <li key={v.version} className={v.version === latestBp ? "border-l-[3px] border-accent pl-3" : "pl-[15px]"}>
+                <li key={v.version} className={`pl-3 ${v.version === latestBp ? EMPHASIS : ""}`}>
                   <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
                     v{v.version}
                     {v.version === latestBp && <Badge tone="outline">目前</Badge>}
@@ -386,6 +400,7 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   const canFinalize = isSlides && latest?.status === "ready" && latest.finalizedAt === null && !stale;
   const busy = latest?.status === "pending" || latest?.status === "generating";
   const frozen = isCourseClosed(course);
+  const canMarkSent = isOutline && latest?.status === "ready" && !latest.sentToClientAt && !frozen;
 
   const request = () => {
     dispatch({ type: "artifact/request", id: makeId("a"), courseId: course.id, kind: series.kind, day: series.day });
@@ -401,7 +416,7 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   };
 
   return (
-    <li className={`${CARD} min-w-0 p-5 ${stale ? "border-l-[3px] border-accent" : ""}`}>
+    <li className={`${CARD} min-w-0 p-5 ${stale ? EMPHASIS : ""}`}>
       <h4 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-ink">
         {label}
         {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
@@ -493,20 +508,21 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
             把 v{latest.version} 標成定稿
           </Button>
         )}
-        {latestReady && (
-          <>
-            <input ref={uploadInput} type="file" hidden onChange={uploadEdit} />
-            <Button variant="secondary" disabled={busy || frozen} title={frozen ? CLOSED_FROZEN_REASON : undefined} onClick={() => uploadInput.current?.click()}>
-              上傳講師修改版
-            </Button>
-          </>
-        )}
-        {isOutline && latest?.status === "ready" && !latest.sentToClientAt && !frozen && (
-          <Button variant="secondary" onClick={() => setConfirmSent(true)}>
-            標記已寄給客戶
-          </Button>
-        )}
       </div>
+      {/* 不常用的動作降成文字按鈕，按鈕列只留產出、下載、定稿，看得出主要動作 */}
+      {(latestReady || canMarkSent) && (
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+          {latestReady && (
+            <>
+              <input ref={uploadInput} type="file" hidden onChange={uploadEdit} />
+              <TextButton disabled={busy || frozen} title={frozen ? CLOSED_FROZEN_REASON : undefined} onClick={() => uploadInput.current?.click()}>
+                上傳講師修改版
+              </TextButton>
+            </>
+          )}
+          {canMarkSent && <TextButton onClick={() => setConfirmSent(true)}>標記已寄給客戶</TextButton>}
+        </div>
+      )}
       {frozen && <p className="mt-2 text-xs text-body-muted">{CLOSED_FROZEN_REASON}；可以查看與下載。</p>}
 
       {isOutline && latest && (

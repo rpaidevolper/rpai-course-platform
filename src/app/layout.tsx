@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { THEME_SCRIPT } from "@/lib/theme";
 import { DemoRuntime } from "./_components/demo-runtime";
+import { ThemeScript } from "./_components/theme-toggle";
 
 export const metadata: Metadata = {
   title: "RPAI 講師後台",
@@ -13,7 +13,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // inline script 在 hydration 前改了 data-theme，讓 React 以 DOM 為準
     <html lang="zh-Hant" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <ThemeScript />
       </head>
       <body>
         {children}

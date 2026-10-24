@@ -12,9 +12,15 @@ import { PROJECT_STATUS_LABELS, type ProjectStatus } from "@/lib/mockup/types";
 
 export const CARD = "rounded-lg bg-card shadow-[0_3px_16px_rgba(1,20,85,0.06)]";
 
+/**
+ * 左強調條（#121）。用 inset shadow 畫，不像 border 會把內容往右推 3px 而跟旁邊對不齊；
+ * 左側不圓角，條才是直的。可以跟 CARD 的陰影疊用。
+ */
+export const EMPHASIS = "rounded-l-none inset-shadow-[3px_0_0_var(--color-accent)]";
+
 export function Card({ children, className = "", emphasis = false }: { children: ReactNode; className?: string; emphasis?: boolean }) {
   return (
-    <div className={`${CARD} p-5 ${emphasis ? "border-l-[3px] border-accent" : ""} ${className}`}>
+    <div className={`${CARD} p-5 ${emphasis ? EMPHASIS : ""} ${className}`}>
       {children}
     </div>
   );
@@ -34,10 +40,31 @@ export function PageHeader({ title, description, children }: { title: string; de
 
 export function SectionTitle({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-3">
-      <h2 className="text-[0.95rem] font-bold text-ink">{children}</h2>
+    // 說明放不下時換到標題下一行，不跟標題擠
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+      <h2 className="text-base font-bold text-ink">{children}</h2>
       {aside && <div className="text-xs text-body-muted">{aside}</div>}
     </div>
+  );
+}
+
+/**
+ * 長頁面的頁內區塊導覽（#121）：黏在頂部列下方，點了跳到該區塊；放不下就橫向捲動。
+ * globals.css 看到 data-section-nav 會加大錨點跳轉的上方留白，標題才不會被它蓋住。
+ */
+export function SectionNav({ label, items }: { label: string; items: [id: string, text: string][] }) {
+  return (
+    <nav data-section-nav aria-label={label} className="sticky top-(--header-h) z-10 -mx-4 mb-8 bg-canvas/95 px-4 py-2 backdrop-blur-sm sm:-mx-8 sm:px-8">
+      <ul className="flex gap-1 overflow-x-auto whitespace-nowrap">
+        {items.map(([id, text]) => (
+          <li key={id}>
+            <a href={`#${id}`} className="block rounded-md px-3 py-1.5 text-sm font-bold text-body hover:bg-layer hover:text-ink">
+              {text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
@@ -140,13 +167,27 @@ export function Button({
   );
 }
 
-/** 文字樣式的小按鈕，用在清單項目旁邊（例如「移除」）。 */
-export function TextButton({ children, onClick, tone = "accent" }: { children: ReactNode; onClick: () => void; tone?: "accent" | "danger" }) {
+/** 文字樣式的小按鈕，用在清單項目旁邊（例如「移除」），或卡片裡不常用的次要動作。 */
+export function TextButton({
+  children,
+  onClick,
+  tone = "accent",
+  disabled = false,
+  title,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  tone?: "accent" | "danger";
+  disabled?: boolean;
+  title?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`text-xs font-bold underline underline-offset-2 ${tone === "danger" ? "text-danger" : "text-accent"}`}
+      disabled={disabled}
+      title={title}
+      className={`text-xs font-bold underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${tone === "danger" ? "text-danger" : "text-accent"}`}
     >
       {children}
     </button>
@@ -162,6 +203,22 @@ export function Field({ label, hint, children }: { label: string; hint?: ReactNo
       <span className="text-xs font-bold text-body-muted">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-body-muted">{hint}</span>}
+    </label>
+  );
+}
+
+/**
+ * 多選的選取膠囊（#121）：外觀是膠囊，底下仍是原生 checkbox，鍵盤、讀屏與表單行為照舊。
+ * 選取時除了底色，還有描邊、粗體與勾號，不只靠顏色區分。
+ */
+export function CheckChip({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: ReactNode }) {
+  return (
+    <label className="group inline-flex cursor-pointer select-none items-center gap-1 rounded-full bg-layer px-3 py-1 text-sm text-ink ring-[1.5px] ring-inset ring-transparent hover:ring-body-muted has-[:checked]:bg-accent-tint has-[:checked]:font-bold has-[:checked]:ring-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
+      <input type="checkbox" className="sr-only" checked={checked} onChange={onChange} />
+      <span aria-hidden className="hidden group-has-[:checked]:inline">
+        ✓
+      </span>
+      {children}
     </label>
   );
 }

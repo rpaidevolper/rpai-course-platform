@@ -41,6 +41,7 @@ import {
   Card,
   CARD,
   DemoMissing,
+  EMPHASIS,
   Empty,
   Facts,
   Field,
@@ -96,6 +97,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     <>
       <Breadcrumb
         items={[
+          { label: "專案", href: "/projects" },
           { label: project.title, href: `/projects/${project.id}` },
           { label: course.title, href: `/courses/${course.id}` },
           { label: sessionDateRange(session) },
@@ -108,7 +110,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       <div className="space-y-8">
         {/* 發布：本頁重點 */}
-        <section id="publish" aria-labelledby="publish-title" className={`${CARD} scroll-mt-6 border-l-[3px] border-accent p-5 sm:p-6`}>
+        <section id="publish" aria-labelledby="publish-title" className={`${CARD} ${EMPHASIS} p-5 sm:p-6`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 id="publish-title" className="text-xl font-bold text-ink">
               發布
@@ -215,7 +217,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </section>
 
         {/* 學員入口 */}
-        <section id="portal" aria-labelledby="portal-title" className="scroll-mt-6">
+        <section id="portal" aria-labelledby="portal-title">
           <SectionTitle>
             <span id="portal-title">學員入口</span>
           </SectionTitle>
@@ -263,7 +265,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
         <div className="grid gap-8 md:grid-cols-2">
           {/* 場次資訊與準備度 */}
-          <section id="info" aria-labelledby="info-title" className="scroll-mt-6">
+          <section id="info" aria-labelledby="info-title">
             <SectionTitle aside={frozen ? <span className="text-xs text-body-muted">{CLOSED_FROZEN_REASON}</span> : <TextButton onClick={() => setDialog("info")}>編輯</TextButton>}>
               <span id="info-title">場次資訊</span>
             </SectionTitle>
@@ -278,7 +280,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             </Card>
           </section>
 
-          <section id="ready" aria-labelledby="ready-title" className="scroll-mt-6">
+          <section id="ready" aria-labelledby="ready-title">
             <SectionTitle>
               <span id="ready-title">準備度</span>
             </SectionTitle>
@@ -293,7 +295,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
 
         {/* 連結 */}
-        <section id="links" aria-labelledby="links-title" className="scroll-mt-6">
+        <section id="links" aria-labelledby="links-title">
           <SectionTitle>
             <span id="links-title">這一場的連結</span>
           </SectionTitle>

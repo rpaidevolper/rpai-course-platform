@@ -30,6 +30,7 @@ import {
   Button,
   CARD,
   DemoMissing,
+  EMPHASIS,
   Empty,
   FieldLabel,
   PageHeader,
@@ -83,7 +84,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
       </PageHeader>
 
       <section aria-labelledby="client-heading" className="mb-12">
-        <div className={`${CARD} border-l-[3px] border-accent p-6`}>
+        <div className={`${CARD} ${EMPHASIS} p-6`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 id="client-heading" className="text-lg font-bold text-ink">
               客戶背景

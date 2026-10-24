@@ -1,7 +1,7 @@
 import type { CoverageStatus, PartialReason, RequirementMapping } from "@/lib/blueprint/requirement-mapping";
 import type { Blueprint } from "@/lib/blueprint/schema";
 import type { RequirementMappingRow } from "@/lib/mockup/logic";
-import { Badge, CARD, Empty } from "./ui";
+import { Badge, CARD, EMPHASIS, Empty } from "./ui";
 
 const STATUS: Record<CoverageStatus, { icon: string; label: string; tone: "success" | "warning" | "danger" }> = {
   covered: { icon: "✅", label: "已涵蓋", tone: "success" },
@@ -40,7 +40,7 @@ export function RequirementMappingPanel({ rows, blueprint }: { rows: Requirement
       {rows.map(({ requirement, mapping: m, review }) => {
         const s = STATUS[m.status];
         return (
-          <li key={requirement.id} className={`${CARD} p-5 ${m.status !== "covered" ? "border-l-[3px] border-accent" : ""}`}>
+          <li key={requirement.id} className={`${CARD} p-5 ${m.status !== "covered" ? EMPHASIS : ""}`}>
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <h3 className="min-w-0 text-base font-bold text-ink">{requirement.text}</h3>
               <Badge tone={s.tone}>

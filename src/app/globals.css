@@ -40,10 +40,33 @@
 
   --font-sans: "Trebuchet MS", "Noto Sans TC", "Microsoft JhengHei", Calibri,
     Arial, sans-serif;
+
+  /* 中文 12px 太小，小字一律 13px（#121） */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
 }
 
 :root {
   color-scheme: light;
+  /* 原生勾選框、radio 也用互動色 */
+  accent-color: var(--color-accent);
+  /* 講師後台頂部列的高度：手機不黏住所以是 0；頁內區塊導覽黏在它下面 */
+  --header-h: 0px;
+}
+
+@media (width >= 40rem) {
+  :root {
+    --header-h: calc(4rem + 3px);
+  }
+}
+
+/* 錨點跳轉時讓標題落在黏住的頂部列（與課程頁的區塊導覽）下方，不被蓋住 */
+html {
+  scroll-padding-top: calc(var(--header-h) + 1.5rem);
+}
+
+html:has([data-section-nav]) {
+  scroll-padding-top: calc(var(--header-h) + 4.5rem);
 }
 
 /*

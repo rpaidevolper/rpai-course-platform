@@ -26,6 +26,7 @@ export function BlueprintChat({ courseId }: { courseId: string }) {
     <>
       <Breadcrumb
         items={[
+          { label: "專案", href: "/projects" },
           ...(project ? [{ label: project.title, href: `/projects/${project.id}` }] : []),
           { label: course.title, href: `/courses/${course.id}` },
           { label: "談藍圖" },

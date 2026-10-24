@@ -3,7 +3,7 @@
 import { downloadPlaceholder } from "@/lib/mockup/download";
 import { dayTimeText, formatDate, formatDateTime, portalView, VENUE_UNSET } from "@/lib/mockup/logic";
 import { useDemoState, useHydrated } from "@/lib/mockup/store";
-import { Badge, Button, CARD } from "../../../_components/ui";
+import { Badge, Button, CARD, EMPHASIS } from "../../../_components/ui";
 
 const formatSize = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
 
@@ -46,7 +46,7 @@ export function StudentPortal({ code }: { code: string }) {
               <li
                 key={d.day}
                 aria-current={current ? "date" : undefined}
-                className={`flex flex-wrap gap-x-3 gap-y-0.5 ${current ? "border-l-[3px] border-accent pl-2" : ""}`}
+                className={`flex flex-wrap gap-x-3 gap-y-0.5 pl-2 ${current ? EMPHASIS : ""}`}
               >
                 {multiDay && <span className="shrink-0 font-bold text-ink">第 {d.day} 天</span>}
                 <span className="text-ink">{dayTimeText(d)}</span>
@@ -58,7 +58,7 @@ export function StudentPortal({ code }: { code: string }) {
       </header>
 
       {view.state !== "open" ? (
-        <section aria-labelledby="notice" className={`${CARD} border-l-[3px] border-accent p-5`}>
+        <section aria-labelledby="notice" className={`${CARD} ${EMPHASIS} p-5`}>
           <h2 id="notice" className="sr-only">
             頁面狀態
           </h2>
@@ -78,7 +78,7 @@ export function StudentPortal({ code }: { code: string }) {
                       href={l.url}
                       target="_blank"
                       rel="noreferrer"
-                      className={`${CARD} block border-l-[3px] border-accent px-5 py-4 hover:bg-accent-tint`}
+                      className={`${CARD} ${EMPHASIS} block px-5 py-4 hover:bg-accent-tint`}
                     >
                       <span className="block text-lg font-bold text-ink">{l.label}</span>
                       <span className="mt-0.5 block break-all text-xs text-body-muted">{l.url}</span>
