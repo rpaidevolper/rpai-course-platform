@@ -3,7 +3,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  coursesUsingModule,
   formatDate,
   getCourse,
   getUnitCard,
@@ -15,6 +14,7 @@ import {
   recipesUsingUnit,
   recipeUnitCards,
 } from "@/lib/mockup/logic";
+import { moduleCardUsage, unitCardUsage, type CourseUsage } from "@/lib/mockup/browse";
 import type { DemoState } from "@/lib/mockup/state";
 import { recipeSpec, unitTags } from "@/lib/mockup/tags";
 import { RECIPE_STATUS_LABELS } from "@/lib/mockup/types";
@@ -62,12 +62,30 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+/** 用過的課程：課程名稱連到課程頁，旁邊是藍圖版本與用到的單元。 */
+export function UsageList({ usages, empty }: { usages: CourseUsage[]; empty: string }) {
+  if (usages.length === 0) return <p className="text-body-muted">{empty}</p>;
+  return (
+    <ul className="space-y-1.5">
+      {usages.map(({ course, blueprintVersion, unitTitles }) => (
+        <li key={course.id}>
+          <Link href={`/courses/${course.id}`} className="font-bold text-navy underline underline-offset-2">
+            {course.title}
+          </Link>{" "}
+          <Badge tone="outline">藍圖 v{blueprintVersion}</Badge>
+          <span className="ml-1.5 text-body-muted">{unitTitles.length === 1 ? unitTitles[0] : `${unitTitles.length} 個單元`}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) => void) {
   const card = st.moduleCards.find((c) => c.moduleId === moduleId);
   if (!card) return null;
   const versions = [...card.versions].sort((a, b) => b.version - a.version);
   const recipes = recipesUsingModule(st, card.moduleId);
-  const courses = coursesUsingModule(st, card.moduleId);
+  const courses = moduleCardUsage(st, card.moduleId);
   return {
     title: `模組卡 ${moduleLabel(card.moduleId)}`,
     description: (
@@ -143,20 +161,9 @@ function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) 
             </ul>
           )}
         </Section>
-        <Section label="平台上用過這張模組卡的課程">
-          {courses.length === 0 ? (
-            <p className="text-body-muted">還沒有課程用過。</p>
-          ) : (
-            <ul className="space-y-1">
-              {courses.map((c) => (
-                <li key={c.id}>
-                  <Link href={`/courses/${c.id}`} className="font-bold text-navy underline underline-offset-2">
-                    {c.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+        <Section label="平台上用過這個模組的課程">
+          <UsageList usages={courses} empty="還沒有課程用過。" />
+          <p className="mt-1 text-xs text-body-muted">藍圖裡有單元屬於這個模組的課程；版本是該課程目前的藍圖版本。</p>
         </Section>
       </>
     ),
@@ -167,6 +174,7 @@ function unitDetail(st: DemoState, unitId: string, onOpen: (card: OpenCard) => v
   const u = getUnitCard(st, unitId);
   if (!u) return null;
   const recipes = recipesUsingUnit(st, u.id);
+  const courses = unitCardUsage(st, u.id);
   return {
     title: `單元卡：${u.title}`,
     description: (
@@ -202,6 +210,10 @@ function unitDetail(st: DemoState, unitId: string, onOpen: (card: OpenCard) => v
               ))}
             </ul>
           )}
+        </Section>
+        <Section label="平台上用過這張單元卡的課程">
+          <UsageList usages={courses} empty="還沒有課程用過。" />
+          <p className="mt-1 text-xs text-body-muted">藍圖單元的來源是這張卡的課程；版本是該課程目前的藍圖版本。</p>
         </Section>
       </>
     ),

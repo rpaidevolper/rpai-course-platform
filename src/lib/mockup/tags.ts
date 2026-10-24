@@ -10,6 +10,9 @@ import type { Course, CourseRecipe, IndustryPack, TagSet, UnitCard } from "./typ
 
 export type Spec = "短講座" | "半日" | "一日" | "兩日" | "系列班" | "長期班";
 
+/** 規格由短到長的順序（篩選用）。 */
+export const SPECS: readonly Spec[] = ["短講座", "半日", "一日", "兩日", "系列班", "長期班"];
+
 /**
  * 規格由下界（分鐘）劃分，每一檔從自己的下界一路管到下一檔的下界之前：
  *   短講座 ≤2H・半日 3–4H・一日 6H・兩日 6H×2・系列班 6H×3–4・長期班 30H 以上。
