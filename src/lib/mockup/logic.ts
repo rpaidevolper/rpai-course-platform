@@ -95,7 +95,7 @@ export const recipesUsingUnit = (st: DemoState, unitId: string) => st.recipes.fi
 
 /** 單元卡的產業：用過它的課程配方的產業聯集，依配方順序、不重複；使用次數即 recipesUsingUnit 的長度。 */
 export const industriesOfUnit = (st: DemoState, unitId: string): Industry[] => [
-  ...new Set(recipesUsingUnit(st, unitId).map((r) => r.industry)),
+  ...new Set(recipesUsingUnit(st, unitId).flatMap((r) => r.industries)),
 ];
 
 /** 至少用到該模組一張單元卡的課程配方。 */

@@ -15,10 +15,12 @@ import {
   unitCardsOfModule,
 } from "@/lib/mockup/logic";
 import type { DemoState } from "@/lib/mockup/state";
+import { recipeSpec } from "@/lib/mockup/tags";
 import { dispatch, useDemoState } from "@/lib/mockup/store";
 import { MODULES, RECIPE_STATUS_LABELS, type ModuleId } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
+import { TagList } from "../../_components/tags";
 import { Badge, Button, Card, CARD, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
 import { CardDetailDialog, type OpenCard } from "./card-details";
 import { DraftCard } from "./draft-card";
@@ -138,8 +140,11 @@ export function KnowledgeView() {
                     <Badge tone="outline">{RECIPE_STATUS_LABELS[r.status]}</Badge>
                   </div>
                   <p className="mt-1 text-sm">
-                    {r.industry}・{r.audience}・{recipeUnitCards(st, r).length} 個單元・{recipeMinutes(st, r)} 分鐘
+                    {recipeUnitCards(st, r).length} 個單元・{recipeMinutes(st, r)} 分鐘
                   </p>
+                  <div className="mt-2">
+                    <TagList tags={r} spec={recipeSpec(st, r)} />
+                  </div>
                   <p className="mt-1 text-sm text-body-muted">{recipeModules(st, r).join("、")}</p>
                   <div className="mt-4">
                     <Button variant="secondary" onClick={() => setOpenCard({ kind: "recipe", id: r.id })}>
@@ -165,9 +170,9 @@ export function KnowledgeView() {
               <li key={s.id} id={s.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === s.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
                   <h3 className="text-base font-bold text-navy">{s.title}</h3>
-                  <p className="mt-1 text-sm">
-                    適用於{s.industry}，受眾是{s.audience}
-                  </p>
+                  <div className="mt-2">
+                    <TagList tags={s} />
+                  </div>
                   <dl className="mt-4 space-y-3">
                     <div>
                       <FieldLabel>案例</FieldLabel>

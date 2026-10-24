@@ -107,7 +107,7 @@ export function ProjectDialog({
         <Select value={industryPackId} onChange={(e) => setIndustryPackId(e.target.value)} required>
           {st.industryPacks.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.title}（{s.industry}）
+              {s.title}（{s.industries.join("、")}）
             </option>
           ))}
         </Select>

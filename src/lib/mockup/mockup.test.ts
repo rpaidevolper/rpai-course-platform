@@ -472,8 +472,7 @@ describe("知識庫 fixture 參照完整", () => {
 
   it("單元卡 id 不重複，產業都在 INDUSTRIES 清單內", () => {
     expect(new Set(UNIT_CARDS.map((u) => u.id)).size).toBe(UNIT_CARDS.length);
-    for (const p of INDUSTRY_PACKS) expect(INDUSTRIES, p.id).toContain(p.industry);
-    for (const r of COURSE_RECIPES) expect(INDUSTRIES, r.id).toContain(r.industry);
+    for (const x of [...INDUSTRY_PACKS, ...COURSE_RECIPES]) for (const i of x.industries) expect(INDUSTRIES, x.id).toContain(i);
   });
 
   it.each(MODULE_CARDS)("模組 $moduleId 的骨架單元都存在，且都屬於這個模組", (card) => {
