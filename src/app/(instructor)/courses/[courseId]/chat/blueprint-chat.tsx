@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { openingMessage, reviseBlueprint, revisionNote, scriptedReply, type ChatMessage } from "@/lib/mockup/chat-script";
+import { CLOSED_FROZEN_REASON, isCourseClosed } from "@/lib/mockup/closing";
 import { getCourse, getProject, latestBlueprintVersion, unitSourceText } from "@/lib/mockup/logic";
 import { dispatch, useDemoState, useHydrated } from "@/lib/mockup/store";
 import type { Course } from "@/lib/mockup/types";
@@ -44,7 +45,14 @@ export function BlueprintChat({ courseId }: { courseId: string }) {
       </PageHeader>
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <Conversation key={course.id} course={course} />
+        {isCourseClosed(course) ? (
+          <section className={`${CARD} min-w-0 p-5 text-sm`}>
+            <h2 className="text-sm font-bold text-navy">{CLOSED_FROZEN_REASON}</h2>
+            <p className="mt-2">這門課程已結案，藍圖凍結，不能再談。要修改請先回課程頁重新開啟。</p>
+          </section>
+        ) : (
+          <Conversation key={course.id} course={course} />
+        )}
         <section aria-labelledby="blueprint-heading" className={`${CARD} min-w-0 p-5`}>
           <div className="mb-4 flex items-baseline justify-between gap-2">
             <h2 id="blueprint-heading" className="text-sm font-bold text-navy">

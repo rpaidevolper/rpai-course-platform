@@ -1,6 +1,6 @@
 import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint, type UnitLevel, type UnitSource } from "@/lib/blueprint/schema";
 import { closingDrafts } from "./closing-drafts";
-import { closingGate, isCourseClosed } from "./closing";
+import { closingGate, isCourseClosed, isFrozenByClosing, reopenWithdrawals } from "./closing";
 import { acceptDraft, discardDraft, excludeUnit, rewriteDraft, type DraftRewrite } from "./draft-review";
 import { CURRENT_INSTRUCTOR_ID } from "./instructor";
 import {
@@ -74,6 +74,8 @@ export type DemoAction =
   | { type: "material/remove"; courseId: string; materialId: string }
   // 場次
   | { type: "course/close"; courseId: string }
+  /** 重新開啟已結案的課程：清掉 closedAt、撤回結案時產生且還在待審的知識庫草稿（已收進知識庫的不動） */
+  | { type: "course/reopen"; courseId: string }
   | { type: "session/create"; id: string; courseId: string; days: SessionDay[]; portalCode: string }
   | { type: "session/updateDays"; sessionId: string; days: SessionDay[] }
   | { type: "link/add"; sessionId: string; label: string; url: string }
@@ -124,6 +126,10 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     sessions: st.sessions.map((s) => (s.id === id ? fn(s) : s)),
   });
   const findCourse = (id: string) => st.courses.find((c) => c.id === id);
+
+  // 結案後凍結（closing.ts）：只在這裡擋一次，各 case 不再各自檢查 closedAt
+  const targetCourseId = "courseId" in action ? action.courseId : "sessionId" in action ? st.sessions.find((s) => s.id === action.sessionId)?.courseId : undefined;
+  if (targetCourseId !== undefined && isFrozenByClosing(findCourse(targetCourseId), action.type)) return state;
 
   switch (action.type) {
     case "project/create":
@@ -207,7 +213,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
 
     case "course/updateTags": {
       const course = findCourse(action.courseId);
-      if (!course || isCourseClosed(course)) return state;
+      if (!course) return state;
       return mapCourse(course.id, (c) => ({
         ...c,
         audiences: uniqueTags(action.tags.audiences),
@@ -317,10 +323,18 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       return { ...closedState, drafts: [...closingDrafts(closedState, course), ...closedState.drafts] };
     }
 
+    case "course/reopen": {
+      const course = findCourse(action.courseId);
+      if (!course || !isCourseClosed(course)) return state;
+      const withdrawn = new Set(reopenWithdrawals(st, course.id).map((d) => d.id));
+      const reopened = mapCourse(course.id, (c) => ({ ...c, closedAt: null }));
+      return { ...reopened, drafts: reopened.drafts.filter((d) => !withdrawn.has(d.id)) };
+    }
+
     case "session/create": {
       const course = findCourse(action.courseId);
-      // 結案後不能再新增場次；要再開同樣的課，複製課程
-      if (!course || isCourseClosed(course) || action.days.length === 0) return state;
+      // 結案後不能再新增場次（上面統一擋掉）；要再開同樣的課，重新開啟或複製課程
+      if (!course || action.days.length === 0) return state;
       return {
         ...st,
         sessions: [
