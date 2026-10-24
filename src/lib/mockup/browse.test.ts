@@ -34,7 +34,10 @@ describe("依標籤篩選", () => {
   it("不同組之間是 AND", () => {
     // 對象含種子團隊，而且工具含 Claude Skills
     expect(unitIds(tags({ audiences: ["種子團隊"], tools: ["Claude Skills"] }))).toEqual(["uc-a5-skill"]);
-    expect(unitIds(tags({ audiences: ["全員"], tools: ["Claude Code"] }))).toEqual([]);
+    // 兩組各自都篩得到卡，交集卻是空的：OR 會篩出東西，AND 才會是空
+    expect(unitIds(tags({ audiences: ["主管經營層"] }))).not.toEqual([]);
+    expect(unitIds(tags({ tools: ["Google Apps Script"] }))).not.toEqual([]);
+    expect(unitIds(tags({ audiences: ["主管經營層"], tools: ["Google Apps Script"] }))).toEqual([]);
   });
   it("模組與標籤也是 AND", () => {
     expect(unitIds(f({ moduleIds: ["B1"], tags: { ...noFilter().tags, audiences: ["種子團隊"] } }))).toEqual(["uc-b1-dept"]);
