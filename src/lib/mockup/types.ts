@@ -13,7 +13,7 @@ import type { ModuleId } from "@/lib/blueprint/modules";
 export const INDUSTRIES = ["金融", "製造", "服務零售", "電商客服", "B2B貿易", "HR", "教育", "公益", "通用"] as const;
 export type Industry = (typeof INDUSTRIES)[number];
 
-/** 對象：學員的職務。藍圖裡 audience.who 是這門課自己的描述，這裡是可以篩選的類別。 */
+/** 對象：學員的類別，用模組框架的 4 類。藍圖裡 audience.who 是這門課自己的描述，這裡是可以篩選的類別。 */
 export const AUDIENCES = ["主管經營層", "全員", "特定職能", "種子團隊"] as const;
 export type Audience = (typeof AUDIENCES)[number];
 
