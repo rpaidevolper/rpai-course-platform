@@ -1,11 +1,10 @@
 import { openItems } from "@/lib/blueprint/open-items";
 import { mapRequirements, type RequirementMapping } from "@/lib/blueprint/requirement-mapping";
 import { checkBlueprint, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
+import { moduleLabel } from "@/lib/blueprint/modules";
 import type { DemoState } from "./state";
 import {
   ARTIFACT_LABELS,
-  MODULES,
-  PROJECT_STATUSES,
   type Artifact,
   type ArtifactKind,
   type ClientDocument,
@@ -19,7 +18,6 @@ import {
   type ModuleCard,
   type ModuleId,
   type Project,
-  type ProjectStatus,
   type Publication,
   type Requirement,
   type RequirementReview,
@@ -53,20 +51,17 @@ export const pendingDrafts = (st: DemoState) => st.drafts;
 
 // ── 知識庫：模組、模組卡、單元卡與課程配方 ─────────────
 
-/** 模組的定義：代號、類別（A 或 B）與名稱。 */
-export const getModule = (id: ModuleId) => MODULES.find((m) => m.id === id)!;
-
-/** 模組的顯示名稱，例如「A1 通用生成 AI」。 */
-export function moduleLabel(id: ModuleId): string {
-  const m = getModule(id);
-  return `${m.id} ${m.label}`;
-}
+export { getModule, moduleLabel } from "@/lib/blueprint/modules";
 
 /** 某個模組的模組卡（一個模組一張）。 */
 export const getModuleCard = (st: DemoState, moduleId: ModuleId) => st.moduleCards.find((c) => c.moduleId === moduleId);
 
 /** 模組卡最新的版本號。 */
 export const latestModuleCardVersion = (card: ModuleCard) => Math.max(...card.versions.map((v) => v.version));
+
+/** 一組模組卡帶最新版本號的字串，例如「「A1 通用生成 AI」v2、「B1 流程診斷」v1」；建課程時記在藍圖第 1 版的備註與畫面提示。 */
+export const moduleCardVersionsLabel = (cards: ModuleCard[]): string =>
+  cards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、");
 
 /** 依 id 找單元卡。 */
 export const getUnitCard = (st: DemoState, id: string) => st.unitCards.find((u) => u.id === id);
@@ -658,11 +653,6 @@ export const formatTwd = (n: number) => `NT$ ${n.toLocaleString("en-US")}`;
 export type { Project, Course, Session, ModuleCard, UnitCard, CourseRecipe, IndustryPack };
 
 // ── 專案：狀態、客戶文件與需求條目 ───────────────────────
-
-/** 專案列表依狀態分組，順序固定為洽談中、進行中、封存；沒有專案的狀態也保留空組。 */
-export function projectsByStatus(projects: Project[]): { status: ProjectStatus; projects: Project[] }[] {
-  return PROJECT_STATUSES.map((status) => ({ status, projects: projects.filter((p) => p.status === status) }));
-}
 
 /**
  * 沒人負責的需求條目：沒指定負責課程，或指定的課程不存在、不屬於這個專案。

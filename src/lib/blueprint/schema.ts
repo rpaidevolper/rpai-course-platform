@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MODULE_IDS } from "./modules";
 
 /**
  * 教學藍圖：一場課的唯一真相來源。
@@ -41,10 +42,6 @@ export const REUSE_LABELS: Record<ReuseLevel, string> = {
   new: "新做",
 };
 
-/** 模組：單元所屬的教材分類。A 類是工具環境，B 類是方法（和設計稿的 MODULES 同一份清單，新增模組時兩邊一起改）。 */
-export const BLUEPRINT_MODULES = ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3", "B4"] as const;
-export type BlueprintModule = (typeof BLUEPRINT_MODULES)[number];
-
 /** 應用層級：學員在單元裡用 AI 做到的程度，由淺到深（L1 問答、L2 產出、L3 工作流、L4 助理、L5 自動化）。 */
 export const APPLICATION_LEVELS = ["L1", "L2", "L3", "L4", "L5"] as const;
 export type ApplicationLevel = (typeof APPLICATION_LEVELS)[number];
@@ -82,7 +79,7 @@ export const UnitSchema = z.object({
   title: NonEmpty,
   minutes: z.number().int().positive(),
   module: z
-    .enum(BLUEPRINT_MODULES)
+    .enum(MODULE_IDS)
     .describe("這個單元屬於哪個模組（A1–A5 工具環境、B1–B4 方法）；單元出自單元卡時與該卡的模組一致"),
   level: z
     .enum(APPLICATION_LEVELS)

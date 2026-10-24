@@ -1,4 +1,4 @@
-import { MODULES, type ModuleId } from "./types";
+import { getModule, type ModuleId } from "@/lib/blueprint/modules";
 
 /** 組課提醒：只提醒、不擋建立課程。 */
 export type CompositionWarning =
@@ -19,7 +19,7 @@ export const MAX_A_IN_SHORT_COURSE = 2;
  */
 export function compositionWarnings({ moduleIds, totalHours }: { moduleIds: ModuleId[]; totalHours: number }): CompositionWarning[] {
   const chosen = new Set(moduleIds);
-  const kindOf = (id: ModuleId) => MODULES.find((m) => m.id === id)!.kind;
+  const kindOf = (id: ModuleId) => getModule(id).kind;
   const aCount = [...chosen].filter((id) => kindOf(id) === "A").length;
   const bCount = chosen.size - aCount;
 

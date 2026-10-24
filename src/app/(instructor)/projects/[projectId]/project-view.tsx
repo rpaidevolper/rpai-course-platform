@@ -13,7 +13,7 @@ import {
   getProject,
   getIndustryPack,
   latestBlueprintVersion,
-  latestModuleCardVersion,
+  moduleCardVersionsLabel,
   moduleLabel,
   readiness,
   sessionDateRange,
@@ -353,7 +353,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
             const cards = chosenModuleCards(st, v.moduleIds);
             dispatch({ type: "course/create", id, projectId: project.id, ...v });
             close();
-            toast(cards.length > 0 ? `已建立課程，藍圖從模組卡${cards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、")} 複製出生` : "已建立課程，藍圖從零開始");
+            toast(cards.length > 0 ? `已建立課程，藍圖從模組卡${moduleCardVersionsLabel(cards)} 複製出生` : "已建立課程，藍圖從零開始");
             router.push(`/courses/${id}/chat`);
           }}
         />

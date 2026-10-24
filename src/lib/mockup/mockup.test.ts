@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openItems } from "@/lib/blueprint/open-items";
-import { BLUEPRINT_MODULES, BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
+import { BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
 import {
   COURSE_RECIPES,
   COURSES,
@@ -29,7 +29,6 @@ import {
   latestModuleCardVersion,
   portalState,
   portalView,
-  projectsByStatus,
   publicationProblems,
   recipeMinutes,
   recipeModules,
@@ -366,26 +365,6 @@ describe("需求條目的負責課程", () => {
   });
 });
 
-describe("專案列表依狀態分組", () => {
-  it("洽談中、進行中、封存各自一組，封存不和進行中混在一起", () => {
-    const groups = projectsByStatus(PROJECTS);
-    expect(groups.map((g) => [g.status, g.projects.map((p) => p.id)])).toEqual([
-      ["negotiating", ["p-c-2027"]],
-      ["active", ["p-a-2026", "p-b-2026", "p-e-2026", "p-f-2026"]],
-      ["archived", ["p-d-2026"]],
-    ]);
-  });
-
-  it("沒有專案的狀態也保留空的一組，畫面上的順序固定", () => {
-    const groups = projectsByStatus([getProject(st, "p-d-2026")!]);
-    expect(groups.map((g) => [g.status, g.projects.length])).toEqual([
-      ["negotiating", 0],
-      ["active", 0],
-      ["archived", 1],
-    ]);
-  });
-});
-
 describe("專案 fixture 參照完整", () => {
   const docIds = (p: Project) => p.clientDocuments.map((d) => d.id);
 
@@ -506,7 +485,6 @@ describe("知識庫 fixture 參照完整", () => {
 
   it("單元的模組都是知識庫裡存在的模組", () => {
     const ids: string[] = MODULES.map((m) => m.id);
-    expect([...BLUEPRINT_MODULES]).toEqual(ids);
     for (const c of COURSES) for (const u of unitsOf(c)) expect(ids, u.title).toContain(u.module);
   });
 

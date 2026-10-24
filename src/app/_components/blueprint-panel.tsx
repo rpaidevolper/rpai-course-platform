@@ -13,7 +13,7 @@ import {
   type ReuseLevel,
   type UnitSource,
 } from "@/lib/blueprint/schema";
-import { moduleLabel } from "@/lib/mockup/logic";
+import { moduleLabel } from "@/lib/blueprint/modules";
 import { CopyButton } from "./copy-button";
 import { Badge } from "./ui";
 
