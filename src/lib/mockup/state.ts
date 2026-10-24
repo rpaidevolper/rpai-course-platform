@@ -1,5 +1,5 @@
-import { COURSES, FRAMEWORKS, KNOWLEDGE_DRAFTS, MOCK_NOW, PROJECTS, REQUIREMENT_REVIEWS, SCENARIOS, SESSIONS } from "./data";
-import type { Course, Framework, IsoTime, KnowledgeDraft, Project, RequirementReview, Scenario, Session } from "./types";
+import { COURSE_RECIPES, COURSES, INDUSTRY_PACKS, KNOWLEDGE_DRAFTS, MODULE_CARDS, MOCK_NOW, PROJECTS, REQUIREMENT_REVIEWS, SESSIONS, UNIT_CARDS } from "./data";
+import type { Course, CourseRecipe, IndustryPack, IsoTime, KnowledgeDraft, ModuleCard, Project, RequirementReview, Session, UnitCard } from "./types";
 
 /**
  * 可互動 demo（#48）的整份狀態。fixture 是初始值，之後所有改動都經過 reducer（actions.ts）。
@@ -11,14 +11,16 @@ export interface DemoState {
   projects: Project[];
   courses: Course[];
   sessions: Session[];
-  frameworks: Framework[];
-  scenarios: Scenario[];
+  moduleCards: ModuleCard[];
+  unitCards: UnitCard[];
+  recipes: CourseRecipe[];
+  industryPacks: IndustryPack[];
   drafts: KnowledgeDraft[];
   requirementReviews: RequirementReview[];
 }
 
 /** 改了 DemoState 的形狀就加一，舊的 localStorage 會被丟掉、回到初始值 */
-export const DEMO_STATE_VERSION = 2;
+export const DEMO_STATE_VERSION = 3;
 
 export function initialState(): DemoState {
   return structuredClone({
@@ -26,8 +28,10 @@ export function initialState(): DemoState {
     projects: PROJECTS,
     courses: COURSES,
     sessions: SESSIONS,
-    frameworks: FRAMEWORKS,
-    scenarios: SCENARIOS,
+    moduleCards: MODULE_CARDS,
+    unitCards: UNIT_CARDS,
+    recipes: COURSE_RECIPES,
+    industryPacks: INDUSTRY_PACKS,
     drafts: KNOWLEDGE_DRAFTS,
     requirementReviews: REQUIREMENT_REVIEWS,
   });

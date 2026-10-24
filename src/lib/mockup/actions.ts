@@ -1,16 +1,17 @@
-import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint } from "@/lib/blueprint/schema";
+import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
 import { CURRENT_INSTRUCTOR_ID } from "./instructor";
 import {
   artifactSeries,
   generationGate,
-  getFramework,
-  getScenario,
+  getIndustryPack,
+  getModuleCard,
   instructorEdit,
   isPublishable,
   latestArtifact,
   latestBlueprintVersion,
-  latestFrameworkVersion,
+  latestModuleCardVersion,
   latestReadyArtifact,
+  moduleLabel,
   portalExpiresAt,
 } from "./logic";
 import type { DemoState } from "./state";
@@ -19,14 +20,17 @@ import type {
   ClientContext,
   ClientDocumentKind,
   Course,
+  CourseRecipe,
   DraftProposal,
-  Framework,
+  IndustryPack,
   IsoTime,
   KnowledgeDraft,
+  ModuleCard,
+  ModuleId,
   ProjectStatus,
-  Scenario,
   Session,
   SessionDay,
+  UnitCard,
 } from "./types";
 
 /**
@@ -41,7 +45,8 @@ export type DemoAction =
   | { type: "project/update"; projectId: string; title: string; priceTwd: number; status: ProjectStatus; clientContext: ClientContext }
   | { type: "clientDocument/add"; projectId: string; id: string; kind: ClientDocumentKind; title: string; fileName: string }
   // 課程與藍圖
-  | { type: "course/create"; id: string; projectId: string; title: string; frameworkId: string | null; scenarioId: string | null }
+  /** moduleId 與 industryPackId 都有值時，藍圖從該模組的模組卡與該產業素材包複製出生；否則從零開始 */
+  | { type: "course/create"; id: string; projectId: string; title: string; moduleId: ModuleId | null; industryPackId: string | null }
   | { type: "blueprint/revise"; courseId: string; blueprint: Blueprint; note: string }
   | { type: "blueprint/finalize"; courseId: string }
   // 產物
@@ -65,9 +70,11 @@ export type DemoAction =
   | { type: "portal/extend"; sessionId: string; days: number }
   // 知識庫
   | { type: "draft/import"; id: string; fileName: string; proposal: DraftProposal }
-  /** newId：收進新框架或新情境時的 id；升版時不用 */
+  /**
+   * newId：收進新課程配方或新產業素材包時的 id（配方的單元卡會以它為前綴，例如 `${newId}-u1`）；
+   * 模組卡升版時不用。
+   */
   | { type: "draft/accept"; draftId: string; newId: string }
-  | { type: "draft/saveAsFramework"; draftId: string; frameworkId: string; title: string }
   | { type: "draft/discard"; draftId: string };
 
 const MINUTE_MS = 60 * 1000;
@@ -152,23 +159,22 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case "course/create": {
       const project = st.projects.find((p) => p.id === action.projectId);
       if (!project) return state;
-      const framework = action.frameworkId ? getFramework(st, action.frameworkId) : undefined;
-      const scenario = action.scenarioId ? getScenario(st, action.scenarioId) : undefined;
+      const moduleCard = action.moduleId ? getModuleCard(st, action.moduleId) : undefined;
+      const industryPack = action.industryPackId ? getIndustryPack(st, action.industryPackId) : undefined;
       const course: Course = {
         id: action.id,
         projectId: project.id,
         title: action.title,
-        source:
-          framework && scenario
-            ? { frameworkId: framework.id, frameworkVersion: latestFrameworkVersion(framework), scenarioId: scenario.id }
-            : null,
+        source: moduleCard && industryPack ? { moduleIds: [moduleCard.moduleId], industryPackId: industryPack.id } : null,
         copiedFrom: null,
-        blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, framework, scenario }),
+        blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCard, unitCards: st.unitCards, industryPack }),
         blueprintHistory: [
           {
             version: 1,
             createdAt: now,
-            note: framework ? `從框架「${framework.title}」v${latestFrameworkVersion(framework)} 複製出生` : "從零開始的藍圖草稿",
+            note: moduleCard
+              ? `從模組卡「${moduleLabel(moduleCard.moduleId)}」v${latestModuleCardVersion(moduleCard)} 複製出生`
+              : "從零開始的藍圖草稿",
             finalizedAt: null,
           },
         ],
@@ -351,41 +357,26 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       const draft = st.drafts.find((d) => d.id === action.draftId);
       if (!draft) return state;
       const p = draft.proposal;
-      if (p.kind === "framework_version") {
-        const fw = getFramework(st, p.frameworkId);
-        if (!fw) return state;
-        const next: Framework = {
-          ...fw,
+      if (p.kind === "module_card_version") {
+        const card = getModuleCard(st, p.moduleId);
+        if (!card) return state;
+        const next: ModuleCard = {
+          ...card,
           versions: [
-            ...fw.versions,
-            { version: latestFrameworkVersion(fw) + 1, createdAt: now, note: p.changes.join("；"), fromCourseId: draft.fromCourseId },
+            ...card.versions,
+            { version: latestModuleCardVersion(card) + 1, createdAt: now, note: p.changes.join("；"), fromCourseId: draft.fromCourseId },
           ],
         };
-        return withoutDraft({ ...st, frameworks: st.frameworks.map((f) => (f.id === fw.id ? next : f)) }, draft.id);
+        return withoutDraft({ ...st, moduleCards: st.moduleCards.map((c) => (c.moduleId === card.moduleId ? next : c)) }, draft.id);
       }
-      if (p.kind === "new_framework") {
-        const note = draft.importedFileName ? `由匯入的講義「${draft.importedFileName}」整理` : "由課後草稿整理";
-        const fw: Framework = { id: action.newId, ...p.framework, versions: [{ version: 1, createdAt: now, note, fromCourseId: draft.fromCourseId }] };
-        return withoutDraft({ ...st, frameworks: [...st.frameworks, fw] }, draft.id);
+      if (p.kind === "new_course_recipe") {
+        // 單元卡依提案的順序編號：newId-u1、newId-u2…；配方照同一組 id 引用它們
+        const unitCards: UnitCard[] = p.unitCards.map((u, i) => ({ ...u, id: `${action.newId}-u${i + 1}` }));
+        const recipe: CourseRecipe = { ...p.recipe, id: action.newId, unitIds: unitCards.map((u) => u.id) };
+        return withoutDraft({ ...st, unitCards: [...st.unitCards, ...unitCards], recipes: [...st.recipes, recipe] }, draft.id);
       }
-      const scenario: Scenario = { id: action.newId, ...p.scenario };
-      return withoutDraft({ ...st, scenarios: [...st.scenarios, scenario] }, draft.id);
-    }
-
-    case "draft/saveAsFramework": {
-      const draft = st.drafts.find((d) => d.id === action.draftId);
-      if (!draft || draft.proposal.kind !== "framework_version") return state;
-      const base = getFramework(st, draft.proposal.frameworkId);
-      if (!base) return state;
-      const fw: Framework = {
-        id: action.frameworkId,
-        topicId: base.topicId,
-        title: action.title,
-        summary: base.summary,
-        moduleTitles: [...base.moduleTitles],
-        versions: [{ version: 1, createdAt: now, note: draft.proposal.changes.join("；"), fromCourseId: draft.fromCourseId }],
-      };
-      return withoutDraft({ ...st, frameworks: [...st.frameworks, fw] }, draft.id);
+      const industryPack: IndustryPack = { ...p.industryPack, id: action.newId };
+      return withoutDraft({ ...st, industryPacks: [...st.industryPacks, industryPack] }, draft.id);
     }
 
     case "draft/discard":
@@ -399,33 +390,42 @@ export function newSessionDay(startsAt: IsoTime, endsAt: IsoTime, venue: string 
 }
 
 /**
- * 新課程的第一版藍圖：依 ADR 0002，從框架與情境「複製內容」出生，之後各自演化。
- * 框架的每個單元記下來源（框架 vN 的那個單元、沿用程度「要改」）；
+ * 新課程的第一版藍圖：依 ADR 0002，從模組卡與產業素材包「複製內容」出生，之後各自演化。
+ * 模組卡的骨架單元依序查出單元卡，每個單元記下來源（kind 為 framework，目前代表模組卡 vN 的那個單元；
+ * 沿用程度「要改」）。查不到單元卡或沒有模組卡時，退回一個預設單元、標成新做、不記來源。
  * 刻意留下缺的五元素與待確認事項，讓講師接著跟 AI 談。客戶的 IT 限制複製進限制。
  */
 export function starterBlueprint({
   title,
   clientContext,
-  framework,
-  scenario,
+  moduleCard,
+  unitCards = [],
+  industryPack,
 }: {
   title: string;
   clientContext: ClientContext;
-  framework?: Framework;
-  scenario?: Scenario;
+  moduleCard?: ModuleCard;
+  /** 用來查骨架單元的單元卡（通常傳 st.unitCards） */
+  unitCards?: UnitCard[];
+  industryPack?: IndustryPack;
 }): Blueprint {
-  const fwVersion = framework ? latestFrameworkVersion(framework) : null;
-  const unitTitles = framework?.moduleTitles.length ? framework.moduleTitles : ["開場與需求盤點"];
+  // 骨架依序查出單元卡；查不到的 id 略過
+  const cards = moduleCard
+    ? moduleCard.skeletonUnitIds.map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined)
+    : [];
+  const unitTitles = cards.length > 0 ? cards.map((u) => u.title) : ["開場與需求盤點"];
   // 一天兩個三小時的時段，單元平均分進上午與下午
   const half = Math.ceil(unitTitles.length / 2);
   const groups = unitTitles.length > 1 ? [unitTitles.slice(0, half), unitTitles.slice(half)] : [unitTitles];
   const slotLabels = ["上午", "下午"];
+  const sourceOf = (unit: string): UnitSource | null =>
+    moduleCard && cards.length > 0 ? { kind: "framework", id: moduleCard.moduleId, version: latestModuleCardVersion(moduleCard), unit } : null;
 
   return BlueprintSchema.parse({
     title,
-    oneLiner: framework?.summary ?? `為${clientContext.company}量身設計的課程，內容還在跟 AI 談。`,
+    oneLiner: moduleCard?.summary ?? `為${clientContext.company}量身設計的課程，內容還在跟 AI 談。`,
     audience: {
-      who: scenario ? `${clientContext.company}的${scenario.audience}` : `${clientContext.company}的學員`,
+      who: industryPack ? `${clientContext.company}的${industryPack.audience}` : `${clientContext.company}的學員`,
       size: null,
       priorKnowledge: "待確認",
       painPoints: [clientContext.goal],
@@ -434,15 +434,15 @@ export function starterBlueprint({
     format: { mode: "workshop", venue: null },
     narrative: { model: "SCQA", arc: ["情境", "衝突", "提問", "解答"] },
     elements: {
-      theory: framework ? [framework.summary] : [],
-      handsOn: scenario?.cases.slice(0, 1) ?? [],
+      theory: moduleCard ? [moduleCard.summary] : [],
+      handsOn: industryPack?.cases.slice(0, 1) ?? [],
       takeaway: [],
       quote: [],
       story: [],
     },
     days: [
       {
-        theme: framework?.title ?? title,
+        theme: moduleCard ? moduleLabel(moduleCard.moduleId) : title,
         slots: groups.map((titles, i) => {
           const minutes = Math.floor(DEFAULT_SLOT_MINUTES / titles.length);
           return {
@@ -458,8 +458,8 @@ export function starterBlueprint({
               activity: null,
               elements: [],
               carriesFrom: null,
-              source: framework && fwVersion ? { kind: "framework", id: framework.id, version: fwVersion, unit: t } : null,
-              reuse: framework ? "modify" : "new",
+              source: sourceOf(t),
+              reuse: sourceOf(t) ? "modify" : "new",
             })),
           };
         }),

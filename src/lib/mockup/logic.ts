@@ -4,22 +4,26 @@ import { checkBlueprint, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, t
 import type { DemoState } from "./state";
 import {
   ARTIFACT_LABELS,
+  MODULES,
   PROJECT_STATUSES,
   type Artifact,
   type ArtifactKind,
   type ClientDocument,
   type Course,
-  type Framework,
+  type CourseRecipe,
+  type IndustryPack,
   type IsoTime,
   type Link,
   type Material,
+  type ModuleCard,
+  type ModuleId,
   type Project,
   type ProjectStatus,
   type Publication,
   type Requirement,
   type RequirementReview,
-  type Scenario,
   type Session,
+  type UnitCard,
 } from "./types";
 
 /** 純函式：資料一律從呼叫端傳入的 DemoState 讀，「現在」由呼叫端傳入（demo 用 state.now）。 */
@@ -35,8 +39,6 @@ const ms = (t: IsoTime) => new Date(t).getTime();
 export const getProject = (st: DemoState, id: string) => st.projects.find((p) => p.id === id);
 export const getCourse = (st: DemoState, id: string) => st.courses.find((c) => c.id === id);
 export const getSession = (st: DemoState, id: string) => st.sessions.find((s) => s.id === id);
-export const getFramework = (st: DemoState, id: string) => st.frameworks.find((f) => f.id === id);
-export const getScenario = (st: DemoState, id: string) => st.scenarios.find((s) => s.id === id);
 export const getSessionByPortalCode = (st: DemoState, code: string) =>
   st.sessions.find((s) => s.portal.code === code);
 
@@ -46,13 +48,62 @@ export const coursesOfProject = (st: DemoState, projectId: string) =>
 export const sessionsOfCourse = (st: DemoState, courseId: string) =>
   st.sessions.filter((s) => s.courseId === courseId).sort((a, b) => ms(sessionStartsAt(a)) - ms(sessionStartsAt(b)));
 
-export const latestFrameworkVersion = (f: Framework) =>
-  Math.max(...f.versions.map((v) => v.version));
-
-export const frameworksOfTopic = (st: DemoState, topicId: string) =>
-  st.frameworks.filter((f) => f.topicId === topicId);
-
 export const pendingDrafts = (st: DemoState) => st.drafts;
+
+// ── 知識庫：模組、模組卡、單元卡與課程配方 ─────────────
+
+const isModuleId = (id: string): id is ModuleId => MODULES.some((m) => m.id === id);
+
+/** 模組的定義：代號、類別（A 或 B）與名稱。 */
+export const getModule = (id: ModuleId) => MODULES.find((m) => m.id === id)!;
+
+/** 模組的顯示名稱，例如「A1 通用生成 AI」。 */
+export function moduleLabel(id: ModuleId): string {
+  const m = getModule(id);
+  return `${m.id} ${m.label}`;
+}
+
+/** 某個模組的模組卡（一個模組一張）。 */
+export const getModuleCard = (st: DemoState, moduleId: ModuleId) => st.moduleCards.find((c) => c.moduleId === moduleId);
+
+/** 模組卡最新的版本號。 */
+export const latestModuleCardVersion = (card: ModuleCard) => Math.max(...card.versions.map((v) => v.version));
+
+/** 依 id 找單元卡。 */
+export const getUnitCard = (st: DemoState, id: string) => st.unitCards.find((u) => u.id === id);
+
+/** 某個模組底下的單元卡，依知識庫的順序。 */
+export const unitCardsOfModule = (st: DemoState, moduleId: ModuleId) => st.unitCards.filter((u) => u.moduleId === moduleId);
+
+/** 依 id 找課程配方。 */
+export const getRecipe = (st: DemoState, id: string) => st.recipes.find((r) => r.id === id);
+
+/** 課程配方依序用到的單元卡；查不到的 id 略過。 */
+export function recipeUnitCards(st: DemoState, recipe: CourseRecipe): UnitCard[] {
+  return recipe.unitIds.map((id) => getUnitCard(st, id)).filter((u): u is UnitCard => u !== undefined);
+}
+
+/** 課程配方的總分鐘數，由單元卡推得。 */
+export const recipeMinutes = (st: DemoState, recipe: CourseRecipe) =>
+  recipeUnitCards(st, recipe).reduce((sum, u) => sum + u.minutes, 0);
+
+/** 課程配方用到的模組，依第一次出現的順序、不重複。 */
+export const recipeModules = (st: DemoState, recipe: CourseRecipe): ModuleId[] =>
+  [...new Set(recipeUnitCards(st, recipe).map((u) => u.moduleId))];
+
+/** 用到某張單元卡的課程配方；單元卡被哪些配方用過由此推得，不另存。 */
+export const recipesUsingUnit = (st: DemoState, unitId: string) => st.recipes.filter((r) => r.unitIds.includes(unitId));
+
+/** 至少用到該模組一張單元卡的課程配方。 */
+export const recipesUsingModule = (st: DemoState, moduleId: ModuleId) =>
+  st.recipes.filter((r) => recipeUnitCards(st, r).some((u) => u.moduleId === moduleId));
+
+/** 依 id 找產業素材包。 */
+export const getIndustryPack = (st: DemoState, id: string) => st.industryPacks.find((p) => p.id === id);
+
+/** 藍圖從該模組的模組卡複製出生過的課程（source.moduleIds 含該模組）。 */
+export const coursesUsingModule = (st: DemoState, moduleId: ModuleId) =>
+  st.courses.filter((c) => c.source?.moduleIds.includes(moduleId) ?? false);
 
 // ── 藍圖與產物 ────────────────────────────────────────
 
@@ -98,14 +149,15 @@ export function latestReadyArtifact(course: Course, kind: ArtifactKind, day: num
     .sort((a, b) => b.version - a.version)[0];
 }
 
-/** 單元來源的顯示文字：「Claude 入門」藍圖 v3・提示詞的四個零件 */
+/** 單元來源的顯示文字：「Claude 入門」藍圖 v3・提示詞的四個零件，或模組卡「B2 提問與指令」v1・提示詞的四個零件 */
 export function unitSourceText(st: DemoState, source: UnitSource): string {
   if (source.kind === "course") {
     const title = getCourse(st, source.id)?.title ?? source.id;
     return `課程「${title}」藍圖 v${source.version}・${source.unit}`;
   }
-  const title = getFramework(st, source.id)?.title ?? source.id;
-  return `框架「${title}」v${source.version}・${source.unit}`;
+  // kind 為 framework 目前代表模組卡，等 #56 改成單元卡來源後這裡再跟著改
+  const card = isModuleId(source.id) ? moduleLabel(source.id) : source.id;
+  return `模組卡「${card}」v${source.version}・${source.unit}`;
 }
 
 /** 要改與新做的單元各幾個，由藍圖完整性檢查推得。 */
@@ -604,7 +656,7 @@ export const VENUE_UNSET = "地點未定";
 
 export const formatTwd = (n: number) => `NT$ ${n.toLocaleString("en-US")}`;
 
-export type { Project, Course, Session, Framework, Scenario };
+export type { Project, Course, Session, ModuleCard, UnitCard, CourseRecipe, IndustryPack };
 
 // ── 專案：狀態、客戶文件與需求條目 ───────────────────────
 

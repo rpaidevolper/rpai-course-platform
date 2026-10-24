@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { demoReducer } from "./actions";
 import { importProposal, titleFromFileName } from "./import-script";
+import { getRecipe, recipeUnitCards } from "./logic";
 import { initialState } from "./state";
-import { TOPICS } from "./types";
+import { MODULES } from "./types";
 
 describe("匯入過往講義的腳本化草稿", () => {
   it("標題是去掉副檔名的檔名", () => {
@@ -13,28 +14,23 @@ describe("匯入過往講義的腳本化草稿", () => {
     expect(titleFromFileName(".md")).toBe(".md");
   });
 
-  it.each(TOPICS.map((t) => t.id))("主題 %s 產生 3–4 個單元的新框架", (topicId) => {
-    const p = importProposal("講義.pdf", topicId);
-    expect(p.kind).toBe("new_framework");
-    expect(p.framework.topicId).toBe(topicId);
-    expect(p.framework.title).toBe("講義");
-    expect(p.framework.summary).toContain("講義");
-    expect(p.framework.moduleTitles.length).toBeGreaterThanOrEqual(3);
-    expect(p.framework.moduleTitles.length).toBeLessThanOrEqual(4);
+  it.each(MODULES.map((m) => m.id))("模組 %s 產生 2–3 張單元卡，都屬於該模組、各 60 分鐘", (moduleId) => {
+    const p = importProposal("講義.pdf", moduleId);
+    expect(p.kind).toBe("new_course_recipe");
+    expect(p.recipe.title).toBe("講義");
+    expect(p.unitCards.length).toBeGreaterThanOrEqual(2);
+    expect(p.unitCards.length).toBeLessThanOrEqual(3);
+    expect(p.unitCards.every((u) => u.moduleId === moduleId && u.minutes === 60)).toBe(true);
   });
 
-  it("匯入後收進知識庫，框架出現在該主題、v1 記下來源檔名", () => {
-    let st = demoReducer(initialState(), {
-      type: "draft/import",
-      id: "d-new",
-      fileName: "GAS 實戰.pptx",
-      proposal: importProposal("GAS 實戰.pptx", "gas"),
-    });
-    st = demoReducer(st, { type: "draft/accept", draftId: "d-new", newId: "fw-new" });
-    const fw = st.frameworks.find((f) => f.id === "fw-new");
-    expect(fw?.topicId).toBe("gas");
-    expect(fw?.title).toBe("GAS 實戰");
-    expect(fw?.versions[0].note).toContain("GAS 實戰.pptx");
+  it("匯入後收進知識庫：配方與單元卡都收進來，草稿消失", () => {
+    const proposal = importProposal("GAS 實戰.pptx", "A4");
+    let st = demoReducer(initialState(), { type: "draft/import", id: "d-new", fileName: "GAS 實戰.pptx", proposal });
+    st = demoReducer(st, { type: "draft/accept", draftId: "d-new", newId: "rc-new" });
+    const recipe = getRecipe(st, "rc-new")!;
+    expect(recipe).toMatchObject({ title: "GAS 實戰", client: "匯入的講義", status: "delivered" });
+    expect(recipe.unitIds).toEqual(proposal.unitCards.map((_, i) => `rc-new-u${i + 1}`));
+    expect(recipeUnitCards(st, recipe).map((u) => u.moduleId)).toEqual(proposal.unitCards.map(() => "A4"));
     expect(st.drafts.some((d) => d.id === "d-new")).toBe(false);
   });
 });

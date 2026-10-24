@@ -2,33 +2,48 @@ import { describe, expect, it } from "vitest";
 import { openItems } from "@/lib/blueprint/open-items";
 import { BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
 import {
+  COURSE_RECIPES,
   COURSES,
-  FRAMEWORKS,
+  INDUSTRY_PACKS,
   KNOWLEDGE_DRAFTS,
+  MODULE_CARDS,
   MOCK_NOW,
   PROJECTS,
   REQUIREMENT_REVIEWS,
   SESSIONS,
+  UNIT_CARDS,
 } from "./data";
 import {
   coursesOfProject,
+  coursesUsingModule,
+  getCourse,
+  getIndustryPack,
+  getModuleCard,
+  getProject,
+  getRecipe,
+  getSession,
+  getUnitCard,
   gateBlockText,
   generationGate,
-  getCourse,
-  getProject,
-  getSession,
   isStale,
   latestBlueprintVersion,
   latestArtifact,
+  latestModuleCardVersion,
   portalState,
   portalView,
   projectsByStatus,
   publicationProblems,
+  recipeMinutes,
+  recipeModules,
+  recipesUsingModule,
+  recipesUsingUnit,
   requirementMappingOfCourse,
   unassignedRequirements,
+  unitCardsOfModule,
+  unitSourceText,
   upcomingSessions,
 } from "./logic";
-import type { Course, Project, Session } from "./types";
+import { INDUSTRIES, MODULES, type Course, type Project, type Session } from "./types";
 import { initialState } from "./state";
 
 const st = initialState();
@@ -78,12 +93,13 @@ describe("設計稿 fixture 參照完整", () => {
     expect(day2Units.some((u) => u.carriesFrom !== null && day1Titles.includes(u.carriesFrom))).toBe(true);
   });
 
-  it("課程指向存在的專案、框架版本與情境", () => {
+  it("課程指向存在的專案與產業素材包，模組都是合法的模組代號", () => {
+    const moduleIds: string[] = MODULES.map((m) => m.id);
     for (const c of COURSES) {
       expect(PROJECTS.some((p) => p.id === c.projectId)).toBe(true);
       if (!c.source) continue;
-      const f = FRAMEWORKS.find((x) => x.id === c.source!.frameworkId);
-      expect(f?.versions.some((v) => v.version === c.source!.frameworkVersion)).toBe(true);
+      expect(getIndustryPack(st, c.source.industryPackId), c.id).toBeDefined();
+      for (const id of c.source.moduleIds) expect(moduleIds, `${c.id} ${id}`).toContain(id);
     }
   });
 
@@ -108,23 +124,16 @@ describe("設計稿 fixture 參照完整", () => {
     }
   });
 
-  it.each(COURSES)("課程 $id 的單元來源都存在：課程版本或框架版本，以及其中的單元", (c) => {
+  it.each(COURSES)("課程 $id 的課程來源單元都存在：來源課程有該版藍圖，且（最新版時）有同名單元", (c) => {
     for (const u of unitsOf(c)) {
-      if (u.source === null) continue;
+      if (!u.source || u.source.kind !== "course") continue;
       const src = u.source;
-      if (src.kind === "course") {
-        const from = getCourse(st, src.id);
-        expect(from, `${u.title} 來源課程 ${src.id}`).toBeDefined();
-        expect(from!.blueprintHistory.map((v) => v.version)).toContain(src.version);
-        // 只存了最新一版藍圖的內容，所以只有指向最新版時才能核對單元標題
-        if (src.version === latestBlueprintVersion(from!)) {
-          expect(unitsOf(from!).map((x) => x.title), `${u.title} 來源單元`).toContain(src.unit);
-        }
-      } else {
-        const f = FRAMEWORKS.find((x) => x.id === src.id);
-        expect(f, `${u.title} 來源框架 ${src.id}`).toBeDefined();
-        expect(f!.versions.map((v) => v.version)).toContain(src.version);
-        expect(f!.moduleTitles, `${u.title} 來源單元`).toContain(src.unit);
+      const from = getCourse(st, src.id);
+      expect(from, `${u.title} 來源課程 ${src.id}`).toBeDefined();
+      expect(from!.blueprintHistory.map((v) => v.version)).toContain(src.version);
+      // 只存了最新一版藍圖的內容，所以只有指向最新版時才能核對單元標題
+      if (src.version === latestBlueprintVersion(from!)) {
+        expect(unitsOf(from!).map((x) => x.title), `${u.title} 來源單元`).toContain(src.unit);
       }
     }
   });
@@ -452,5 +461,97 @@ describe("課程頁的需求對照", () => {
   it("實質涵蓋標註都指向存在的需求條目", () => {
     const ids = PROJECTS.flatMap((p) => p.requirements.map((r) => r.id));
     for (const r of REQUIREMENT_REVIEWS) expect(ids).toContain(r.requirementId);
+  });
+});
+
+describe("知識庫 fixture 參照完整", () => {
+  it("每個模組恰好一張模組卡，順序與 MODULES 相同", () => {
+    expect(MODULE_CARDS.map((c) => c.moduleId)).toEqual(MODULES.map((m) => m.id));
+  });
+
+  it("單元卡 id 不重複，產業都在 INDUSTRIES 清單內", () => {
+    expect(new Set(UNIT_CARDS.map((u) => u.id)).size).toBe(UNIT_CARDS.length);
+    for (const p of INDUSTRY_PACKS) expect(INDUSTRIES, p.id).toContain(p.industry);
+    for (const r of COURSE_RECIPES) expect(INDUSTRIES, r.id).toContain(r.industry);
+  });
+
+  it.each(MODULE_CARDS)("模組 $moduleId 的骨架單元都存在，且都屬於這個模組", (card) => {
+    for (const id of card.skeletonUnitIds) {
+      expect(getUnitCard(st, id), id).toBeDefined();
+      expect(getUnitCard(st, id)!.moduleId, id).toBe(card.moduleId);
+    }
+  });
+
+  it.each(COURSE_RECIPES)("課程配方 $id 用到的單元卡都存在", (r) => {
+    for (const id of r.unitIds) expect(getUnitCard(st, id), id).toBeDefined();
+  });
+
+  it("專案指向的產業素材包都存在", () => {
+    for (const p of PROJECTS) expect(getIndustryPack(st, p.clientContext.industryPackId), p.id).toBeDefined();
+  });
+
+  it.each(COURSES)("課程 $id 的模組來源單元：模組在 moduleIds 裡、模組卡有該版本、模組底下有同名單元卡", (c) => {
+    for (const u of unitsOf(c)) {
+      if (!u.source || u.source.kind !== "framework") continue;
+      const src = u.source;
+      expect(c.source?.moduleIds, u.title).toContain(src.id);
+      const card = MODULE_CARDS.find((x) => x.moduleId === src.id);
+      expect(card, `${u.title} 來源模組卡 ${src.id}`).toBeDefined();
+      expect(card!.versions.map((v) => v.version), u.title).toContain(src.version);
+      expect(unitCardsOfModule(st, card!.moduleId).map((x) => x.title), `${u.title} 來源單元`).toContain(src.unit);
+    }
+  });
+});
+
+describe("知識庫查詢：課程配方、模組與單元卡", () => {
+  const recipe = (id: string) => getRecipe(st, id)!;
+
+  it("課程配方的總分鐘數與用到的模組由單元卡推得", () => {
+    expect(recipeMinutes(st, recipe("rc-f-claude-2603"))).toBe(420);
+    expect(recipeMinutes(st, recipe("rc-g-pa-2601"))).toBe(360);
+    expect(recipeModules(st, recipe("rc-f-claude-2603"))).toEqual(["A1", "B2", "B1"]);
+  });
+
+  it("模組依第一次出現的順序排列、不重複", () => {
+    expect(recipeModules(st, recipe("rc-h-gas-2602"))).toEqual(["B1", "A4"]);
+    expect(recipeModules(st, recipe("rc-g-pa-2601"))).toEqual(["A4", "B3"]);
+  });
+
+  it("配方裡找不到的單元卡 id 略過，不影響分鐘數", () => {
+    const base = recipe("rc-h-gas-2602");
+    expect(recipeMinutes(st, { ...base, unitIds: ["uc-missing", ...base.unitIds] })).toBe(recipeMinutes(st, base));
+  });
+
+  it("用到某張單元卡的配方，依知識庫的配方順序", () => {
+    expect(recipesUsingUnit(st, "uc-b1-inventory").map((r) => r.id)).toEqual(["rc-h-gas-2602", "rc-l-rpa-2604", "rc-j-agent"]);
+  });
+
+  it("用到某模組的配方：至少一張該模組的單元卡", () => {
+    expect(recipesUsingModule(st, "B3").map((r) => r.id)).toEqual(["rc-g-pa-2601", "rc-k-kb-2605", "rc-m-governance"]);
+    expect(recipesUsingModule(st, "A5").map((r) => r.id)).toEqual(["rc-j-agent"]);
+  });
+
+  it("模組底下的單元卡依知識庫的順序", () => {
+    expect(unitCardsOfModule(st, "A4").map((u) => u.id)).toEqual([
+      "uc-a4-cloud-first",
+      "uc-a4-approval",
+      "uc-a4-overdue",
+      "uc-a4-first-script",
+      "uc-a4-form-trigger",
+      "uc-a4-safety-net",
+    ]);
+  });
+
+  it("藍圖從含該模組的模組卡複製出生的課程", () => {
+    expect(coursesUsingModule(st, "B3").map((c) => c.id)).toEqual(["c-claude-intro-managers", "c-claude-advanced", "c-pa-finance"]);
+    expect(coursesUsingModule(st, "A5")).toEqual([]);
+  });
+
+  it("模組卡最新版本號，以及單元來源文字指向模組卡", () => {
+    expect(latestModuleCardVersion(getModuleCard(st, "A4")!)).toBe(2);
+    expect(unitSourceText(st, { kind: "framework", id: "A1", version: 2, unit: "用 Project 記住工作脈絡" })).toBe(
+      "模組卡「A1 通用生成 AI」v2・用 Project 記住工作脈絡",
+    );
+    expect(unitSourceText(st, { kind: "framework", id: "X9", version: 1, unit: "某單元" })).toBe("模組卡「X9」v1・某單元");
   });
 });
