@@ -1,4 +1,4 @@
-import { getModuleCard, latestModuleCardVersion } from "./logic";
+import { getModuleCard, latestModuleCardVersion, moduleCardSkeleton } from "./logic";
 import type { DemoState } from "./state";
 import { uniqueTags } from "./tags";
 import type { CourseRecipe, DraftProposal, IsoTime, KnowledgeDraft, ModuleCard, UnitCard } from "./types";
@@ -135,12 +135,26 @@ export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoS
 
   const card = getModuleCard(st, p.moduleId);
   if (!card) return st;
+  // 新版本的骨架是上一版，把被改的單元換成新單元卡；新單元卡還在待審時連同草稿一起收進知識庫（和課程配方一致）
+  let next = st;
+  let skeleton = moduleCardSkeleton(card);
+  for (const change of p.changes) {
+    const { unitCardId, replacesUnitCardId } = change;
+    if (!unitCardId || !replacesUnitCardId || !skeleton.includes(replacesUnitCardId)) continue;
+    if (!next.unitCards.some((u) => u.id === unitCardId)) {
+      const pending = next.drafts.find((d) => d.proposal.kind === "new_unit_card" && d.proposal.unitCard.id === unitCardId);
+      if (!pending || pending.proposal.kind !== "new_unit_card") continue;
+      next = without({ ...next, unitCards: [...next.unitCards, pending.proposal.unitCard] }, pending.id);
+    }
+    // 換上的單元卡已經在骨架裡就不重複放，只拿掉被換掉的那個
+    skeleton = skeleton.includes(unitCardId) ? skeleton.filter((id) => id !== replacesUnitCardId) : skeleton.map((id) => (id === replacesUnitCardId ? unitCardId : id));
+  }
   const nextCard: ModuleCard = {
     ...card,
     versions: [
       ...card.versions,
-      { version: latestModuleCardVersion(card) + 1, createdAt: now, note: p.changes.map((c) => c.text).join("；"), fromCourseId: draft.fromCourseId },
+      { version: latestModuleCardVersion(card) + 1, createdAt: now, note: p.changes.map((c) => c.text).join("；"), fromCourseId: draft.fromCourseId, skeletonUnitIds: skeleton },
     ],
   };
-  return without({ ...st, moduleCards: st.moduleCards.map((c) => (c.moduleId === card.moduleId ? nextCard : c)) }, draftId);
+  return without({ ...next, moduleCards: next.moduleCards.map((c) => (c.moduleId === card.moduleId ? nextCard : c)) }, draftId);
 }

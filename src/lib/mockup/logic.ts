@@ -15,6 +15,7 @@ import {
   type IsoTime,
   type Link,
   type Material,
+  type CourseModuleSource,
   type ModuleCard,
   type ModuleId,
   type Project,
@@ -59,9 +60,16 @@ export const getModuleCard = (st: DemoState, moduleId: ModuleId) => st.moduleCar
 /** 模組卡最新的版本號。 */
 export const latestModuleCardVersion = (card: ModuleCard) => Math.max(...card.versions.map((v) => v.version));
 
-/** 一組模組卡帶最新版本號的字串，例如「「A1 通用生成 AI」v2、「B1 流程診斷」v1」；建課程時記在藍圖第 1 版的備註與畫面提示。 */
-export const moduleCardVersionsLabel = (cards: ModuleCard[]): string =>
-  cards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、");
+/**
+ * 模組卡某一版的核心單元骨架（單元卡 id，依序）。不指定版本就是最新版本，也就是模組卡「目前的骨架」：
+ * 骨架只存在各版本的快照裡，不另存一份；查無該版本回傳空陣列。
+ */
+export const moduleCardSkeleton = (card: ModuleCard, version: number = latestModuleCardVersion(card)): string[] =>
+  card.versions.find((v) => v.version === version)?.skeletonUnitIds ?? [];
+
+/** 一組模組與版本號的字串，例如「「A1 通用生成 AI」v2、「B1 流程診斷」v1」；建課程時記在藍圖第 1 版的備註與畫面提示。 */
+export const moduleCardVersionsLabel = (modules: CourseModuleSource[]): string =>
+  modules.map((m) => `「${moduleLabel(m.moduleId)}」v${m.version}`).join("、");
 
 /** 依 id 找單元卡。 */
 export const getUnitCard = (st: DemoState, id: string) => st.unitCards.find((u) => u.id === id);

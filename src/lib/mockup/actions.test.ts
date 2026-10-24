@@ -6,6 +6,7 @@ import {
   getCourse,
   getIndustryPack,
   getModuleCard,
+  moduleCardSkeleton,
   getSession,
   getUnitCard,
   isStale,
@@ -187,7 +188,7 @@ describe("從零開一門課到準備好", () => {
       },
     ]);
     const course = getCourse(st, "c-x")!;
-    expect(course.source).toEqual({ moduleIds: ["A1", "B2"], industryPackId: "ip-manufacturing" });
+    expect(course.source).toEqual({ modules: [{ moduleId: "A1", version: 2 }, { moduleId: "B2", version: 1 }], industryPackId: "ip-manufacturing" });
     expect(course.blueprint.constraints).toContain("只能用瀏覽器");
     const kinds = () => readiness(st, getSession(st, "s-x")!).map((i) => i.kind);
     expect(kinds()).toEqual(expect.arrayContaining(["open_items", "missing_elements", "units_need_work", "artifact_missing", "no_materials", "no_links", "venue_unset", "unpublished"]));
@@ -240,9 +241,9 @@ describe("從零開一門課到準備好", () => {
       industryPack: getIndustryPack(st, "ip-manufacturing"),
     });
     const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
-    expect(units.map((u) => u.title)).toEqual(card.skeletonUnitIds.map((id) => getUnitCard(st, id)!.title));
+    expect(units.map((u) => u.title)).toEqual(moduleCardSkeleton(card).map((id) => getUnitCard(st, id)!.title));
     expect(units.map((u) => u.source)).toEqual(
-      card.skeletonUnitIds.map((id) => ({ kind: "unit_card", id, version: null, unit: getUnitCard(st, id)!.title })),
+      moduleCardSkeleton(card).map((id) => ({ kind: "unit_card", id, version: null, unit: getUnitCard(st, id)!.title })),
     );
     expect(units.every((u) => u.reuse === "modify" && u.module === "A1" && u.level === null)).toBe(true);
     expect(bp.days[0].theme).toBe("A1 通用生成 AI");
@@ -259,7 +260,7 @@ describe("從零開一門課到準備好", () => {
   it("course/create 帶模組：單元依骨架出生，來源記下模組與產業素材包", () => {
     const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleIds: ["A4"], totalHours: 6, industryPackId: "ip-finance-approval" }]);
     const c = getCourse(st, "c-z")!;
-    expect(c.source).toEqual({ moduleIds: ["A4"], industryPackId: "ip-finance-approval" });
+    expect(c.source).toEqual({ modules: [{ moduleId: "A4", version: 2 }], industryPackId: "ip-finance-approval" });
     expect(c.blueprintHistory[0].note).toBe("從模組卡「A4 雲端自動化」v2 複製出生");
     const units = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
     expect(units.map((u) => u.title)).toEqual(["雲端流程上手", "表單觸發器", "逾期提醒", "寄送前的安全網"]);
@@ -271,9 +272,9 @@ describe("從零開一門課到準備好", () => {
     // 刻意亂序傳入，順序以模組代號為準，不看選的先後
     const st = run([{ type: "course/create", id: "c-m", projectId: "p-a-2026", title: "多模組", moduleIds: ["B1", "A4", "A1"], totalHours: 6, industryPackId: "ip-finance-approval" }]);
     const c = getCourse(st, "c-m")!;
-    expect(c.source).toEqual({ moduleIds: ["A1", "A4", "B1"], industryPackId: "ip-finance-approval" });
+    expect(c.source).toEqual({ modules: [{ moduleId: "A1", version: 2 }, { moduleId: "A4", version: 2 }, { moduleId: "B1", version: 1 }], industryPackId: "ip-finance-approval" });
     const units = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
-    const expectedIds = (["A1", "A4", "B1"] as const).flatMap((m) => getModuleCard(st, m)!.skeletonUnitIds);
+    const expectedIds = (["A1", "A4", "B1"] as const).flatMap((m) => moduleCardSkeleton(getModuleCard(st, m)!));
     expect(units.map((u) => u.source)).toEqual(expectedIds.map((id) => ({ kind: "unit_card", id, version: null, unit: getUnitCard(st, id)!.title })));
     expect(units.map((u) => u.module)).toEqual(expectedIds.map((id) => getUnitCard(st, id)!.moduleId));
     expect(c.blueprintHistory[0].note).toBe("從模組卡「A1 通用生成 AI」v2、「A4 雲端自動化」v2、「B1 流程診斷」v1 複製出生");

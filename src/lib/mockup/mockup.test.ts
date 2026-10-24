@@ -98,7 +98,10 @@ describe("設計稿 fixture 參照完整", () => {
       expect(PROJECTS.some((p) => p.id === c.projectId)).toBe(true);
       if (!c.source) continue;
       expect(getIndustryPack(st, c.source.industryPackId), c.id).toBeDefined();
-      for (const id of c.source.moduleIds) expect(moduleIds, `${c.id} ${id}`).toContain(id);
+      for (const { moduleId, version } of c.source.modules) {
+        expect(moduleIds, `${c.id} ${moduleId}`).toContain(moduleId);
+        expect(getModuleCard(st, moduleId)!.versions.map((v) => v.version), `${c.id} ${moduleId} v${version}`).toContain(version);
+      }
     }
   });
 
@@ -448,10 +451,13 @@ describe("知識庫 fixture 參照完整", () => {
     for (const x of [...INDUSTRY_PACKS, ...COURSE_RECIPES]) for (const i of x.industries) expect(INDUSTRIES, x.id).toContain(i);
   });
 
-  it.each(MODULE_CARDS)("模組 $moduleId 的骨架單元都存在，且都屬於這個模組", (card) => {
-    for (const id of card.skeletonUnitIds) {
-      expect(getUnitCard(st, id), id).toBeDefined();
-      expect(getUnitCard(st, id)!.moduleId, id).toBe(card.moduleId);
+  it.each(MODULE_CARDS)("模組 $moduleId 每個版本的骨架單元都存在，且都屬於這個模組", (card) => {
+    for (const v of card.versions) {
+      expect(v.skeletonUnitIds.length, `v${v.version}`).toBeGreaterThan(0);
+      for (const id of v.skeletonUnitIds) {
+        expect(getUnitCard(st, id), `v${v.version} ${id}`).toBeDefined();
+        expect(getUnitCard(st, id)!.moduleId, id).toBe(card.moduleId);
+      }
     }
   });
 

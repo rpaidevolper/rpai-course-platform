@@ -7,6 +7,7 @@ import {
   getCourse,
   getUnitCard,
   latestModuleCardVersion,
+  moduleCardSkeleton,
   moduleLabel,
   recipeMinutes,
   recipeModules,
@@ -99,7 +100,7 @@ function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) 
         <Section label="範圍">{card.scope}</Section>
         <Section label="核心單元骨架">
           <ol className="space-y-1">
-            {card.skeletonUnitIds.map((id, i) => {
+            {moduleCardSkeleton(card).map((id, i) => {
               const u = getUnitCard(st, id);
               return (
                 <li key={id} className="flex gap-2.5">
@@ -132,6 +133,9 @@ function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) 
                   <span className="w-8 shrink-0 font-bold text-navy">v{v.version}</span>
                   <span className="min-w-0">
                     <span className="text-body-muted">{formatDate(v.createdAt)}</span> {v.note}
+                    <span className="block text-xs text-body-muted">
+                      這一版的骨架（{v.skeletonUnitIds.length} 個單元）：{v.skeletonUnitIds.map((id) => getUnitCard(st, id)?.title ?? id).join("、")}
+                    </span>
                     {from && (
                       <>
                         {" "}

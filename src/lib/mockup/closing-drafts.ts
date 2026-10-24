@@ -1,4 +1,4 @@
-import { latestBlueprintVersion, sessionEndsAt, sessionsOfCourse } from "./logic";
+import { latestBlueprintVersion, moduleCardSkeleton, sessionEndsAt, sessionsOfCourse } from "./logic";
 import { finalArtifacts } from "./closing";
 import type { DemoState } from "./state";
 import { uniqueTags } from "./tags";
@@ -13,7 +13,8 @@ import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId,
  *   同一張單元卡在藍圖裡出現多次只算一份。
  * - 其餘（要改、新做、沒有來源、來源是別的課程、單元卡已不存在）→ 新單元卡，id 預先定為 `uc-<課程 id>-<n>`。
  * - 整門課程 → 一份新課程配方，id 為 `rc-<課程 id>`，單元依藍圖順序引用上面兩種單元卡。
- * - 單元來源是某模組卡骨架裡的單元卡、而且沿用程度是「要改」→ 那個模組卡的新版本，每個這樣的單元一條改動。
+ * - 單元來源是某模組卡（目前骨架）裡的單元卡、而且沿用程度是「要改」→ 那個模組卡的新版本，每個這樣的單元一條改動，
+ *   記下被換掉的骨架單元（replacesUnitCardId）與換上的新單元卡；接受時新版本的骨架就是上一版把它換掉。
  *   沒有骨架被改過的模組不提議升版。
  *
  * 「用過的配方 +1」不存計數：單元卡被哪些配方用過由配方推得（logic.ts 的 recipesUsingUnit），
@@ -64,9 +65,9 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
     newCards.push(card);
     cardIds.push(card.id);
     if (existing && unit.reuse === "modify") {
-      const moduleCard = st.moduleCards.find((m) => m.skeletonUnitIds.includes(existing.id));
+      const moduleCard = st.moduleCards.find((m) => moduleCardSkeleton(m).includes(existing.id));
       if (moduleCard) {
-        const change = { text: `骨架單元「${existing.title}」在這門課改成「${unit.title}」（${unit.minutes} 分）`, unitCardId: card.id };
+        const change = { text: `骨架單元「${existing.title}」在這門課改成「${unit.title}」（${unit.minutes} 分）`, unitCardId: card.id, replacesUnitCardId: existing.id };
         moduleChanges.set(moduleCard.moduleId, [...(moduleChanges.get(moduleCard.moduleId) ?? []), change]);
       }
     }
