@@ -29,7 +29,8 @@ export function titleFromFileName(fileName: string): string {
 }
 
 /** 匯入的單元卡只有標題是腳本給的，目標、方法與成果用通用文字。 */
-const unitCardOf = (moduleId: ModuleId, title: string): Omit<UnitCard, "id"> => ({
+const unitCardOf = (id: string, moduleId: ModuleId, title: string): UnitCard => ({
+  id,
   moduleId,
   title,
   minutes: 60,
@@ -41,20 +42,28 @@ const unitCardOf = (moduleId: ModuleId, title: string): Omit<UnitCard, "id"> => 
   scenarios: [],
 });
 
-/** 依檔名與講師選的模組，產生一份課程配方草稿（沒有來源課程、沒有日期，對象、工具與應用場景待確認）。 */
-export function importProposal(fileName: string, moduleId: ModuleId): Extract<DraftProposal, { kind: "new_course_recipe" }> {
-  return {
-    kind: "new_course_recipe",
-    recipe: {
-      title: titleFromFileName(fileName),
-      client: "匯入的講義",
-      status: "delivered",
-      heldOn: null,
-      audiences: [],
-      tools: [],
-      industries: ["通用"],
-      scenarios: [],
+/**
+ * 依檔名與講師選的模組，產生一份課程配方草稿加上每個單元一份新單元卡草稿
+ * （沒有來源課程、沒有日期，對象、工具與應用場景待確認）。單元卡 id 是 `${baseId}-u1`…，配方 id 是 baseId。
+ */
+export function importProposals(fileName: string, moduleId: ModuleId, baseId: string): DraftProposal[] {
+  const unitCards = SCRIPT[moduleId].map((title, i) => unitCardOf(`${baseId}-u${i + 1}`, moduleId, title));
+  return [
+    {
+      kind: "new_course_recipe",
+      recipe: {
+        id: baseId,
+        title: titleFromFileName(fileName),
+        client: "匯入的講義",
+        status: "delivered",
+        heldOn: null,
+        audiences: [],
+        tools: [],
+        industries: ["通用"],
+        scenarios: [],
+      },
+      unitCardIds: unitCards.map((u) => u.id),
     },
-    unitCards: SCRIPT[moduleId].map((title) => unitCardOf(moduleId, title)),
-  };
+    ...unitCards.map((unitCard): DraftProposal => ({ kind: "new_unit_card", unitCard })),
+  ];
 }

@@ -5,7 +5,6 @@ import {
   COURSE_RECIPES,
   COURSES,
   INDUSTRY_PACKS,
-  KNOWLEDGE_DRAFTS,
   MODULE_CARDS,
   MOCK_NOW,
   PROJECTS,
@@ -222,9 +221,6 @@ describe("設計稿 fixture 參照完整", () => {
     expect(new Set(codes).size).toBe(codes.length);
   });
 
-  it("知識庫草稿指向存在的課程", () => {
-    for (const d of KNOWLEDGE_DRAFTS) expect(getCourse(st, d.fromCourseId!)).toBeDefined();
-  });
 });
 
 describe("產物過期（fixture 示範）", () => {

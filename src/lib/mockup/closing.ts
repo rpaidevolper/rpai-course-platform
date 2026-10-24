@@ -1,6 +1,6 @@
 import { coursesOfProject, seriesLabel, sessionEndsAt, sessionsOfCourse } from "./logic";
 import type { DemoState } from "./state";
-import type { Course, IsoTime } from "./types";
+import type { Artifact, Course, IsoTime } from "./types";
 
 /**
  * 結案閘與結案狀態（#59）。純函式，不碰 UI；結案動作在 actions.ts 的 course/close。
@@ -34,6 +34,20 @@ export interface ClosingGate {
  */
 function hasFinal(course: Course, kind: FinalKind, day: number): boolean {
   return course.artifacts.some((a) => a.kind === kind && a.day === day && a.editedFromId !== null);
+}
+
+/**
+ * 各天各種類的最終版：同一份產物裡講師上傳（editedFromId 不為 null）的最新一版。
+ * 依天數排列、逐頁腳本在前簡報在後；沒有講師上傳版本的那一份不出現。
+ */
+export function finalArtifacts(course: Course): Artifact[] {
+  return course.blueprint.days.flatMap((_, i) =>
+    FINAL_KINDS.flatMap((kind) => {
+      const uploads = course.artifacts.filter((a) => a.kind === kind && a.day === i + 1 && a.editedFromId !== null);
+      const latest = uploads.reduce<Artifact | undefined>((best, a) => (best === undefined || a.version > best.version ? a : best), undefined);
+      return latest ? [latest] : [];
+    }),
+  );
 }
 
 export function closingGate(st: DemoState, course: Course, now: IsoTime): ClosingGate {
