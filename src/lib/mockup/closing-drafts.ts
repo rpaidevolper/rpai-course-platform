@@ -1,7 +1,8 @@
 import { latestBlueprintVersion, moduleCardSkeleton, sessionEndsAt, sessionsOfCourse } from "./logic";
 import { finalArtifacts } from "./closing";
 import type { DemoState } from "./state";
-import { uniqueTags } from "./tags";
+import { courseSpec, uniqueTags } from "./tags";
+import { moduleLabel } from "@/lib/blueprint/modules";
 import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId, UnitCard } from "./types";
 
 /**
@@ -21,8 +22,18 @@ import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId,
  * 「用過的配方 +1」不存計數：單元卡被哪些配方用過由配方推得（logic.ts 的 recipesUsingUnit），
  * 所以 +1 發生在新課程配方被接受、把單元卡寫進 unitIds 的那一刻。
  */
+/**
+ * 結案草稿的配方名稱：由內容組成的中性名稱「產業・模組・規格」，不沿用課程名稱、也不放客戶。
+ * 產業取課程的產業標籤（沒有就「通用」）、模組取藍圖單元用到的模組（依出現順序、去重）、規格由總時數推得（沒有時數就省略）；
+ * 講師可以再改寫。
+ */
+export function neutralRecipeTitle(course: Course, moduleIds: ModuleId[]): string {
+  const industries = uniqueTags(course.industries);
+  const modules = [...new Set(moduleIds)].map(moduleLabel);
+  return [industries.length > 0 ? industries.join("、") : "通用", modules.join("＋"), courseSpec(course)].filter(Boolean).join("・");
+}
+
 export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
-  const project = st.projects.find((p) => p.id === course.projectId);
   const units = course.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units)).map((unit, i) => ({ unit, n: i + 1 }));
   const courseTags = {
     audiences: uniqueTags(course.audiences),
@@ -71,7 +82,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
     if (existing && unit.reuse === "modify") {
       const moduleCard = st.moduleCards.find((m) => moduleCardSkeleton(m).includes(existing.id));
       if (moduleCard) {
-        const change = { text: `骨架單元「${existing.title}」在這門課改成「${unit.title}」（${unit.minutes} 分）`, unitCardId: card.id, replacesUnitCardId: existing.id };
+        const change: ModuleCardChange = { unitCardId: card.id, replacesUnitCardId: existing.id };
         moduleChanges.set(moduleCard.moduleId, [...(moduleChanges.get(moduleCard.moduleId) ?? []), change]);
       }
     }
@@ -86,8 +97,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
       kind: "new_course_recipe",
       recipe: {
         id: `rc-${course.id}`,
-        title: course.title,
-        client: project?.clientContext.company ?? "",
+        title: neutralRecipeTitle(course, units.map((x) => x.unit.module)),
         status: "delivered",
         heldOn: lastEnd ? lastEnd.slice(0, 7) : null,
         audiences: courseTags.audiences,

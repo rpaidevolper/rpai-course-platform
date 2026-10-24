@@ -1,7 +1,7 @@
 import { getModuleCard, latestModuleCardVersion, moduleCardSkeleton } from "./logic";
 import type { DemoState } from "./state";
 import { uniqueTags } from "./tags";
-import type { CourseRecipe, DraftProposal, IsoTime, KnowledgeDraft, ModuleCard, UnitCard } from "./types";
+import type { CourseRecipe, DraftProposal, IsoTime, KnowledgeDraft, ModuleCard, ModuleCardChange, UnitCard } from "./types";
 
 /**
  * 知識庫草稿的審核（#60）：接受、捨棄、排除某個單元、改寫含客戶機密的文字。
@@ -13,10 +13,20 @@ import type { CourseRecipe, DraftProposal, IsoTime, KnowledgeDraft, ModuleCard, 
 /** 審核時可以改寫的文字：只含講師可能要拿掉客戶名稱的欄位，不能改 id 或單元的組成。 */
 export type DraftRewrite =
   | { kind: "new_unit_card"; title?: string; objective?: string; method?: string; outcome?: string }
-  | { kind: "new_course_recipe"; title?: string; client?: string }
-  | { kind: "module_card_version"; index: number; text: string };
+  | { kind: "new_course_recipe"; title?: string };
 
 const without = (st: DemoState, id: string): DemoState => ({ ...st, drafts: st.drafts.filter((d) => d.id !== id) });
+
+/**
+ * 模組卡改動的說明文字，顯示與升版備註時才用「目前」的標題組出來：換上的單元卡可能還在待審的單元卡草稿裡，
+ * 講師改寫它的標題後，說明跟著變。找不到的單元卡退回用 id，不會丟出錯。
+ */
+export function moduleChangeText(st: DemoState, change: ModuleCardChange): string {
+  const pending = st.drafts.find((d) => d.proposal.kind === "new_unit_card" && d.proposal.unitCard.id === change.unitCardId)?.proposal;
+  const next = st.unitCards.find((u) => u.id === change.unitCardId) ?? (pending?.kind === "new_unit_card" ? pending.unitCard : undefined);
+  const old = st.unitCards.find((u) => u.id === change.replacesUnitCardId);
+  return `骨架單元「${old?.title ?? change.replacesUnitCardId}」在這門課改成「${next?.title ?? change.unitCardId}」${next ? `（${next.minutes} 分）` : ""}`;
+}
 
 /** 非空白才算有改寫；去掉頭尾空白 */
 const filled = (value: string | undefined, current: string): string => (value && value.trim() ? value.trim() : current);
@@ -72,7 +82,7 @@ export function discardDraft(st: DemoState, draftId: string): DemoState {
   return p.kind === "new_unit_card" ? dropUnit(st, draft.fromCourseId, p.unitCard.id) : without(st, draftId);
 }
 
-/** 改寫草稿裡的文字；種類對不上或空白的欄位忽略。 */
+/** 改寫草稿裡的文字；種類對不上或空白的欄位忽略。模組卡新版本的說明由單元卡推得，不能直接改。 */
 export function rewriteDraft(st: DemoState, draftId: string, patch: DraftRewrite): DemoState {
   const draft = st.drafts.find((d) => d.id === draftId);
   if (!draft || draft.proposal.kind !== patch.kind) return st;
@@ -85,10 +95,7 @@ export function rewriteDraft(st: DemoState, draftId: string, patch: DraftRewrite
       unitCard: { ...c, title: filled(patch.title, c.title), objective: filled(patch.objective, c.objective), method: filled(patch.method, c.method), outcome: filled(patch.outcome, c.outcome) },
     };
   } else if (p.kind === "new_course_recipe" && patch.kind === "new_course_recipe") {
-    next = { ...p, recipe: { ...p.recipe, title: filled(patch.title, p.recipe.title), client: filled(patch.client, p.recipe.client) } };
-  } else if (p.kind === "module_card_version" && patch.kind === "module_card_version") {
-    if (!p.changes[patch.index]) return st;
-    next = { ...p, changes: p.changes.map((c, i) => (i === patch.index ? { ...c, text: filled(patch.text, c.text) } : c)) };
+    next = { ...p, recipe: { ...p.recipe, title: filled(patch.title, p.recipe.title) } };
   }
   return { ...st, drafts: st.drafts.map((d) => (d.id === draftId ? { ...d, proposal: next } : d)) };
 }
@@ -142,7 +149,7 @@ export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoS
   let skeleton = moduleCardSkeleton(card);
   for (const change of p.changes) {
     const { unitCardId, replacesUnitCardId } = change;
-    if (!unitCardId || !replacesUnitCardId || !skeleton.includes(replacesUnitCardId)) continue;
+    if (!skeleton.includes(replacesUnitCardId)) continue;
     if (!next.unitCards.some((u) => u.id === unitCardId)) {
       const pending = next.drafts.find((d) => d.proposal.kind === "new_unit_card" && d.proposal.unitCard.id === unitCardId);
       if (!pending || pending.proposal.kind !== "new_unit_card") continue;
@@ -155,7 +162,7 @@ export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoS
     ...card,
     versions: [
       ...card.versions,
-      { version: latestModuleCardVersion(card) + 1, createdAt: now, note: p.changes.map((c) => c.text).join("；"), fromCourseId: draft.fromCourseId, skeletonUnitIds: skeleton },
+      { version: latestModuleCardVersion(card) + 1, createdAt: now, note: p.changes.map((c) => moduleChangeText(next, c)).join("；"), fromCourseId: draft.fromCourseId, skeletonUnitIds: skeleton },
     ],
   };
   return without({ ...next, moduleCards: next.moduleCards.map((c) => (c.moduleId === card.moduleId ? nextCard : c)) }, draftId);

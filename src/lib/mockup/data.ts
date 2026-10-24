@@ -130,8 +130,7 @@ export const MODULE_CARDS: ModuleCard[] = [
 export const COURSE_RECIPES: CourseRecipe[] = [
   {
     id: "rc-f-claude-2603",
-    title: "F 公司行政人員 Claude 工作坊",
-    client: "F 公司",
+    title: "行政人員 Claude 工作坊",
     status: "delivered",
     heldOn: "2026-03",
     audiences: ["行政", "業務"],
@@ -142,8 +141,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
   },
   {
     id: "rc-g-pa-2601",
-    title: "G 公司財務部簽核自動化",
-    client: "G 公司",
+    title: "財務部簽核自動化",
     status: "delivered",
     heldOn: "2026-01",
     audiences: ["財務", "行政"],
@@ -154,8 +152,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
   },
   {
     id: "rc-h-gas-2602",
-    title: "H 公司人資表單自動化",
-    client: "H 公司",
+    title: "人資表單自動化",
     status: "delivered",
     heldOn: "2026-02",
     audiences: ["人資", "行政"],
@@ -166,8 +163,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
   },
   {
     id: "rc-l-rpa-2604",
-    title: "L 公司報表自動化兩天班",
-    client: "L 公司",
+    title: "報表自動化兩天班",
     status: "delivered",
     heldOn: "2026-04",
     audiences: ["生管資材"],
@@ -178,8 +174,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
   },
   {
     id: "rc-k-kb-2605",
-    title: "K 公司部門知識庫講座",
-    client: "K 公司",
+    title: "部門知識庫講座",
     status: "delivered",
     heldOn: "2026-05",
     audiences: ["部門主管"],
@@ -190,8 +185,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
   },
   {
     id: "rc-j-agent",
-    title: "J 公司 AI Agent 導入提案",
-    client: "J 公司",
+    title: "AI Agent 導入提案",
     status: "proposal",
     heldOn: null,
     audiences: ["種子團隊"],
@@ -202,8 +196,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
   },
   {
     id: "rc-m-governance",
-    title: "M 公司主管 AI 治理半日課",
-    client: "M 公司",
+    title: "主管 AI 治理半日課",
     status: "preparing",
     heldOn: null,
     audiences: ["部門主管"],

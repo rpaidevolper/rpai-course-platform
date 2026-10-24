@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { unitLevelText } from "@/lib/blueprint/schema";
-import type { DraftRewrite } from "@/lib/mockup/draft-review";
 import { formatDate, getCourse, getModuleCard, getUnitCard, latestModuleCardVersion, moduleLabel, recipesUsingUnit, seriesLabel } from "@/lib/mockup/logic";
-import { canExcludeUnit, pendingUsageIncrease } from "@/lib/mockup/draft-review";
+import { canExcludeUnit, moduleChangeText, pendingUsageIncrease } from "@/lib/mockup/draft-review";
 import type { DemoState } from "@/lib/mockup/state";
 import { dispatch } from "@/lib/mockup/store";
 import type { KnowledgeDraft, UnitCard } from "@/lib/mockup/types";
@@ -109,10 +108,6 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
         <>
           <h3 className="mt-2 text-base font-bold text-navy">建議新增課程配方「{p.recipe.title}」</h3>
           <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <FieldLabel>客戶</FieldLabel>
-              <dd>{p.recipe.client || "—"}</dd>
-            </div>
             <div className="sm:col-span-2">
               <FieldLabel>標籤</FieldLabel>
               <dd className="mt-1">
@@ -264,40 +259,33 @@ function ModuleBody({ st, draft, accept, buttons }: BodyProps) {
       </h3>
       <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
         {p.changes.map((c, i) => (
-          <li key={i}>{c.text}</li>
+          <li key={i}>{moduleChangeText(st, c)}</li>
         ))}
       </ul>
       {buttons(
         <Button onClick={() => accept(`模組卡「${moduleLabel(p.moduleId)}」已升到 v${next}`, `module-${p.moduleId}`)} disabled={!card} title={card ? undefined : "找不到原模組卡"}>
           升成 v{next ?? "?"}
         </Button>,
-        { rewrite: true },
       )}
     </>
   );
 }
 
-/** 改寫含客戶機密的文字：把客戶名稱、代號換成中性的說法再收進知識庫。 */
+/** 改寫含客戶機密的文字：把客戶名稱、代號換成中性的說法再收進知識庫。模組卡新版本的說明由單元卡推得，改寫單元標題就會跟著變。 */
 function RewriteDialog({ draft, onClose }: { draft: KnowledgeDraft; onClose: () => void }) {
   const p = draft.proposal;
-  const [fields, setFields] = useState<Record<string, string>>(() => {
-    if (p.kind === "new_unit_card") return { title: p.unitCard.title, objective: p.unitCard.objective, outcome: p.unitCard.outcome };
-    if (p.kind === "new_course_recipe") return { title: p.recipe.title, client: p.recipe.client };
-    if (p.kind === "module_card_version") return Object.fromEntries(p.changes.map((c, i) => [String(i), c.text]));
+  const [fields, setFields] = useState<Record<string, string>>((): Record<string, string> => {
+    if (p.kind === "new_unit_card") return { title: p.unitCard.title, objective: p.unitCard.objective, method: p.unitCard.method, outcome: p.unitCard.outcome };
+    if (p.kind === "new_course_recipe") return { title: p.recipe.title };
     return {};
   });
   const set = (key: string) => ({ value: fields[key] ?? "", onChange: (e: { target: { value: string } }) => setFields({ ...fields, [key]: e.target.value }) });
 
   const submit = () => {
     if (p.kind === "new_unit_card") {
-      dispatch({ type: "draft/rewrite", draftId: draft.id, patch: { kind: "new_unit_card", title: fields.title, objective: fields.objective, outcome: fields.outcome } });
+      dispatch({ type: "draft/rewrite", draftId: draft.id, patch: { kind: "new_unit_card", title: fields.title, objective: fields.objective, method: fields.method, outcome: fields.outcome } });
     } else if (p.kind === "new_course_recipe") {
-      dispatch({ type: "draft/rewrite", draftId: draft.id, patch: { kind: "new_course_recipe", title: fields.title, client: fields.client } });
-    } else if (p.kind === "module_card_version") {
-      p.changes.forEach((_, index) => {
-        const patch: DraftRewrite = { kind: "module_card_version", index, text: fields[String(index)] };
-        dispatch({ type: "draft/rewrite", draftId: draft.id, patch });
-      });
+      dispatch({ type: "draft/rewrite", draftId: draft.id, patch: { kind: "new_course_recipe", title: fields.title } });
     }
     toast("已改寫，收進知識庫的是改寫後的文字");
     onClose();
@@ -313,6 +301,9 @@ function RewriteDialog({ draft, onClose }: { draft: KnowledgeDraft; onClose: () 
           <Field label="學習目標">
             <TextArea {...set("objective")} />
           </Field>
+          <Field label="教學方式">
+            <TextInput {...set("method")} />
+          </Field>
           <Field label="成果">
             <TextArea {...set("outcome")} />
           </Field>
@@ -323,17 +314,8 @@ function RewriteDialog({ draft, onClose }: { draft: KnowledgeDraft; onClose: () 
           <Field label="配方名稱">
             <TextInput {...set("title")} />
           </Field>
-          <Field label="客戶" hint="想隱藏客戶名稱就改成產業說法，例如「某金融業客戶」">
-            <TextInput {...set("client")} />
-          </Field>
         </>
       )}
-      {p.kind === "module_card_version" &&
-        p.changes.map((_, i) => (
-          <Field key={i} label={`改動 ${i + 1}`}>
-            <TextArea {...set(String(i))} />
-          </Field>
-        ))}
     </Dialog>
   );
 }

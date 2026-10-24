@@ -92,7 +92,6 @@ export function filterRecipes(st: DemoState, f: KnowledgeFilter): CourseRecipe[]
     }
     return matchesKeyword(f.keyword, [
       r.title,
-      r.client,
       RECIPE_STATUS_LABELS[r.status],
       ...recipeModules(st, r).map(moduleLabel),
       ...recipeUnitCards(st, r).map((u) => u.title),

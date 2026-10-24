@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { demoReducer, type DemoAction } from "./actions";
 import { finalArtifacts } from "./closing";
-import { canExcludeUnit, pendingUsageIncrease } from "./draft-review";
+import { canExcludeUnit, moduleChangeText, pendingUsageIncrease } from "./draft-review";
 import { getModuleCard, getRecipe, getUnitCard, latestModuleCardVersion, recipeUnitCards, recipesUsingUnit } from "./logic";
 import { importProposals } from "./import-script";
 import { initialState, type DemoState } from "./state";
@@ -125,12 +125,14 @@ describe("結案產生草稿", () => {
     expect(updateDraftFor(withCardLevel("uc-a4-approval", null, null), "uc-a4-approval")!.proposal.fillLevel).toBeNull();
   });
 
-  it("新課程配方：依藍圖順序引用單元卡，標籤與客戶取自課程與專案，狀態已交付、上課年月取最後一個場次", () => {
+  it("新課程配方：依藍圖順序引用單元卡，標籤取自課程，名稱是中性組成（不含課程名稱與客戶），狀態已交付、上課年月取最後一個場次", () => {
     const st = closed();
     const { recipe, unitCardIds } = only(st, "new_course_recipe").proposal;
+    expect(recipe).not.toHaveProperty("client");
+    expect(recipe.title).not.toContain("請款簽核先導班");
+    expect(recipe.title).not.toContain("F 公司");
     expect(recipe).toMatchObject({
-      title: "請款簽核先導班",
-      client: "F 公司",
+      title: "金融・A4 雲端自動化＋B3 AI 治理與風險・一日",
       status: "delivered",
       heldOn: "2026-09",
       audiences: ["財務", "行政"],
@@ -148,7 +150,8 @@ describe("結案產生草稿", () => {
     const draft = only(st, "module_card_version");
     expect(draft.proposal.moduleId).toBe("A4");
     expect(draft.proposal.changes).toHaveLength(1);
-    expect(draft.proposal.changes[0].text).toContain("雲端流程上手");
+    expect(draft.proposal.changes[0]).toEqual({ unitCardId: unitDraftByTitle(st, MODIFIED_TITLE).proposal.unitCard.id, replacesUnitCardId: "uc-a4-cloud-first" });
+    expect(moduleChangeText(st, draft.proposal.changes[0])).toContain(MODIFIED_TITLE);
     expect(draft.proposal.changes[0].unitCardId).toBe(unitDraftByTitle(st, MODIFIED_TITLE).proposal.unitCard.id);
   });
 });
@@ -195,7 +198,8 @@ describe("接受提案後，知識庫的變化", () => {
     const usedBefore = { approval: recipesUsingUnit(st0, "uc-a4-approval").length, golive: recipesUsingUnit(st0, "uc-b3-golive").length };
     const st = run([accept(d.id)], st0);
     const recipe = getRecipe(st, d.proposal.recipe.id)!;
-    expect(recipe).toMatchObject({ title: "請款簽核先導班", client: "F 公司", status: "delivered", heldOn: "2026-09" });
+    expect(recipe).toMatchObject({ title: d.proposal.recipe.title, status: "delivered", heldOn: "2026-09" });
+    expect(recipe).not.toHaveProperty("client");
     expect(recipe.unitIds).toEqual(d.proposal.unitCardIds);
     expect(recipeUnitCards(st, recipe).map((u) => u.title)).toEqual([MODIFIED_TITLE, "核准與退回分支", NEW_UNIT_TITLE, "上線檢查表"]);
     expect(recipesUsingUnit(st, "uc-a4-approval")).toHaveLength(usedBefore.approval + 1);
@@ -223,7 +227,7 @@ describe("接受提案後，知識庫的變化", () => {
     const st = run([accept(d.id)], st0);
     const card = getModuleCard(st, "A4")!;
     expect(latestModuleCardVersion(card)).toBe(before + 1);
-    expect(card.versions.at(-1)).toMatchObject({ fromCourseId: COURSE, note: d.proposal.changes.map((c) => c.text).join("；") });
+    expect(card.versions.at(-1)).toMatchObject({ fromCourseId: COURSE, note: d.proposal.changes.map((c) => moduleChangeText(st0, c)).join("；") });
     expect(st.drafts.map((x) => x.id)).not.toContain(d.id);
   });
 
@@ -283,37 +287,74 @@ describe("審核：排除單元", () => {
 });
 
 describe("審核：改寫含客戶機密的文字", () => {
-  it("改寫單元卡的標題、目標、成果與課程配方的名稱、客戶後接受，知識庫裡不再有客戶代號", () => {
+  it("改寫單元卡的標題、目標、教學方式、成果與課程配方的名稱後接受，知識庫裡不再有客戶代號", () => {
     const st0 = closed();
     const unit = unitDraftByTitle(st0, NEW_UNIT_TITLE);
     const recipeDraft = only(st0, "new_course_recipe");
     const st = run(
       [
-        { type: "draft/rewrite", draftId: unit.id, patch: { kind: "new_unit_card", title: "請款單逾期對帳", objective: "把逾期三天的請款單自動對帳並提醒", outcome: "逾期對帳流程" } },
-        { type: "draft/rewrite", draftId: recipeDraft.id, patch: { kind: "new_course_recipe", title: "金融業請款簽核先導班", client: "某金融業客戶" } },
+        { type: "draft/rewrite", draftId: unit.id, patch: { kind: "new_unit_card", title: "請款單逾期對帳", objective: "把逾期三天的請款單自動對帳並提醒", method: "範例拆解＋動手練習", outcome: "逾期對帳流程" } },
+        { type: "draft/rewrite", draftId: recipeDraft.id, patch: { kind: "new_course_recipe", title: "金融業請款簽核先導班" } },
         accept(recipeDraft.id),
       ],
       st0,
     );
     const recipe = getRecipe(st, recipeDraft.proposal.recipe.id)!;
-    expect(recipe).toMatchObject({ title: "金融業請款簽核先導班", client: "某金融業客戶" });
-    expect(getUnitCard(st, unit.proposal.unitCard.id)).toMatchObject({ title: "請款單逾期對帳", objective: "把逾期三天的請款單自動對帳並提醒", outcome: "逾期對帳流程" });
+    expect(recipe).toMatchObject({ title: "金融業請款簽核先導班" });
+    expect(getUnitCard(st, unit.proposal.unitCard.id)).toMatchObject({ title: "請款單逾期對帳", objective: "把逾期三天的請款單自動對帳並提醒", method: "範例拆解＋動手練習", outcome: "逾期對帳流程" });
     const added = [recipe, ...recipeUnitCards(st, recipe).filter((u) => !st0.unitCards.some((x) => x.id === u.id))];
     expect(JSON.stringify(added)).not.toContain("F 公司");
   });
 
-  it("改寫模組卡新版本的改動文字；空白的改寫忽略", () => {
+  it("改寫單元卡標題後，模組卡新版本的變更說明跟著變，接受後版本備註也不留原標題", () => {
     const st0 = closed();
     const d = only(st0, "module_card_version");
+    const unit = unitDraftByTitle(st0, MODIFIED_TITLE);
+    const change = d.proposal.changes[0];
+    expect(moduleChangeText(st0, change)).toContain(MODIFIED_TITLE);
+    const st1 = run([{ type: "draft/rewrite", draftId: unit.id, patch: { kind: "new_unit_card", title: "雲端流程上手（財務版）" } }], st0);
+    const text = moduleChangeText(st1, only(st1, "module_card_version").proposal.changes[0]);
+    expect(text).toContain("雲端流程上手（財務版）");
+    expect(text).not.toContain(MODIFIED_TITLE);
+    const st = run([accept(d.id)], st1);
+    expect(getModuleCard(st, "A4")!.versions.at(-1)!.note).toContain("雲端流程上手（財務版）");
+    expect(getModuleCard(st, "A4")!.versions.at(-1)!.note).not.toContain(MODIFIED_TITLE);
+  });
+
+  it("模組卡新版本沒有可改寫的自由文字：rewrite 對它不生效", () => {
+    const st0 = closed();
+    const d = only(st0, "module_card_version");
+    // @ts-expect-error module_card_version 不再是可改寫的種類
+    const st = run([{ type: "draft/rewrite", draftId: d.id, patch: { kind: "module_card_version", index: 0, text: "x" } }], st0);
+    expect(st.drafts).toEqual(st0.drafts);
+  });
+
+  it("教學方式改寫在接受時套用；空白的教學方式忽略", () => {
+    const st0 = closed();
+    const unit = unitDraftByTitle(st0, NEW_UNIT_TITLE);
+    const original = unit.proposal.unitCard.method;
     const st = run(
       [
-        { type: "draft/rewrite", draftId: d.id, patch: { kind: "module_card_version", index: 0, text: "雲端流程上手改成請款情境" } },
-        { type: "draft/rewrite", draftId: d.id, patch: { kind: "module_card_version", index: 0, text: "   " } },
-        accept(d.id),
+        { type: "draft/rewrite", draftId: unit.id, patch: { kind: "new_unit_card", method: "情境演練＋小組討論" } },
+        { type: "draft/rewrite", draftId: unit.id, patch: { kind: "new_unit_card", method: "   " } },
       ],
       st0,
     );
-    expect(getModuleCard(st, "A4")!.versions.at(-1)!.note).toBe("雲端流程上手改成請款情境");
+    expect(unitDraftByTitle(st, NEW_UNIT_TITLE).proposal.unitCard.method).toBe("情境演練＋小組討論");
+    expect(original).not.toBe("情境演練＋小組討論");
+    const accepted = run([accept(unit.id)], st);
+    expect(getUnitCard(accepted, unit.proposal.unitCard.id)!.method).toBe("情境演練＋小組討論");
+  });
+
+  it("fixture 的課程配方沒有客戶欄位，名稱也不含任何專案的客戶公司代號", () => {
+    const st = initialState();
+    const companies = st.projects.map((p) => p.clientContext.company).filter(Boolean);
+    expect(companies.length).toBeGreaterThan(0);
+    for (const r of st.recipes) {
+      expect(r, r.id).not.toHaveProperty("client");
+      expect(r.title, r.id).not.toMatch(/[A-Z] 公司/);
+      for (const c of companies) expect(r.title, r.id).not.toContain(c);
+    }
   });
 
   it("種類對不上的改寫、空白標題都被忽略", () => {

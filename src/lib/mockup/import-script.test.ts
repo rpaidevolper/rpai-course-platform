@@ -34,7 +34,8 @@ describe("匯入過往講義的腳本化草稿", () => {
     expect(st.drafts.map((d) => d.id)).toEqual(proposals.map((_, i) => `d-new-${i + 1}`));
     st = demoReducer(st, { type: "draft/accept", draftId: "d-new-1" });
     const recipe = getRecipe(st, "rc-new")!;
-    expect(recipe).toMatchObject({ title: "GAS 實戰", client: "匯入的講義", status: "delivered" });
+    expect(recipe).toMatchObject({ title: "GAS 實戰", status: "delivered" });
+    expect(recipe).not.toHaveProperty("client");
     expect(recipe.unitIds).toEqual(proposals.slice(1).map((_, i) => `rc-new-u${i + 1}`));
     expect(recipeUnitCards(st, recipe).map((u) => u.moduleId)).toEqual(recipe.unitIds.map(() => "A4"));
     expect(st.drafts).toEqual([]);
