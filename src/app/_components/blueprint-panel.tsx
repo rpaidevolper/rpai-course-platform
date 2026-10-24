@@ -47,7 +47,7 @@ export function BlueprintPanel({
   return (
     <div className="space-y-6">
       <header>
-        <h3 className="text-lg font-bold text-navy">{blueprint.title}</h3>
+        <h3 className="text-lg font-bold text-ink">{blueprint.title}</h3>
         <p className="mt-1 text-sm">{blueprint.oneLiner}</p>
       </header>
 
@@ -79,14 +79,14 @@ export function BlueprintPanel({
             return (
               <li
                 key={key}
-                className={`rounded-md p-3 text-sm ${missing ? "bg-warning-tint" : "bg-iced"}`}
+                className={`rounded-md p-3 text-sm ${missing ? "bg-warning-tint" : "bg-layer"}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-navy">
+                  <span className="font-bold text-ink">
                     {FIVE_ELEMENT_LABELS[key]}
                   </span>
                   {missing && (
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-warning">
+                    <span className="rounded-full bg-card px-2 py-0.5 text-xs font-bold text-warning">
                       缺
                     </span>
                   )}
@@ -126,16 +126,16 @@ export function BlueprintPanel({
         <ol className="mt-3 space-y-5">
           {blueprint.days.map((day, di) => (
             <li key={di}>
-              <h5 className="text-sm font-bold text-navy">
+              <h5 className="text-sm font-bold text-ink">
                 第 {di + 1} 天<span className="font-normal">・{day.theme}</span>
               </h5>
               <ol className="mt-2 space-y-3">
                 {day.slots.map((slot, si) => {
                   const mismatch = durationIssues.find((i) => i.day === di + 1 && i.slot === si + 1);
                   return (
-                    <li key={si} className="rounded-md border-2 border-iced p-3">
+                    <li key={si} className="rounded-md border-2 border-layer p-3">
                       <div className="flex items-baseline justify-between gap-2 text-xs">
-                        <span className="font-bold text-navy">{slot.label}</span>
+                        <span className="font-bold text-ink">{slot.label}</span>
                         <span>{slot.minutes} 分鐘</span>
                       </div>
                       {mismatch && (
@@ -146,9 +146,9 @@ export function BlueprintPanel({
                       )}
                       <ol className="mt-2 space-y-2">
                         {slot.units.map((u) => (
-                          <li key={u.title} className="rounded-md bg-iced p-3 text-sm">
+                          <li key={u.title} className="rounded-md bg-layer p-3 text-sm">
                             <div className="flex justify-between gap-2">
-                              <span className="flex flex-wrap items-center gap-2 font-bold text-navy">
+                              <span className="flex flex-wrap items-center gap-2 font-bold text-ink">
                                 {u.title}
                                 <Badge tone={REUSE_TONE[u.reuse]}>{REUSE_LABELS[u.reuse]}</Badge>
                                 {isLectureOnly(u) && <Badge tone="warning">純講述</Badge>}
@@ -199,10 +199,10 @@ export function BlueprintPanel({
         {blueprint.tools.length === 0 ? (
           <p className="mt-1 text-sm">還沒列出學員要用的工具。</p>
         ) : (
-          <ul className="mt-2 divide-y-2 divide-iced text-sm">
+          <ul className="mt-2 divide-y-2 divide-layer text-sm">
             {blueprint.tools.map((t) => (
               <li key={t.name} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="font-bold text-navy">
+                <span className="font-bold text-ink">
                   {t.name}
                   <span className="ml-2 font-normal text-body">{TOOL_PLAN_LABELS[t.plan]}</span>
                 </span>
@@ -224,7 +224,7 @@ export function BlueprintPanel({
         ) : (
           <div className="mt-2 space-y-4">
             <div>
-              <h5 className="text-sm font-bold text-navy">問客戶（{clientItems.length}）</h5>
+              <h5 className="text-sm font-bold text-ink">問客戶（{clientItems.length}）</h5>
               {clientItems.length === 0 ? (
                 <p className="mt-1 text-sm">沒有要問客戶的事。</p>
               ) : (
@@ -238,7 +238,7 @@ export function BlueprintPanel({
                 </ul>
               )}
               {emailText && (
-                <div className="mt-3 rounded-md border-2 border-iced p-3">
+                <div className="mt-3 rounded-md border-2 border-layer p-3">
                   <CopyButton text={emailText}>複製給客戶</CopyButton>
                   <p className="mt-2 text-xs text-body-muted">平台不代寄，複製後貼進你自己的信件。</p>
                   <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm">{emailText}</pre>
@@ -246,7 +246,7 @@ export function BlueprintPanel({
               )}
             </div>
             <div>
-              <h5 className="text-sm font-bold text-navy">自己決定（{selfItems.length}）</h5>
+              <h5 className="text-sm font-bold text-ink">自己決定（{selfItems.length}）</h5>
               {selfItems.length === 0 ? (
                 <p className="mt-1 text-sm">沒有要自己決定的事。</p>
               ) : (
@@ -273,7 +273,7 @@ function UnitClientItems({ items }: { items: OpenItem[] }) {
   return (
     <ul className="mt-2 space-y-1">
       {items.map((i) => (
-        <li key={i.text} className="flex flex-wrap items-start gap-2 rounded-md bg-white p-2 text-xs">
+        <li key={i.text} className="flex flex-wrap items-start gap-2 rounded-md bg-card p-2 text-xs">
           <Badge tone="outline">問客戶</Badge>
           <span className="min-w-0 flex-1 break-words">{i.text}</span>
         </li>

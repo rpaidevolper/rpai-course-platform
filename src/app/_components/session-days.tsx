@@ -9,12 +9,12 @@ export function SessionDays({ session }: { session: Session }) {
     <ol className="space-y-2 text-sm">
       {session.days.map((d, i) => (
         <li key={d.startsAt} className="flex flex-wrap gap-x-4 gap-y-0.5">
-          {multi && <span className="shrink-0 font-bold text-navy">第 {i + 1} 天</span>}
-          <span className="text-navy">{dayTimeText(d)}</span>
-          <span className={d.venue === null ? "font-bold text-warning" : "text-navy"}>{d.venue ?? VENUE_UNSET}</span>
+          {multi && <span className="shrink-0 font-bold text-ink">第 {i + 1} 天</span>}
+          <span className="text-ink">{dayTimeText(d)}</span>
+          <span className={d.venue === null ? "font-bold text-warning" : "text-ink"}>{d.venue ?? VENUE_UNSET}</span>
           <span>
             <span className="text-body-muted">授課</span>{" "}
-            <span className="font-bold text-navy">{getInstructor(d.instructorId)?.name ?? d.instructorId}</span>
+            <span className="font-bold text-ink">{getInstructor(d.instructorId)?.name ?? d.instructorId}</span>
           </span>
         </li>
       ))}

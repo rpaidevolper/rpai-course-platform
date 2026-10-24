@@ -39,7 +39,7 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
             </p>
             <p className="mt-2">
               結案時內容已拆成待審核的知識庫草稿，
-              <Link href="/knowledge" className="font-bold text-navy underline underline-offset-2">
+              <Link href="/knowledge" className="font-bold text-accent underline underline-offset-2">
                 到知識庫審核
               </Link>
               ；審核時可以排除單元，也可以改寫含客戶機密的文字。

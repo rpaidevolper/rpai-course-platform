@@ -27,7 +27,7 @@ import { Badge, FieldLabel } from "../../_components/ui";
 /** 知識庫裡正在打開的一張卡。 */
 export type OpenCard = { kind: "module" | "unit" | "recipe"; id: string };
 
-const linkButton = "text-left font-bold text-navy underline underline-offset-2 hover:text-body";
+const linkButton = "text-left font-bold text-accent underline underline-offset-2 hover:text-body";
 
 /** 模組卡、單元卡、課程配方的詳細內容。三種卡共用一個對話框，卡與卡之間可以直接跳轉。 */
 export function CardDetailDialog({
@@ -71,7 +71,7 @@ export function UsageList({ usages, empty }: { usages: CourseUsage[]; empty: str
     <ul className="space-y-1.5">
       {usages.map(({ course, blueprintVersion, unitTitles }) => (
         <li key={course.id}>
-          <Link href={`/courses/${course.id}`} className="font-bold text-navy underline underline-offset-2">
+          <Link href={`/courses/${course.id}`} className="font-bold text-accent underline underline-offset-2">
             {course.title}
           </Link>{" "}
           <Badge tone="outline">藍圖 v{blueprintVersion}</Badge>
@@ -105,7 +105,7 @@ function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) 
               const u = getUnitCard(st, id);
               return (
                 <li key={id} className="flex gap-2.5">
-                  <span className="w-5 shrink-0 text-right font-bold text-navy">{i + 1}</span>
+                  <span className="w-5 shrink-0 text-right font-bold text-ink">{i + 1}</span>
                   {u ? (
                     <button type="button" className={linkButton} onClick={() => onOpen({ kind: "unit", id })}>
                       {u.title}（{u.minutes} 分）
@@ -131,7 +131,7 @@ function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) 
               const from = v.fromCourseId ? getCourse(st, v.fromCourseId) : undefined;
               return (
                 <li key={v.version} className="flex gap-2.5">
-                  <span className="w-8 shrink-0 font-bold text-navy">v{v.version}</span>
+                  <span className="w-8 shrink-0 font-bold text-ink">v{v.version}</span>
                   <span className="min-w-0">
                     <span className="text-body-muted">{formatDate(v.createdAt)}</span> {v.note}
                     <span className="block text-xs text-body-muted">
@@ -140,7 +140,7 @@ function moduleDetail(st: DemoState, moduleId: string, onOpen: (card: OpenCard) 
                     {from && (
                       <>
                         {" "}
-                        <Link href={`/courses/${from.id}`} className="text-body-muted underline underline-offset-2 hover:text-navy">
+                        <Link href={`/courses/${from.id}`} className="text-body-muted underline underline-offset-2 hover:text-accent">
                           （來自{from.title}）
                         </Link>
                       </>
@@ -253,7 +253,7 @@ function recipeDetail(st: DemoState, recipeId: string, onOpen: (card: OpenCard) 
           <ol className="space-y-1">
             {units.map((u, i) => (
               <li key={u.id} className="flex gap-2.5">
-                <span className="w-5 shrink-0 text-right font-bold text-navy">{i + 1}</span>
+                <span className="w-5 shrink-0 text-right font-bold text-ink">{i + 1}</span>
                 <button type="button" className={linkButton} onClick={() => onOpen({ kind: "unit", id: u.id })}>
                   {u.title}（{u.minutes} 分）
                 </button>

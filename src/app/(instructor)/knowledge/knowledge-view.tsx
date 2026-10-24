@@ -23,7 +23,7 @@ import { MODULES, RECIPE_STATUS_LABELS, type ModuleId, type UnitCard } from "@/l
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
 import { TagList } from "../../_components/tags";
-import { Badge, Button, Card, CARD, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
+import { Badge, Button, Card, CARD, EMPHASIS, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
 import { CardDetailDialog, type OpenCard } from "./card-details";
 import { BrowseFilter } from "./browse-filter";
 import { DraftCard } from "./draft-card";
@@ -31,7 +31,7 @@ import { DraftCard } from "./draft-card";
 /** 假裝 AI 拆解講義要花的時間 */
 const IMPORT_MS = 1500;
 const HIGHLIGHT_MS = 2400;
-const HIGHLIGHT = "ring-2 ring-navy";
+const HIGHLIGHT = "ring-2 ring-accent";
 
 /** 知識庫：待審核草稿 > 模組卡（依模組分組，附單元卡） > 課程配方 > 產業素材包。 */
 export function KnowledgeView() {
@@ -94,8 +94,8 @@ export function KnowledgeView() {
         </SectionTitle>
         <div aria-live="polite">
           {importing && (
-            <p className={`${CARD} mb-4 border-l-[3px] border-navy p-5 text-sm font-bold text-navy`}>
-              <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-navy align-middle" aria-hidden />
+            <p className={`${CARD} ${EMPHASIS} mb-4 p-5 text-sm font-bold text-ink`}>
+              <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent align-middle" aria-hidden />
               AI 正在拆解講義「{importing}」…
             </p>
           )}
@@ -107,7 +107,7 @@ export function KnowledgeView() {
               {closable ? (
                 <>
                   ，例如{" "}
-                  <Link href={`/courses/${closable.id}#closing`} className="font-bold text-navy underline underline-offset-2">
+                  <Link href={`/courses/${closable.id}#closing`} className="font-bold text-accent underline underline-offset-2">
                     「{closable.title}」
                   </Link>
                   已可結案：到課程頁按「結案」。
@@ -138,7 +138,7 @@ export function KnowledgeView() {
 
         <nav aria-label="跳到模組" className="mb-6 flex flex-wrap gap-2">
           {visibleModules.map((m) => (
-            <a key={m.id} href={`#module-${m.id}`} className="rounded-md bg-navy-tint px-3 py-1.5 text-sm font-bold text-navy hover:bg-iced">
+            <a key={m.id} href={`#module-${m.id}`} className="rounded-md bg-accent-tint px-3 py-1.5 text-sm font-bold text-ink hover:bg-accent-tint-hover">
               {moduleLabel(m.id)}（{units.filter((u) => u.moduleId === m.id).length}）
             </a>
           ))}
@@ -161,10 +161,10 @@ export function KnowledgeView() {
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
             {recipes.map((r) => (
-              <li key={r.id} id={r.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === r.id ? HIGHLIGHT : ""}`}>
+              <li key={r.id} id={r.id} className={`rounded-lg transition-shadow ${highlight === r.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h3 className="min-w-0 text-base font-bold text-navy">{r.title}</h3>
+                    <h3 className="min-w-0 text-base font-bold text-ink">{r.title}</h3>
                     <Badge tone="outline">{RECIPE_STATUS_LABELS[r.status]}</Badge>
                   </div>
                   <p className="mt-1 text-sm">
@@ -195,9 +195,9 @@ export function KnowledgeView() {
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
             {st.industryPacks.map((s) => (
-              <li key={s.id} id={s.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === s.id ? HIGHLIGHT : ""}`}>
+              <li key={s.id} id={s.id} className={`rounded-lg transition-shadow ${highlight === s.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
-                  <h3 className="text-base font-bold text-navy">{s.title}</h3>
+                  <h3 className="text-base font-bold text-ink">{s.title}</h3>
                   <div className="mt-2">
                     <TagList tags={s} />
                   </div>
@@ -214,7 +214,7 @@ export function KnowledgeView() {
                     </div>
                     <div>
                       <FieldLabel>素材檔</FieldLabel>
-                      <dd className="mt-1 text-sm text-navy">
+                      <dd className="mt-1 text-sm text-ink">
                         {s.materialNames.length > 0 ? s.materialNames.join("、") : "沒有素材檔"}
                       </dd>
                     </div>
@@ -287,15 +287,15 @@ function ModuleSection({ st, moduleId, units, filtered, highlighted, onOpen }: {
   const mod = getModule(moduleId);
   const card = getModuleCard(st, moduleId);
   return (
-    <section id={`module-${moduleId}`} aria-labelledby={`module-title-${moduleId}`} className="scroll-mt-6">
-      <h3 id={`module-title-${moduleId}`} className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold text-navy">
+    <section id={`module-${moduleId}`} aria-labelledby={`module-title-${moduleId}`}>
+      <h3 id={`module-title-${moduleId}`} className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold text-ink">
         {moduleLabel(moduleId)}
         <Badge tone="outline">{mod.kind === "A" ? "A 學員打開的環境" : "B 方法"}</Badge>
       </h3>
       {card ? (
         <article className={`${CARD} p-5 transition-shadow ${highlighted ? HIGHLIGHT : ""}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h4 className="min-w-0 text-base font-bold text-navy">模組卡 {moduleLabel(moduleId)}</h4>
+            <h4 className="min-w-0 text-base font-bold text-ink">模組卡 {moduleLabel(moduleId)}</h4>
             <Badge tone="outline">目前 v{latestModuleCardVersion(card)}</Badge>
           </div>
           <p className="mt-1.5 max-w-3xl text-sm">{card.summary}</p>
@@ -319,7 +319,7 @@ function ModuleSection({ st, moduleId, units, filtered, highlighted, onOpen }: {
                 <button
                   type="button"
                   onClick={() => onOpen({ kind: "unit", id: u.id })}
-                  className="rounded-md bg-white px-3 py-1.5 text-left text-sm text-navy shadow-[0_1px_6px_rgba(1,20,85,0.08)] hover:bg-navy-tint"
+                  className="rounded-md bg-card px-3 py-1.5 text-left text-sm text-ink shadow-[0_1px_6px_rgba(1,20,85,0.08)] hover:bg-accent-tint"
                 >
                   {u.title}（{u.minutes} 分）
                 </button>

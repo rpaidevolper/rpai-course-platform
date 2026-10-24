@@ -26,6 +26,7 @@ export function BlueprintChat({ courseId }: { courseId: string }) {
     <>
       <Breadcrumb
         items={[
+          { label: "專案", href: "/projects" },
           ...(project ? [{ label: project.title, href: `/projects/${project.id}` }] : []),
           { label: course.title, href: `/courses/${course.id}` },
           { label: "談藍圖" },
@@ -47,7 +48,7 @@ export function BlueprintChat({ courseId }: { courseId: string }) {
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {isCourseClosed(course) ? (
           <section className={`${CARD} min-w-0 p-5 text-sm`}>
-            <h2 className="text-sm font-bold text-navy">{CLOSED_FROZEN_REASON}</h2>
+            <h2 className="text-sm font-bold text-ink">{CLOSED_FROZEN_REASON}</h2>
             <p className="mt-2">這門課程已結案，藍圖凍結，不能再談。要修改請先回課程頁重新開啟。</p>
           </section>
         ) : (
@@ -55,7 +56,7 @@ export function BlueprintChat({ courseId }: { courseId: string }) {
         )}
         <section aria-labelledby="blueprint-heading" className={`${CARD} min-w-0 p-5`}>
           <div className="mb-4 flex items-baseline justify-between gap-2">
-            <h2 id="blueprint-heading" className="text-sm font-bold text-navy">
+            <h2 id="blueprint-heading" className="text-sm font-bold text-ink">
               目前的藍圖
             </h2>
             <span className="text-xs text-body-muted">v{version}</span>
@@ -121,7 +122,7 @@ function Conversation({ course }: { course: Course }) {
 
   return (
     <section aria-labelledby="chat-heading" className={`${CARD} flex min-w-0 flex-col p-5`}>
-      <h2 id="chat-heading" className="text-sm font-bold text-navy">
+      <h2 id="chat-heading" className="text-sm font-bold text-ink">
         對話
       </h2>
       <p className="mt-1 text-xs text-body-muted">demo：AI 的回覆是預先寫好的腳本，不會真的呼叫 AI。</p>
@@ -131,7 +132,7 @@ function Conversation({ course }: { course: Course }) {
           <div
             key={i}
             className={`max-w-[85%] whitespace-pre-wrap break-words rounded-md p-3 text-sm ${
-              m.role === "instructor" ? "ml-auto bg-navy-tint text-navy" : "bg-iced"
+              m.role === "instructor" ? "ml-auto bg-accent-tint text-ink" : "bg-layer"
             }`}
           >
             <span className="sr-only">{m.role === "instructor" ? "你：" : "AI："}</span>
@@ -150,21 +151,21 @@ function Conversation({ course }: { course: Course }) {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="輸入你的想法…"
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-md bg-iced px-3 py-2 text-sm text-navy placeholder:text-body-muted"
+          className="min-w-0 flex-1 rounded-md bg-layer px-3 py-2 text-sm text-ink placeholder:text-body-muted"
         />
         <Button type="submit" disabled={!draft.trim()}>
           送出
         </Button>
       </form>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t-2 border-iced pt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t-2 border-layer pt-4">
         <Button onClick={update} disabled={pending.length === 0} title={pending.length === 0 ? "先跟 AI 說點什麼" : undefined}>
           更新藍圖
         </Button>
         {updatedTo !== null && pending.length === 0 ? (
           <p className="text-sm">
             已升到 v{updatedTo}。
-            <Link href={`/courses/${course.id}#blueprint`} className="font-bold text-navy underline underline-offset-2">
+            <Link href={`/courses/${course.id}#blueprint`} className="font-bold text-accent underline underline-offset-2">
               回課程頁看藍圖
             </Link>
           </p>
