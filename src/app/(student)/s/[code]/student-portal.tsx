@@ -93,7 +93,7 @@ export function StudentPortal({ code }: { code: string }) {
             <h2 id="artifacts" className="mb-3 text-lg font-bold text-navy">
               {multiDay ? `第 ${view.day} 天的上課教材` : "上課教材"}
             </h2>
-            {multiDay && <p className="mb-3 text-sm">每一天的簡報會在那一天出現；學員手冊整門課共用一份。</p>}
+            {multiDay && <p className="mb-3 text-sm">每一天的簡報與學員手冊（有動手環節的天才有）會在那一天出現。</p>}
             {view.artifacts.length === 0 ? (
               <p className="text-sm">講師還沒有放上教材。</p>
             ) : (

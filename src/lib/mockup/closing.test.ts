@@ -6,7 +6,7 @@ import { initialState, type DemoState } from "./state";
 import type { Artifact, Course, Session } from "./types";
 
 /**
- * 結案閘：每天的最終版逐頁腳本與簡報（講師上傳的版本）都齊了、所有場次都已結束，才能結案。
+ * 結案閘：每天的最終版簡報（講師上傳的版本）都齊了、所有場次都已結束，才能結案。
  * 每個測試自己組一份兩天課程的快照，不依賴 fixture 示範的狀態。
  */
 
@@ -29,11 +29,11 @@ function art(a: Pick<Artifact, "id" | "kind"> & Partial<Artifact>): Artifact {
   };
 }
 /** AI 產的第 1 版，再加上講師上傳的第 2 版（最終版） */
-const uploaded = (kind: "page_script" | "slides", day: number): Artifact[] => [
+const uploaded = (kind: "slides" | "handbook", day: number): Artifact[] => [
   art({ id: `${kind}-${day}-1`, kind, day, version: 1 }),
   art({ id: `${kind}-${day}-2`, kind, day, version: 2, editedFromId: `${kind}-${day}-1` }),
 ];
-const aiOnly = (kind: "page_script" | "slides", day: number): Artifact[] => [art({ id: `${kind}-${day}-1`, kind, day, version: 1 })];
+const aiOnly = (kind: "slides" | "handbook", day: number): Artifact[] => [art({ id: `${kind}-${day}-1`, kind, day, version: 1 })];
 
 const session = (id: string, endsAt: string, courseId = COURSE): Session => ({
   id,
@@ -57,11 +57,11 @@ function world(artifacts: Artifact[], sessions: Session[] = [session("s1", PAST)
   };
 }
 const gate = (st: DemoState) => closingGate(st, getCourse(st, COURSE)!, st.now);
-const FULL = [...uploaded("page_script", 1), ...uploaded("slides", 1), ...uploaded("page_script", 2), ...uploaded("slides", 2)];
+const FULL = [...uploaded("slides", 1), ...uploaded("slides", 2)];
 const run = (actions: DemoAction[], from: DemoState) => actions.reduce(demoReducer, from);
 
 describe("結案閘：缺哪一天的哪一種最終版", () => {
-  it("每天的逐頁腳本與簡報都有講師上傳的版本、場次都結束了，才放行", () => {
+  it("每天的簡報都有講師上傳的版本、場次都結束了，才放行", () => {
     const g = gate(world(FULL));
     expect(g.missingFinals).toEqual([]);
     expect(g.unfinishedSessionIds).toEqual([]);
@@ -69,20 +69,20 @@ describe("結案閘：缺哪一天的哪一種最終版", () => {
   });
 
   it("只缺某一天的簡報時，只回報那一天的簡報", () => {
-    const g = gate(world([...uploaded("page_script", 1), ...uploaded("slides", 1), ...uploaded("page_script", 2), ...aiOnly("slides", 2)]));
+    const g = gate(world([...uploaded("slides", 1), ...aiOnly("slides", 2)]));
     expect(g.missingFinals).toEqual([{ kind: "slides", day: 2 }]);
     expect(g.canClose).toBe(false);
   });
 
   it("AI 產的版本沒改過也不算，要講師重新上傳", () => {
-    const g = gate(world([...aiOnly("page_script", 1), ...uploaded("slides", 1), ...uploaded("page_script", 2), ...uploaded("slides", 2)]));
-    expect(g.missingFinals).toEqual([{ kind: "page_script", day: 1 }]);
+    const g = gate(world([...aiOnly("slides", 1), ...uploaded("slides", 2)]));
+    expect(g.missingFinals).toEqual([{ kind: "slides", day: 1 }]);
   });
 
-  it("還沒產過的產物也算缺，依天數與逐頁腳本、簡報的順序列出", () => {
-    const g = gate(world([...uploaded("slides", 1), ...uploaded("page_script", 2)]));
+  it("還沒產過簡報的天也算缺，依天數列出", () => {
+    const g = gate(world([]));
     expect(g.missingFinals).toEqual([
-      { kind: "page_script", day: 1 },
+      { kind: "slides", day: 1 },
       { kind: "slides", day: 2 },
     ]);
   });
@@ -92,14 +92,18 @@ describe("結案閘：缺哪一天的哪一種最終版", () => {
     expect(g.missingFinals).toEqual([]);
   });
 
-  it("課程大綱、講師準備單、學員手冊不在結案閘裡", () => {
-    const g = gate(world(FULL));
-    expect(g.missingFinals.every((m) => m.kind === "page_script" || m.kind === "slides")).toBe(true);
+  it("最終版只看簡報：學員手冊有沒有上傳、課程大綱、講師準備單都不在結案閘裡", () => {
+    const g = gate(world([...FULL, ...aiOnly("handbook", 1)]));
+    expect(g.missingFinals).toEqual([]);
+    expect(gate(world([...uploaded("handbook", 1), ...uploaded("handbook", 2)])).missingFinals).toEqual([
+      { kind: "slides", day: 1 },
+      { kind: "slides", day: 2 },
+    ]);
     expect(g.canClose).toBe(true);
   });
 
   it("缺漏的文字寫出天與產物種類", () => {
-    const g = gate(world([...uploaded("page_script", 1), ...uploaded("slides", 1), ...uploaded("page_script", 2)]));
+    const g = gate(world([...uploaded("slides", 1)]));
     expect(closingGateReasons(g).join("；")).toContain("第 2 天簡報");
   });
 });
@@ -143,7 +147,7 @@ describe("結案", () => {
   });
 
   it("閘沒過時結案被拒絕，狀態不變", () => {
-    const st = world([...uploaded("page_script", 1)]);
+    const st = world([...uploaded("slides", 1)]);
     expect(demoReducer(st, { type: "course/close", courseId: COURSE })).toBe(st);
     expect(isCourseClosed(getCourse(st, COURSE)!)).toBe(false);
   });

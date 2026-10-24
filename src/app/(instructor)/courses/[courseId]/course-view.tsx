@@ -17,6 +17,7 @@ import {
   moduleLabel,
   latestBlueprintVersion,
   latestReadyArtifact,
+  isHandsOnDay,
   outlineFeedback,
   requirementMappingOfCourse,
   seriesLabel,
@@ -75,7 +76,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
   const finalizeBlueprint = () => {
     dispatch({ type: "blueprint/finalize", courseId: course.id });
-    toast(`藍圖 v${latestBp} 已定稿，可以產逐頁腳本`);
+    toast(`藍圖 v${latestBp} 已定稿，可以產簡報`);
   };
 
   const addMaterials = (e: ChangeEvent<HTMLInputElement>) => {
@@ -144,7 +145,7 @@ export function CourseView({ courseId }: { courseId: string }) {
           <span id="artifacts">產物鏈</span>
         </SectionTitle>
         <p className="-mt-1 mb-4 max-w-2xl text-xs text-body-muted">
-          藍圖 → 課程大綱、講師準備單；藍圖 → 每天的逐頁腳本 → 那天的簡報；各天逐頁腳本 → 學員手冊。上游換了新版本，下游就標成過期。藍圖定稿後才能產逐頁腳本；某天的逐頁腳本定稿後才能產那天的簡報；每一天都定稿後才能產學員手冊。
+          藍圖 → 課程大綱、講師準備單；藍圖 → 每天的簡報（講稿在簡報備忘稿裡）→ 那天的學員手冊。上游換了新版本，下游就標成過期。藍圖定稿後才能產簡報；某天的簡報定稿後才能產那天的學員手冊。學員手冊只給有動手環節的天，純講述的天不產。
         </p>
 
         <div className="space-y-6">
@@ -162,18 +163,18 @@ export function CourseView({ courseId }: { courseId: string }) {
                 第 {i + 1} 天<span className="font-normal">・{d.theme}</span>
               </h3>
               <ul className="grid gap-3 md:grid-cols-2">
-                <ArtifactCard course={course} project={project} series={{ kind: "page_script", day: i + 1 }} />
                 <ArtifactCard course={course} project={project} series={{ kind: "slides", day: i + 1 }} />
+                {isHandsOnDay(course, i + 1) ? (
+                  <ArtifactCard course={course} project={project} series={{ kind: "handbook", day: i + 1 }} />
+                ) : (
+                  <li className={`${CARD} min-w-0 p-5`}>
+                    <h4 className="text-base font-bold text-navy">第 {i + 1} 天學員手冊</h4>
+                    <p className="mt-1.5 text-sm text-body-muted">這一天的單元都是純講述，沒有動手環節，不產學員手冊。</p>
+                  </li>
+                )}
               </ul>
             </div>
           ))}
-
-          <div>
-            <h3 className="mb-2 text-sm font-bold text-navy">整門課</h3>
-            <ul className="grid gap-3 md:grid-cols-2">
-              <ArtifactCard course={course} project={project} series={{ kind: "handbook", day: null }} />
-            </ul>
-          </div>
         </div>
       </section>
 
@@ -209,7 +210,7 @@ export function CourseView({ courseId }: { courseId: string }) {
             </ol>
             {!latestBpFinalized && (
               <div className="mt-4 border-t-2 border-white pt-3">
-                <p className="mb-2 text-xs">v{latestBp} 還沒定稿；定稿後才能產逐頁腳本。課程大綱與講師準備單隨時可以產。</p>
+                <p className="mb-2 text-xs">v{latestBp} 還沒定稿；定稿後才能產簡報。課程大綱與講師準備單隨時可以產。</p>
                 <Button variant="secondary" onClick={finalizeBlueprint}>
                   把 v{latestBp} 標成定稿
                 </Button>
@@ -326,8 +327,8 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   const isOutline = series.kind === "outline";
   const older = isOutline ? versions : versions.slice(1);
   const blocks = generationGate(course, series).map(gateBlockText);
-  const isScript = series.kind === "page_script";
-  const canFinalize = isScript && latest?.status === "ready" && latest.finalizedAt === null && !stale;
+  const isSlides = series.kind === "slides";
+  const canFinalize = isSlides && latest?.status === "ready" && latest.finalizedAt === null && !stale;
   const busy = latest?.status === "pending" || latest?.status === "generating";
 
   const request = () => {
@@ -350,8 +351,8 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
         {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
         {latest && <Badge tone={STATUS_TONE[latest.status]}>{STATUS_TEXT[latest.status]}</Badge>}
         {latest?.editedFromId && <Badge tone="outline">講師修改</Badge>}
-        {isScript && latest?.finalizedAt && <Badge tone="success">已定稿</Badge>}
-        {isScript && latest?.status === "ready" && !latest.finalizedAt && <Badge tone="warning">還沒定稿</Badge>}
+        {isSlides && latest?.finalizedAt && <Badge tone="success">已定稿</Badge>}
+        {isSlides && latest?.status === "ready" && !latest.finalizedAt && <Badge tone="warning">還沒定稿</Badge>}
         {series.kind === "prep_sheet" && <Badge>內部・永不發布</Badge>}
       </h4>
       {latest ? (
@@ -424,7 +425,7 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
             variant="secondary"
             onClick={() => {
               dispatch({ type: "artifact/finalize", courseId: course.id, artifactId: latest.id });
-              toast(`${label} v${latest.version} 已定稿，可以產第 ${series.day} 天的簡報`);
+              toast(`${label} v${latest.version} 已定稿${isHandsOnDay(course, series.day!) ? `，可以產第 ${series.day} 天的學員手冊` : ""}`);
             }}
           >
             把 v{latest.version} 標成定稿

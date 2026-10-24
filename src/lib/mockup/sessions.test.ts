@@ -101,28 +101,28 @@ describe("學員入口依日期選天", () => {
 });
 
 describe("多天場次的學員入口", () => {
-  // s-gas-1020：第一天 10/20（林予晴）、第二天 10/27（周明遠），發布了兩天的簡報與學員手冊
+  // s-gas-1020：第一天 10/20（林予晴）、第二天 10/27（周明遠），發布了兩天的簡報與各天的學員手冊
   const ids = (now: string) => portalView(st, "e1020", now)!.artifacts.map((a) => a.id);
 
-  it("第一天之前就先看到第一天的簡報與整門課的學員手冊", () => {
+  it("第一天之前就先看到第一天的簡報與學員手冊", () => {
     const view = portalView(st, "e1020", "2026-10-08T10:00:00+08:00")!;
     expect(view.state).toBe("open");
     expect(view.day).toBe(1);
-    expect(ids("2026-10-08T10:00:00+08:00")).toEqual(["a-gas-slides-d1-1", "a-gas-handbook-1"]);
+    expect(ids("2026-10-08T10:00:00+08:00")).toEqual(["a-gas-slides-d1-1", "a-gas-handbook-d1-1"]);
   });
 
-  it("第一天只看到第一天的簡報，不會看到第二天的", () => {
-    expect(ids("2026-10-20T10:00:00+08:00")).toEqual(["a-gas-slides-d1-1", "a-gas-handbook-1"]);
+  it("第一天只看到第一天的簡報與手冊，不會看到第二天的", () => {
+    expect(ids("2026-10-20T10:00:00+08:00")).toEqual(["a-gas-slides-d1-1", "a-gas-handbook-d1-1"]);
   });
 
-  it("兩天之間與第二天看到第二天的簡報，學員手冊一直都在", () => {
-    expect(ids("2026-10-23T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-1"]);
-    expect(ids("2026-10-27T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-1"]);
+  it("兩天之間與第二天看到第二天的簡報與學員手冊", () => {
+    expect(ids("2026-10-23T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-d2-1"]);
+    expect(ids("2026-10-27T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-d2-1"]);
   });
 
   it("最後一天之後停在最後一天", () => {
     expect(portalView(st, "e1020", "2026-11-10T10:00:00+08:00")!.day).toBe(2);
-    expect(ids("2026-11-10T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-1"]);
+    expect(ids("2026-11-10T10:00:00+08:00")).toEqual(["a-gas-slides-d2-1", "a-gas-handbook-d2-1"]);
   });
 
   it("列出每一天的日期與地點", () => {

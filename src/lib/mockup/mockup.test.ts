@@ -23,6 +23,7 @@ import {
   getUnitCard,
   gateBlockText,
   generationGate,
+  isHandsOnDay,
   isStale,
   latestBlueprintVersion,
   latestArtifact,
@@ -159,9 +160,9 @@ describe("設計稿 fixture 參照完整", () => {
     }
   });
 
-  it.each(COURSES)("課程 $id：逐頁腳本與簡報帶藍圖範圍內的天，其他產物不帶天", (c) => {
+  it.each(COURSES)("課程 $id：簡報與學員手冊帶藍圖範圍內的天，其他產物不帶天", (c) => {
     for (const a of c.artifacts) {
-      if (a.kind === "page_script" || a.kind === "slides") {
+      if (a.kind === "handbook" || a.kind === "slides") {
         expect(a.day, a.id).not.toBeNull();
         expect(a.day! >= 1 && a.day! <= c.blueprint.days.length, a.id).toBe(true);
       } else {
@@ -175,13 +176,11 @@ describe("設計稿 fixture 參照完整", () => {
     for (const a of c.artifacts) {
       const ups = a.upstreamIds.map(byId);
       expect(ups.every(Boolean), a.id).toBe(true);
-      if (a.kind === "slides") {
-        expect(ups.map((u) => [u!.kind, u!.day]), a.id).toEqual([["page_script", a.day]]);
-      } else if (a.kind === "handbook") {
-        expect(ups.map((u) => [u!.kind, u!.day]), a.id).toEqual(
-          c.blueprint.days.map((_, i) => ["page_script", i + 1]),
-        );
+      if (a.kind === "handbook") {
+        expect(ups.map((u) => [u!.kind, u!.day]), a.id).toEqual([["slides", a.day]]);
+        expect(isHandsOnDay(c, a.day!), a.id).toBe(true);
       } else {
+        // 簡報只有藍圖當上游，不帶上游產物
         expect(a.upstreamIds, a.id).toEqual([]);
       }
     }
@@ -225,24 +224,25 @@ describe("設計稿 fixture 參照完整", () => {
 describe("產物過期（fixture 示範）", () => {
   it("出自舊版藍圖的產物算過期，出自最新版的不算", () => {
     const course = getCourse(st, "c-claude-intro")!;
-    expect(isStale(course, latestArtifact(course, "handbook")!)).toBe(true);
+    expect(isStale(course, latestArtifact(course, "handbook", 1)!)).toBe(true);
     expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(false);
   });
 
-  it("兩天課程只改了第一天逐頁腳本：第一天簡報與學員手冊過期，第二天簡報沒有", () => {
+  it("兩天課程只改了第一天簡報：第一天學員手冊過期，第二天簡報與手冊沒有", () => {
     const course = getCourse(st, "c-gas-two-day")!;
-    expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(true);
-    expect(isStale(course, latestArtifact(course, "handbook")!)).toBe(true);
+    expect(isStale(course, latestArtifact(course, "slides", 1)!)).toBe(false);
+    expect(isStale(course, latestArtifact(course, "handbook", 1)!)).toBe(true);
     expect(isStale(course, latestArtifact(course, "slides", 2)!)).toBe(false);
+    expect(isStale(course, latestArtifact(course, "handbook", 2)!)).toBe(false);
   });
 });
 
 describe("定稿（fixture）", () => {
   const ms = (t: string) => new Date(t).getTime();
 
-  it("只有逐頁腳本會標定稿，且定稿時間不晚於現在", () => {
+  it("只有簡報會標定稿，且定稿時間不晚於現在", () => {
     for (const a of COURSES.flatMap((c) => c.artifacts)) {
-      if (a.kind !== "page_script") expect(a.finalizedAt, a.id).toBeNull();
+      if (a.kind !== "slides") expect(a.finalizedAt, a.id).toBeNull();
       else if (a.finalizedAt) expect(ms(a.finalizedAt), a.id).toBeLessThanOrEqual(ms(MOCK_NOW));
     }
     for (const v of COURSES.flatMap((c) => c.blueprintHistory)) {
@@ -250,10 +250,10 @@ describe("定稿（fixture）", () => {
     }
   });
 
-  it.each(COURSES)("課程 $id 的產物沒有違反定稿閘：產出時，綁定的藍圖版本與上游逐頁腳本都已定稿", (c) => {
+  it.each(COURSES)("課程 $id 的產物沒有違反定稿閘：產出時，綁定的藍圖版本與上游簡報都已定稿", (c) => {
     for (const a of c.artifacts) {
       if (a.editedFromId) continue; // 講師修改版沿用原版本的綁定，不是新排的產檔工作
-      if (a.kind === "page_script") {
+      if (a.kind === "slides") {
         const bp = c.blueprintHistory.find((v) => v.version === a.blueprintVersion)!;
         expect(bp.finalizedAt, a.id).not.toBeNull();
         expect(ms(bp.finalizedAt!), a.id).toBeLessThanOrEqual(ms(a.createdAt));
@@ -266,17 +266,16 @@ describe("定稿（fixture）", () => {
     }
   });
 
-  it("示範兩天課程：第 1 天簡報與學員手冊被沒定稿的第 1 天逐頁腳本擋住，第 2 天簡報可以排", () => {
+  it("示範兩天課程：第 1 天簡報有沒定稿的新版，第 1 天學員手冊被擋住，第 2 天手冊與簡報可以排", () => {
     const course = getCourse(st, "c-gas-two-day")!;
-    expect(generationGate(course, { kind: "slides", day: 1 }).map(gateBlockText)).toEqual(["第 1 天逐頁腳本 v2 還沒定稿"]);
-    expect(generationGate(course, { kind: "handbook", day: null }).map(gateBlockText)).toEqual(["第 1 天逐頁腳本 v2 還沒定稿"]);
-    expect(generationGate(course, { kind: "slides", day: 2 })).toEqual([]);
-    expect(generationGate(course, { kind: "page_script", day: 1 })).toEqual([]);
+    expect(generationGate(course, { kind: "handbook", day: 1 }).map(gateBlockText)).toEqual(["第 1 天簡報 v2 還沒定稿"]);
+    expect(generationGate(course, { kind: "handbook", day: 2 })).toEqual([]);
+    expect(generationGate(course, { kind: "slides", day: 1 })).toEqual([]);
   });
 
-  it("示範藍圖還沒定稿的課程：逐頁腳本被擋，課程大綱照樣可以排", () => {
+  it("示範藍圖還沒定稿的課程：簡報被擋，課程大綱照樣可以排", () => {
     const course = getCourse(st, "c-claude-intro-managers")!;
-    expect(generationGate(course, { kind: "page_script", day: 1 }).map(gateBlockText)).toEqual(["藍圖 v1 還沒定稿"]);
+    expect(generationGate(course, { kind: "slides", day: 1 }).map(gateBlockText)).toEqual(["藍圖 v1 還沒定稿"]);
     expect(generationGate(course, { kind: "outline", day: null })).toEqual([]);
   });
 });

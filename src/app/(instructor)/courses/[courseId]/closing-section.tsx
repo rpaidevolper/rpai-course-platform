@@ -10,7 +10,7 @@ import { toast } from "../../../_components/demo-runtime";
 import { Badge, Button, CARD, SectionTitle } from "../../../_components/ui";
 
 /**
- * 結案：每天的最終版逐頁腳本與簡報（課後由講師上傳）都齊了、所有場次都已結束，才能按。
+ * 結案：每天的最終版簡報（課後由講師上傳）都齊了、所有場次都已結束，才能按。
  * 缺哪一天、缺哪一種，以及還有沒有場次沒結束，都列在按鈕上方。
  * 結案時內容會拆成待審核的知識庫草稿（新單元卡、更新單元卡、新課程配方、模組卡新版本），到知識庫審核後才收進去。
  */
@@ -46,7 +46,7 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
           </>
         ) : (
           <>
-            <p className="text-body-muted">最終版是課後由你上傳、代表實際上課內容的逐頁腳本與簡報。AI 產的版本即使沒改，也要重新上傳一次才算。</p>
+            <p className="text-body-muted">最終版是課後由你上傳、代表實際上課內容的簡報（講稿在備忘稿裡）。AI 產的版本即使沒改，也要重新上傳一次才算。</p>
             <ul className="mt-3 space-y-1">
               {reasons.length === 0 ? (
                 <li>每一天的最終版都齊了，所有場次都已結束，可以結案。</li>
