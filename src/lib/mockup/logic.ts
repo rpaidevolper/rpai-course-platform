@@ -105,10 +105,6 @@ export const recipesUsingModule = (st: DemoState, moduleId: ModuleId) =>
 /** 依 id 找產業素材包。 */
 export const getIndustryPack = (st: DemoState, id: string) => st.industryPacks.find((p) => p.id === id);
 
-/** 藍圖從該模組的模組卡複製出生過的課程（source.moduleIds 含該模組）。 */
-export const coursesUsingModule = (st: DemoState, moduleId: ModuleId) =>
-  st.courses.filter((c) => c.source?.moduleIds.includes(moduleId) ?? false);
-
 // ── 藍圖與產物 ────────────────────────────────────────
 
 export const latestBlueprintVersion = (course: Course) =>

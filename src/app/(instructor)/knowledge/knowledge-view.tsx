@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
+import { filterRecipes, filterUnitCards, hasFilter, noFilter } from "@/lib/mockup/browse";
 import { IMPORT_ACCEPT, importProposal } from "@/lib/mockup/import-script";
 import {
   getModule,
@@ -12,17 +13,17 @@ import {
   recipeMinutes,
   recipeModules,
   recipeUnitCards,
-  unitCardsOfModule,
 } from "@/lib/mockup/logic";
 import type { DemoState } from "@/lib/mockup/state";
 import { recipeSpec } from "@/lib/mockup/tags";
 import { dispatch, useDemoState } from "@/lib/mockup/store";
-import { MODULES, RECIPE_STATUS_LABELS, type ModuleId } from "@/lib/mockup/types";
+import { MODULES, RECIPE_STATUS_LABELS, type ModuleId, type UnitCard } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
 import { TagList } from "../../_components/tags";
 import { Badge, Button, Card, CARD, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
 import { CardDetailDialog, type OpenCard } from "./card-details";
+import { BrowseFilter } from "./browse-filter";
 import { DraftCard } from "./draft-card";
 
 /** 假裝 AI 拆解講義要花的時間 */
@@ -38,6 +39,11 @@ export function KnowledgeView() {
   const [importing, setImporting] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [openCard, setOpenCard] = useState<OpenCard | null>(null);
+  const [filter, setFilter] = useState(noFilter);
+  const units = filterUnitCards(st, filter);
+  const recipes = filterRecipes(st, filter);
+  // 有設條件時，只留下選了的模組或有符合單元卡的模組
+  const visibleModules = MODULES.filter((m) => !hasFilter(filter) || filter.moduleIds.includes(m.id) || units.some((u) => u.moduleId === m.id));
 
   // 審核後捲到被改動的模組卡、課程配方或產業素材包，短暫標出來
   useEffect(() => {
@@ -76,6 +82,8 @@ export function KnowledgeView() {
 
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} onImport={startImport} />
 
+      <BrowseFilter value={filter} onChange={setFilter} unitCount={units.length} recipeCount={recipes.length} />
+
       <section aria-labelledby="drafts-title" className="mb-12">
         <SectionTitle aside="確認後才會收進知識庫">
           <span id="drafts-title">待審核草稿（{drafts.length}）</span>
@@ -110,29 +118,30 @@ export function KnowledgeView() {
         </p>
 
         <nav aria-label="跳到模組" className="mb-6 flex flex-wrap gap-2">
-          {MODULES.map((m) => (
+          {visibleModules.map((m) => (
             <a key={m.id} href={`#module-${m.id}`} className="rounded-md bg-navy-tint px-3 py-1.5 text-sm font-bold text-navy hover:bg-iced">
-              {moduleLabel(m.id)}（{unitCardsOfModule(st, m.id).length}）
+              {moduleLabel(m.id)}（{units.filter((u) => u.moduleId === m.id).length}）
             </a>
           ))}
         </nav>
 
         <div className="space-y-10">
-          {MODULES.map((m) => (
-            <ModuleSection key={m.id} st={st} moduleId={m.id} highlighted={highlight === `module-${m.id}`} onOpen={setOpenCard} />
+          {visibleModules.length === 0 && <Empty>沒有符合條件的單元卡。</Empty>}
+          {visibleModules.map((m) => (
+            <ModuleSection key={m.id} st={st} moduleId={m.id} units={units.filter((u) => u.moduleId === m.id)} filtered={hasFilter(filter)} highlighted={highlight === `module-${m.id}`} onOpen={setOpenCard} />
           ))}
         </div>
       </section>
 
       <section aria-labelledby="recipes-title" className="mb-12">
         <SectionTitle aside="一門過去課程的骨架，不是藍圖">
-          <span id="recipes-title">課程配方（{st.recipes.length}）</span>
+          <span id="recipes-title">課程配方（{recipes.length}）</span>
         </SectionTitle>
-        {st.recipes.length === 0 ? (
-          <Empty>還沒有課程配方。課程結案、審核通過草稿後，會出現在這裡。</Empty>
+        {recipes.length === 0 ? (
+          <Empty>{st.recipes.length === 0 ? "還沒有課程配方。課程結案、審核通過草稿後，會出現在這裡。" : "沒有符合條件的課程配方。"}</Empty>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
-            {st.recipes.map((r) => (
+            {recipes.map((r) => (
               <li key={r.id} id={r.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === r.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -255,11 +264,9 @@ function ImportDialog({ open, onClose, onImport }: { open: boolean; onClose: () 
 }
 
 /** 一個模組：標題、模組卡摘要，以及這個模組底下的單元卡。 */
-function ModuleSection({ st, moduleId, highlighted, onOpen }: { st: DemoState; moduleId: ModuleId; highlighted: boolean; onOpen: (card: OpenCard) => void }) {
+function ModuleSection({ st, moduleId, units, filtered, highlighted, onOpen }: { st: DemoState; moduleId: ModuleId; units: UnitCard[]; filtered: boolean; highlighted: boolean; onOpen: (card: OpenCard) => void }) {
   const mod = getModule(moduleId);
   const card = getModuleCard(st, moduleId);
-  const units = unitCardsOfModule(st, moduleId);
-
   return (
     <section id={`module-${moduleId}`} aria-labelledby={`module-title-${moduleId}`} className="scroll-mt-6">
       <h3 id={`module-title-${moduleId}`} className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold text-navy">
@@ -285,7 +292,7 @@ function ModuleSection({ st, moduleId, highlighted, onOpen }: { st: DemoState; m
       <div className="mt-4">
         <FieldLabel>單元卡（{units.length}）</FieldLabel>
         {units.length === 0 ? (
-          <p className="mt-1.5 text-sm text-body-muted">這個模組還沒有單元卡。</p>
+          <p className="mt-1.5 text-sm text-body-muted">{filtered ? "沒有符合條件的單元卡。" : "這個模組還沒有單元卡。"}</p>
         ) : (
           <ul className="mt-1.5 flex flex-wrap gap-2">
             {units.map((u) => (
