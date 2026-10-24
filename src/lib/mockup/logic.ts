@@ -283,7 +283,8 @@ export function gateBlockText(block: GateBlock): string {
 
 /**
  * 講師把某個版本改過再上傳：成為同一份產物的下一版（排在目前最新版之後），
- * 沿用原版本的藍圖與上游綁定，所以過期與否跟著原本的綁定走。
+ * 沿用原版本的藍圖綁定；上游則改綁各上游系列「目前最新的 ready 版本」（沒有 ready 版本就維持原綁定），
+ * 因為講師上傳的是課後實際用的版本，不該因為舊版綁的上游後來更新了就顯示已過期（#124）。
  */
 export function instructorEdit(course: Course, baseId: string, upload: { id: string; createdAt: IsoTime }): Artifact {
   const original = course.artifacts.find((a) => a.id === baseId);
@@ -295,7 +296,10 @@ export function instructorEdit(course: Course, baseId: string, upload: { id: str
     day: original.day,
     version: latest.version + 1,
     blueprintVersion: original.blueprintVersion,
-    upstreamIds: [...original.upstreamIds],
+    upstreamIds: original.upstreamIds.map((id) => {
+      const upstream = course.artifacts.find((a) => a.id === id);
+      return (upstream && latestReadyArtifact(course, upstream.kind, upstream.day)?.id) ?? id;
+    }),
     editedFromId: original.id,
     sentToClientAt: null,
     finalizedAt: null,

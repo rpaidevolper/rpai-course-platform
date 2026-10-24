@@ -471,7 +471,7 @@ function splitMinutes(total: number, n: number): number[] {
  * 新課程的第一版藍圖：依 ADR 0002，從模組卡與產業素材包「複製內容」出生，之後各自演化。
  * 所選模組卡依 MODULES 順序接續，每張的核心單元骨架依序查出單元卡，每個單元記下來源
  * （kind 為 unit_card，指向那張單元卡）、所屬模組（單元卡的模組），沿用程度「要改」；
- * 應用層級單元卡還沒有，先留 null 讓講師與 AI 談。
+ * 應用層級沿用單元卡的評分（還沒評就是 null），讓講師與 AI 談。
  * 總長就是 totalHours（預設 6 小時，規格由總時數推得、不另存）：時段一律 180 分鐘（不足一段的短講座例外）、
  * 一天兩個時段；單元依序分進時段，單元不夠排的時段補一個「待規劃」單元（新做、不記來源）。
  * 查不到任何單元卡時，退回一個預設單元、標成新做、不記來源；schema 要求單元一定有模組，
@@ -538,7 +538,7 @@ export function starterBlueprint({
           ? `為${clientContext.company}結合${moduleCards.map((c) => moduleLabel(c.moduleId)).join("、")}的課程，內容還在跟 AI 談。`
           : `為${clientContext.company}量身設計的課程，內容還在跟 AI 談。`,
     audience: {
-      who: industryPack ? `${clientContext.company}的${industryPack.audiences.join("、")}` : `${clientContext.company}的學員`,
+      who: `${clientContext.company}的學員`,
       size: null,
       priorKnowledge: "待確認",
       painPoints: [clientContext.goal],

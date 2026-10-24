@@ -89,7 +89,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const lockedMaterials = pub ? course.materials.filter((m) => pub.materialIds.includes(m.id)) : [];
   const linksChanged = pub !== null && !sameLinks(pub.links, session.links);
   const closeDialog = () => setDialog(null);
-  // 課程結案後場次凍結：不能發布、改日期、增減連結；學員入口的管理（關閉、重新開放、延長）仍可以
+  // 課程結案後場次凍結：不能改日期、增減連結；發布與學員入口的管理（關閉、重新開放、延長）仍可以
   const frozen = isCourseClosed(course);
   const frozenTitle = frozen ? CLOSED_FROZEN_REASON : undefined;
 
@@ -121,12 +121,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           {!pub ? (
             <>
               <p className="mt-3 max-w-xl text-sm">
-                {frozen
-                  ? `${CLOSED_FROZEN_REASON}，結案前沒發布的場次不能再發布。`
-                  : "發布後，學員入口才會打開；之後你再改藍圖或重新產出，學員看到的都不會變，直到再次發布。"}
+                發布後，學員入口才會打開；之後你再改藍圖或重新產出，學員看到的都不會變，直到再次發布。
               </p>
               <div className="mt-5">
-                <Button onClick={() => setDialog("publish")} disabled={frozen} title={frozenTitle}>
+                <Button onClick={() => setDialog("publish")}>
                   發布給學員
                 </Button>
               </div>
@@ -205,10 +203,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               </div>
 
               <p className="mt-5 max-w-xl text-sm">
-                {frozen ? `${CLOSED_FROZEN_REASON}，不能重新發布；學員入口維持結案前發布的內容。` : "重新發布會把學員入口換成目前最新的產物、素材與連結。"}
+                重新發布會把學員入口換成目前最新的產物、素材與連結。
               </p>
               <div className="mt-4">
-                <Button onClick={() => setDialog("publish")} disabled={frozen} title={frozenTitle}>
+                <Button onClick={() => setDialog("publish")}>
                   重新發布
                 </Button>
               </div>

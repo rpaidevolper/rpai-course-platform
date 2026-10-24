@@ -4,7 +4,7 @@ import type { DemoState } from "./state";
 import type { Course, CourseRecipe, CourseTagSet, IndustryPack, TagSet, UnitCard } from "./types";
 
 /**
- * 標籤（GLOSSARY）：對象、工具、產業、應用場景四組可多選，存在單元卡、課程配方、產業素材包與課程上；
+ * 標籤（GLOSSARY）：對象、工具、產業、應用場景四組可多選，存在單元卡、課程配方與產業素材包上，課程只存對象、產業、應用場景（工具由藍圖推得，見 courseTools）；
  * 第五組「規格」不存，由總時數推得。
  */
 

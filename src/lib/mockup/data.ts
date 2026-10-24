@@ -826,7 +826,7 @@ export const COURSES: Course[] = [
       artifact({ id: "a-pp-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 2, editedFromId: "a-pp-slides-1", createdAt: "2026-09-05T20:30:00+08:00" }),
       artifact({ id: "a-pp-handbook-1", kind: "handbook", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pp-slides-1"], createdAt: "2026-08-22T10:00:00+08:00" }),
       // 課後講師上傳實際發給學員的手冊：學員手冊的最終版
-      artifact({ id: "a-pp-handbook-2", kind: "handbook", day: 1, version: 2, blueprintVersion: 2, upstreamIds: ["a-pp-slides-1"], editedFromId: "a-pp-handbook-1", createdAt: "2026-09-05T20:40:00+08:00" }),
+      artifact({ id: "a-pp-handbook-2", kind: "handbook", day: 1, version: 2, blueprintVersion: 2, upstreamIds: ["a-pp-slides-2"], editedFromId: "a-pp-handbook-1", createdAt: "2026-09-05T20:40:00+08:00" }),
     ],
     materials: [],
   },
