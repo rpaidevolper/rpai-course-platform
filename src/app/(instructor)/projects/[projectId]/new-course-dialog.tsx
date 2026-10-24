@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { getFramework, getScenario, latestFrameworkVersion } from "@/lib/mockup/logic";
+import { getIndustryPack, getModuleCard, latestModuleCardVersion, moduleLabel } from "@/lib/mockup/logic";
 import { useDemoState } from "@/lib/mockup/store";
-import { TOPICS, type Project } from "@/lib/mockup/types";
+import { MODULES, type ModuleId, type Project } from "@/lib/mockup/types";
 import { Dialog } from "../../../_components/dialog";
 import { Field, Select, TextInput } from "../../../_components/ui";
 
 const FROM_SCRATCH = "";
 
-export type NewCourseValues = { title: string; frameworkId: string | null; scenarioId: string | null };
+export type NewCourseValues = { title: string; moduleId: ModuleId | null; industryPackId: string | null };
 
-/** 在專案底下開新課程（#48）。藍圖依 ADR 0002 從框架與情境複製內容出生。只在要開的時候掛上。 */
+/**
+ * 在專案底下開新課程（#48）。藍圖依 ADR 0002 從模組卡與產業素材包複製內容出生。只在要開的時候掛上。
+ * 目前只能選一個模組；A 可多選、B 定錨、產業與組課提醒由 #58 重做。
+ */
 export function NewCourseDialog({
   project,
   onClose,
@@ -23,12 +26,12 @@ export function NewCourseDialog({
 }) {
   const st = useDemoState();
   const [title, setTitle] = useState("");
-  const [frameworkId, setFrameworkId] = useState(st.frameworks[0]?.id ?? FROM_SCRATCH);
-  const [scenarioId, setScenarioId] = useState(project.clientContext.scenarioId);
+  const [moduleId, setModuleId] = useState<string>(st.moduleCards[0]?.moduleId ?? FROM_SCRATCH);
+  const [industryPackId, setIndustryPackId] = useState(project.clientContext.industryPackId);
 
-  const framework = frameworkId === FROM_SCRATCH ? undefined : getFramework(st, frameworkId);
-  const scenario = getScenario(st, scenarioId);
-  const valid = title.trim() !== "" && scenario !== undefined;
+  const card = moduleId === FROM_SCRATCH ? undefined : getModuleCard(st, moduleId as ModuleId);
+  const pack = getIndustryPack(st, industryPackId);
+  const valid = title.trim() !== "" && pack !== undefined;
   const itNote = project.clientContext.itConstraints.length > 0 ? `客戶的 ${project.clientContext.itConstraints.length} 條 IT 限制也會一併複製進藍圖。` : "";
 
   return (
@@ -39,32 +42,27 @@ export function NewCourseDialog({
       description={`AI 會先把「${project.clientContext.company}」的客戶背景帶進新藍圖，接著跟你把缺的部分談完。`}
       submitLabel="開課程並開始談藍圖"
       submitDisabled={!valid}
-      onSubmit={() => onSubmit({ title: title.trim(), frameworkId: framework?.id ?? null, scenarioId: scenario?.id ?? null })}
+      onSubmit={() => onSubmit({ title: title.trim(), moduleId: card?.moduleId ?? null, industryPackId: pack?.id ?? null })}
     >
       <Field label="課程名稱">
         <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="例如：Claude 入門工作坊" />
       </Field>
-      <Field label="框架">
-        <Select value={frameworkId} onChange={(e) => setFrameworkId(e.target.value)}>
-          {TOPICS.map((topic) => {
-            const fws = st.frameworks.filter((f) => f.topicId === topic.id);
-            if (fws.length === 0) return null;
-            return (
-              <optgroup key={topic.id} label={topic.label}>
-                {fws.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.title}（目前 v{latestFrameworkVersion(f)}）
-                  </option>
-                ))}
-              </optgroup>
-            );
+      <Field label="模組">
+        <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
+          {MODULES.map((m) => {
+            const c = getModuleCard(st, m.id);
+            return c ? (
+              <option key={m.id} value={m.id}>
+                {moduleLabel(m.id)}（目前 v{latestModuleCardVersion(c)}）
+              </option>
+            ) : null;
           })}
-          <option value={FROM_SCRATCH}>不套用框架，從零開始</option>
+          <option value={FROM_SCRATCH}>不套用模組卡，從零開始</option>
         </Select>
       </Field>
-      <Field label="情境" hint="預設是客戶背景選定的情境。">
-        <Select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)} required>
-          {st.scenarios.map((s) => (
+      <Field label="產業素材包" hint="預設是客戶背景選定的素材包。">
+        <Select value={industryPackId} onChange={(e) => setIndustryPackId(e.target.value)} required>
+          {st.industryPacks.map((s) => (
             <option key={s.id} value={s.id}>
               {s.title}（{s.industry}）
             </option>
@@ -72,9 +70,9 @@ export function NewCourseDialog({
         </Select>
       </Field>
       <p className="rounded-md bg-iced px-3 py-2 text-xs">
-        {framework && scenario
-          ? `藍圖會從「${framework.title}」v${latestFrameworkVersion(framework)} 與情境「${scenario.title}」複製內容出生；之後框架升版，這門課的藍圖不會跟著變。`
-          : "藍圖會從零開始，只帶入客戶背景與情境的受眾；之後一樣可以跟 AI 談。"}
+        {card && pack
+          ? `藍圖會從模組卡「${moduleLabel(card.moduleId)}」v${latestModuleCardVersion(card)} 與產業素材包「${pack.title}」複製內容出生；之後模組卡升版，這門課的藍圖不會跟著變。`
+          : "藍圖會從零開始，只帶入客戶背景與素材包的受眾；之後一樣可以跟 AI 談。"}
         {itNote}
       </p>
     </Dialog>

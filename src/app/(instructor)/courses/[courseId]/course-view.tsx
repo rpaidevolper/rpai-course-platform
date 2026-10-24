@@ -11,9 +11,9 @@ import {
   gateBlockText,
   generationGate,
   getCourse,
-  getFramework,
   getProject,
-  getScenario,
+  getIndustryPack,
+  moduleLabel,
   latestBlueprintVersion,
   latestReadyArtifact,
   outlineFeedback,
@@ -62,8 +62,7 @@ export function CourseView({ courseId }: { courseId: string }) {
   const project = course && getProject(st, course.projectId);
   if (!course || !project) return <DemoMissing what="課程" loading={!hydrated} />;
 
-  const framework = course.source ? getFramework(st, course.source.frameworkId) : undefined;
-  const scenario = course.source ? getScenario(st, course.source.scenarioId) : undefined;
+  const industryPack = course.source ? getIndustryPack(st, course.source.industryPackId) : undefined;
   const latestBp = latestBlueprintVersion(course);
   const history = [...course.blueprintHistory].sort((a, b) => b.version - a.version);
   const latestBpFinalized = history[0].finalizedAt !== null;
@@ -102,23 +101,28 @@ export function CourseView({ courseId }: { courseId: string }) {
               </p>
               <p className="mt-1 text-body-muted">內容是複製來的，之後兩邊各改各的；每個單元的來源與沿用程度見下方藍圖。</p>
             </>
-          ) : course.source && framework && scenario ? (
+          ) : course.source && industryPack ? (
             <>
               <p>
-                從框架「
-                <Link href={`/knowledge#${framework.id}`} className="font-bold text-navy underline underline-offset-2">
-                  {framework.title}
-                </Link>
-                」v{course.source.frameworkVersion} 與情境「
-                <Link href={`/knowledge#${scenario.id}`} className="font-bold text-navy underline underline-offset-2">
-                  {scenario.title}
+                從模組卡「
+                {course.source.moduleIds.map((m, i) => (
+                  <span key={m}>
+                    {i > 0 && "、"}
+                    <Link href={`/knowledge#module-${m}`} className="font-bold text-navy underline underline-offset-2">
+                      {moduleLabel(m)}
+                    </Link>
+                  </span>
+                ))}
+                」與產業素材包「
+                <Link href={`/knowledge#${industryPack.id}`} className="font-bold text-navy underline underline-offset-2">
+                  {industryPack.title}
                 </Link>
                 」談出。
               </p>
-              <p className="mt-1 text-body-muted">之後框架改版不會影響這份藍圖。</p>
+              <p className="mt-1 text-body-muted">之後模組卡改版不會影響這份藍圖。</p>
             </>
           ) : (
-            <p>這份藍圖是從零談出的，沒有套用知識庫的框架。</p>
+            <p>這份藍圖是從零談出的，沒有套用知識庫的模組卡。</p>
           )
         }
       >

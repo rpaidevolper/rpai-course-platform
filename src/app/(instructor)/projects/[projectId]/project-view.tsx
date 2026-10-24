@@ -9,11 +9,12 @@ import {
   coursesOfProject,
   formatDate,
   formatTwd,
-  getFramework,
   getProject,
-  getScenario,
+  getIndustryPack,
   latestBlueprintVersion,
-  latestFrameworkVersion,
+  getModuleCard,
+  latestModuleCardVersion,
+  moduleLabel,
   readiness,
   sessionDateRange,
   sessionsOfCourse,
@@ -51,7 +52,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
   if (!project) return <DemoMissing what="專案" loading={!hydrated} backHref="/projects" backLabel="回專案列表" />;
 
   const ctx = project.clientContext;
-  const scenario = getScenario(st, ctx.scenarioId);
+  const industryPack = getIndustryPack(st, ctx.industryPackId);
   const courses = coursesOfProject(st, project.id);
   const unassigned = unassignedRequirements(project, st.courses);
   const unassignedIds = new Set(unassigned.map((r) => r.id));
@@ -134,14 +135,14 @@ export function ProjectView({ projectId }: { projectId: string }) {
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel>選定的情境</FieldLabel>
+              <FieldLabel>選定的產業素材包</FieldLabel>
               <dd className="mt-0.5 text-sm">
-                {scenario ? (
-                  <Link href={`/knowledge#${scenario.id}`} className="font-bold text-navy underline underline-offset-2">
-                    {scenario.title}
+                {industryPack ? (
+                  <Link href={`/knowledge#${industryPack.id}`} className="font-bold text-navy underline underline-offset-2">
+                    {industryPack.title}
                   </Link>
                 ) : (
-                  <span className="text-body-muted">還沒選情境</span>
+                  <span className="text-body-muted">還沒選產業素材包</span>
                 )}
               </dd>
             </div>
@@ -249,8 +250,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
             {courses.map((c) => {
               const sessions = sessionsOfCourse(st, c.id);
               const missing = sessions.reduce((n, s) => n + readiness(st, s, c).length, 0);
-              const fw = c.source ? getFramework(st, c.source.frameworkId) : undefined;
-              return (
+                            return (
                 <li key={c.id} className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -266,12 +266,17 @@ export function ProjectView({ projectId }: { projectId: string }) {
                             ，複製自「{courses.find((x) => x.id === c.copiedFrom!.courseId)?.title ?? c.copiedFrom.courseId}」藍圖 v
                             {c.copiedFrom.blueprintVersion}
                           </>
-                        ) : c.source && fw && (
+                        ) : c.source && (
                           <>
                             ，來自{" "}
-                            <Link href={`/knowledge#${fw.id}`} className="text-navy underline underline-offset-2">
-                              {fw.title} v{c.source.frameworkVersion}
-                            </Link>
+                            {c.source.moduleIds.map((m, i) => (
+                              <span key={m}>
+                                {i > 0 && "、"}
+                                <Link href={`/knowledge#module-${m}`} className="text-navy underline underline-offset-2">
+                                  {moduleLabel(m)}
+                                </Link>
+                              </span>
+                            ))}
                           </>
                         )}
                       </p>
@@ -332,10 +337,10 @@ export function ProjectView({ projectId }: { projectId: string }) {
           onClose={close}
           onSubmit={(v) => {
             const id = makeId("c");
-            const fw = v.frameworkId ? getFramework(st, v.frameworkId) : undefined;
+            const card = v.moduleId ? getModuleCard(st, v.moduleId) : undefined;
             dispatch({ type: "course/create", id, projectId: project.id, ...v });
             close();
-            toast(fw ? `已建立課程，藍圖從「${fw.title}」v${latestFrameworkVersion(fw)} 複製出生` : "已建立課程，藍圖從零開始");
+            toast(card ? `已建立課程，藍圖從模組卡「${moduleLabel(card.moduleId)}」v${latestModuleCardVersion(card)} 複製出生` : "已建立課程，藍圖從零開始");
             router.push(`/courses/${id}/chat`);
           }}
         />

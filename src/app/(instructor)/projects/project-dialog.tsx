@@ -30,7 +30,7 @@ export function ProjectDialog({
   const [company, setCompany] = useState(ctx?.company ?? "");
   const [industry, setIndustry] = useState(ctx?.industry ?? "");
   const [goal, setGoal] = useState(ctx?.goal ?? "");
-  const [scenarioId, setScenarioId] = useState(ctx?.scenarioId ?? st.scenarios[0]?.id ?? "");
+  const [industryPackId, setIndustryPackId] = useState(ctx?.industryPackId ?? st.industryPacks[0]?.id ?? "");
   const [itConstraints, setItConstraints] = useState(ctx?.itConstraints.join("\n") ?? "");
 
   const priceTwd = Number(price);
@@ -39,7 +39,7 @@ export function ProjectDialog({
     company.trim() !== "" &&
     industry.trim() !== "" &&
     goal.trim() !== "" &&
-    scenarioId !== "" &&
+    industryPackId !== "" &&
     price.trim() !== "" &&
     Number.isFinite(priceTwd) &&
     priceTwd >= 0;
@@ -65,7 +65,7 @@ export function ProjectDialog({
             company: company.trim(),
             industry: industry.trim(),
             goal: goal.trim(),
-            scenarioId,
+            industryPackId,
             itConstraints: itConstraints
               .split("\n")
               .map((line) => line.trim())
@@ -103,9 +103,9 @@ export function ProjectDialog({
       <Field label="培訓目標">
         <TextArea value={goal} onChange={(e) => setGoal(e.target.value)} required />
       </Field>
-      <Field label="情境" hint="AI 談新課程的藍圖時，會套用這個情境的案例與練習。">
-        <Select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)} required>
-          {st.scenarios.map((s) => (
+      <Field label="產業素材包" hint="AI 談新課程的藍圖時，會套用這個素材包的案例與練習。">
+        <Select value={industryPackId} onChange={(e) => setIndustryPackId(e.target.value)} required>
+          {st.industryPacks.map((s) => (
             <option key={s.id} value={s.id}>
               {s.title}（{s.industry}）
             </option>

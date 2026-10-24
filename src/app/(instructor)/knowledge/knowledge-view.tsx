@@ -1,16 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
 import { IMPORT_ACCEPT, importProposal } from "@/lib/mockup/import-script";
-import { formatDate, frameworksOfTopic, getCourse, latestFrameworkVersion, pendingDrafts } from "@/lib/mockup/logic";
+import {
+  getModule,
+  getModuleCard,
+  latestModuleCardVersion,
+  moduleLabel,
+  pendingDrafts,
+  recipeMinutes,
+  recipeModules,
+  recipeUnitCards,
+  unitCardsOfModule,
+} from "@/lib/mockup/logic";
 import type { DemoState } from "@/lib/mockup/state";
 import { dispatch, useDemoState } from "@/lib/mockup/store";
-import { TOPICS, type Framework, type TopicId } from "@/lib/mockup/types";
+import { MODULES, RECIPE_STATUS_LABELS, type ModuleId } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
 import { Badge, Button, Card, CARD, Empty, Field, FieldLabel, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
+import { CardDetailDialog, type OpenCard } from "./card-details";
 import { DraftCard } from "./draft-card";
 
 /** 假裝 AI 拆解講義要花的時間 */
@@ -18,15 +28,16 @@ const IMPORT_MS = 1500;
 const HIGHLIGHT_MS = 2400;
 const HIGHLIGHT = "ring-2 ring-navy";
 
-/** 知識庫：待審核草稿 > 框架（依主題分組） > 情境。 */
+/** 知識庫：待審核草稿 > 模組卡（依模組分組，附單元卡） > 課程配方 > 產業素材包。 */
 export function KnowledgeView() {
   const st = useDemoState();
   const drafts = pendingDrafts(st);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [openCard, setOpenCard] = useState<OpenCard | null>(null);
 
-  // 審核後捲到被改動的框架或情境，短暫標出來
+  // 審核後捲到被改動的模組卡、課程配方或產業素材包，短暫標出來
   useEffect(() => {
     if (!highlight) return;
     document.getElementById(highlight)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -39,12 +50,12 @@ export function KnowledgeView() {
     if (importTimer.current) clearTimeout(importTimer.current);
   }, []);
 
-  const startImport = (fileName: string, topicId: TopicId) => {
+  const startImport = (fileName: string, moduleId: ModuleId) => {
     setImportOpen(false);
     setImporting(fileName);
     importTimer.current = setTimeout(() => {
       importTimer.current = null;
-      dispatch({ type: "draft/import", id: makeId("d"), fileName, proposal: importProposal(fileName, topicId) });
+      dispatch({ type: "draft/import", id: makeId("d"), fileName, proposal: importProposal(fileName, moduleId) });
       setImporting(null);
       toast("已產生草稿，等你審核");
     }, IMPORT_MS);
@@ -54,7 +65,7 @@ export function KnowledgeView() {
     <>
       <PageHeader
         title="知識庫"
-        description="從過去的課整理出來、你確認過的框架與情境。新課程的藍圖從這裡複製內容出生，之後框架改版不會動到已經存在的藍圖。"
+        description="從過去的課整理出來、你確認過的模組卡、單元卡、課程配方與產業素材包。新課程的藍圖從這裡複製內容出生，之後模組卡改版不會動到已經存在的藍圖。"
       >
         <Button variant="secondary" onClick={() => setImportOpen(true)} disabled={importing !== null}>
           匯入過往講義
@@ -88,54 +99,69 @@ export function KnowledgeView() {
         )}
       </section>
 
-      <section aria-labelledby="frameworks-title" className="mb-12">
-        <SectionTitle aside="直接編輯框架會升一版">
-          <span id="frameworks-title">框架</span>
+      <section aria-labelledby="modules-title" className="mb-12">
+        <SectionTitle aside="直接整理模組卡會升一版">
+          <span id="modules-title">模組卡</span>
         </SectionTitle>
-        <p className="mb-5 max-w-2xl text-sm">開新課程時，AI 會依專案的客戶背景，從這裡推薦框架與情境。</p>
+        <p className="mb-5 max-w-2xl text-sm">
+          9 個模組各一張模組卡。A 類是學員課堂上打開的環境，彼此互斥；B 類是不綁工具的方法，可以疊加。開新課程時，藍圖從所選模組的模組卡複製內容出生。
+        </p>
 
-        <nav aria-label="跳到主題" className="mb-6 flex flex-wrap gap-2">
-          {TOPICS.map((t) => (
-            <a key={t.id} href={`#topic-${t.id}`} className="rounded-md bg-navy-tint px-3 py-1.5 text-sm font-bold text-navy hover:bg-iced">
-              {t.label}（{frameworksOfTopic(st, t.id).length}）
+        <nav aria-label="跳到模組" className="mb-6 flex flex-wrap gap-2">
+          {MODULES.map((m) => (
+            <a key={m.id} href={`#module-${m.id}`} className="rounded-md bg-navy-tint px-3 py-1.5 text-sm font-bold text-navy hover:bg-iced">
+              {moduleLabel(m.id)}（{unitCardsOfModule(st, m.id).length}）
             </a>
           ))}
         </nav>
 
         <div className="space-y-10">
-          {TOPICS.map((t) => {
-            const list = frameworksOfTopic(st, t.id);
-            return (
-              <section key={t.id} id={`topic-${t.id}`} aria-labelledby={`topic-title-${t.id}`} className="scroll-mt-6">
-                <h3 id={`topic-title-${t.id}`} className="mb-3 text-lg font-bold text-navy">
-                  {t.label}
-                </h3>
-                {list.length === 0 ? (
-                  <Empty>這個主題還沒有框架。上完這類課程、審核通過草稿後，會出現在這裡。</Empty>
-                ) : (
-                  <ul className="space-y-4">
-                    {list.map((f) => (
-                      <li key={f.id}>
-                        <FrameworkCard st={st} framework={f} highlighted={highlight === f.id} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
+          {MODULES.map((m) => (
+            <ModuleSection key={m.id} st={st} moduleId={m.id} highlighted={highlight === `module-${m.id}`} onOpen={setOpenCard} />
+          ))}
         </div>
       </section>
 
-      <section aria-labelledby="scenarios-title">
-        <SectionTitle aside="一份藍圖只套用一個情境">
-          <span id="scenarios-title">情境</span>
+      <section aria-labelledby="recipes-title" className="mb-12">
+        <SectionTitle aside="一門過去課程的骨架，不是藍圖">
+          <span id="recipes-title">課程配方（{st.recipes.length}）</span>
         </SectionTitle>
-        {st.scenarios.length === 0 ? (
-          <Empty>還沒有情境。審核通過課後草稿裡的情境後，會出現在這裡。</Empty>
+        {st.recipes.length === 0 ? (
+          <Empty>還沒有課程配方。課程結案、審核通過草稿後，會出現在這裡。</Empty>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
-            {st.scenarios.map((s) => (
+            {st.recipes.map((r) => (
+              <li key={r.id} id={r.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === r.id ? HIGHLIGHT : ""}`}>
+                <Card className="h-full">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <h3 className="min-w-0 text-base font-bold text-navy">{r.title}</h3>
+                    <Badge tone="outline">{RECIPE_STATUS_LABELS[r.status]}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm">
+                    {r.industry}・{r.audience}・{recipeUnitCards(st, r).length} 個單元・{recipeMinutes(st, r)} 分鐘
+                  </p>
+                  <p className="mt-1 text-sm text-body-muted">{recipeModules(st, r).join("、")}</p>
+                  <div className="mt-4">
+                    <Button variant="secondary" onClick={() => setOpenCard({ kind: "recipe", id: r.id })}>
+                      打開課程配方
+                    </Button>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="packs-title">
+        <SectionTitle aside="一份藍圖只套用一個產業素材包">
+          <span id="packs-title">產業素材包</span>
+        </SectionTitle>
+        {st.industryPacks.length === 0 ? (
+          <Empty>還沒有產業素材包。審核通過課後草稿裡的素材包後，會出現在這裡。</Empty>
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2">
+            {st.industryPacks.map((s) => (
               <li key={s.id} id={s.id} className={`scroll-mt-6 rounded-lg transition-shadow ${highlight === s.id ? HIGHLIGHT : ""}`}>
                 <Card className="h-full">
                   <h3 className="text-base font-bold text-navy">{s.title}</h3>
@@ -166,20 +192,22 @@ export function KnowledgeView() {
           </ul>
         )}
       </section>
+
+      <CardDetailDialog st={st} open={openCard} onOpen={setOpenCard} onClose={() => setOpenCard(null)} />
     </>
   );
 }
 
-/** 選講義檔與主題。demo 不讀檔內容，只用檔名產生腳本化的草稿。 */
-function ImportDialog({ open, onClose, onImport }: { open: boolean; onClose: () => void; onImport: (fileName: string, topicId: TopicId) => void }) {
+/** 選講義檔與模組。demo 不讀檔內容，只用檔名產生腳本化的草稿。 */
+function ImportDialog({ open, onClose, onImport }: { open: boolean; onClose: () => void; onImport: (fileName: string, moduleId: ModuleId) => void }) {
   const [fileName, setFileName] = useState<string | null>(null);
-  const [topicId, setTopicId] = useState<TopicId>(TOPICS[0].id);
+  const [moduleId, setModuleId] = useState<ModuleId>(MODULES[0].id);
   // 每次打開都換一個 key，清掉上次選的檔案
   const [round, setRound] = useState(0);
 
   const reset = () => {
     setFileName(null);
-    setTopicId(TOPICS[0].id);
+    setModuleId(MODULES[0].id);
     setRound((r) => r + 1);
   };
 
@@ -191,12 +219,12 @@ function ImportDialog({ open, onClose, onImport }: { open: boolean; onClose: () 
         onClose();
       }}
       title="匯入過往講義"
-      description="AI 會把講義拆成一份新框架的草稿，你審核過才會收進知識庫。"
+      description="AI 會把講義拆成單元卡與一份課程配方的草稿，你審核過才會收進知識庫。"
       submitLabel="開始拆解"
       submitDisabled={fileName === null}
       onSubmit={() => {
         if (!fileName) return;
-        onImport(fileName, topicId);
+        onImport(fileName, moduleId);
         reset();
       }}
     >
@@ -208,11 +236,11 @@ function ImportDialog({ open, onClose, onImport }: { open: boolean; onClose: () 
           onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
         />
       </Field>
-      <Field label="主題">
-        <Select value={topicId} onChange={(e) => setTopicId(e.target.value as TopicId)}>
-          {TOPICS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
+      <Field label="模組">
+        <Select value={moduleId} onChange={(e) => setModuleId(e.target.value as ModuleId)}>
+          {MODULES.map((m) => (
+            <option key={m.id} value={m.id}>
+              {moduleLabel(m.id)}
             </option>
           ))}
         </Select>
@@ -221,81 +249,54 @@ function ImportDialog({ open, onClose, onImport }: { open: boolean; onClose: () 
   );
 }
 
-function FrameworkCard({ st, framework: f, highlighted }: { st: DemoState; framework: Framework; highlighted: boolean }) {
-  const latest = latestFrameworkVersion(f);
-  const versions = [...f.versions].sort((a, b) => b.version - a.version);
-  const users = st.courses.filter((c) => c.source?.frameworkId === f.id);
+/** 一個模組：標題、模組卡摘要，以及這個模組底下的單元卡。 */
+function ModuleSection({ st, moduleId, highlighted, onOpen }: { st: DemoState; moduleId: ModuleId; highlighted: boolean; onOpen: (card: OpenCard) => void }) {
+  const mod = getModule(moduleId);
+  const card = getModuleCard(st, moduleId);
+  const units = unitCardsOfModule(st, moduleId);
 
   return (
-    <article id={f.id} className={`${CARD} scroll-mt-6 p-5 transition-shadow ${highlighted ? HIGHLIGHT : ""}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h4 className="min-w-0 text-base font-bold text-navy">{f.title}</h4>
-        <Badge tone="outline">目前 v{latest}</Badge>
-      </div>
-      <p className="mt-1.5 max-w-3xl text-sm">{f.summary}</p>
-
-      <div className="mt-5 grid gap-6 lg:grid-cols-2">
-        <div>
-          <FieldLabel>單元</FieldLabel>
-          <ol className="mt-1.5 space-y-1 text-sm">
-            {f.moduleTitles.map((m, i) => (
-              <li key={m} className="flex gap-2.5">
-                <span className="w-5 shrink-0 text-right font-bold text-navy">{i + 1}</span>
-                <span>{m}</span>
+    <section id={`module-${moduleId}`} aria-labelledby={`module-title-${moduleId}`} className="scroll-mt-6">
+      <h3 id={`module-title-${moduleId}`} className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold text-navy">
+        {moduleLabel(moduleId)}
+        <Badge tone="outline">{mod.kind === "A" ? "A 學員打開的環境" : "B 方法"}</Badge>
+      </h3>
+      {card ? (
+        <article className={`${CARD} p-5 transition-shadow ${highlighted ? HIGHLIGHT : ""}`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h4 className="min-w-0 text-base font-bold text-navy">模組卡 {moduleLabel(moduleId)}</h4>
+            <Badge tone="outline">目前 v{latestModuleCardVersion(card)}</Badge>
+          </div>
+          <p className="mt-1.5 max-w-3xl text-sm">{card.summary}</p>
+          <div className="mt-4">
+            <Button variant="secondary" onClick={() => onOpen({ kind: "module", id: moduleId })}>
+              打開模組卡
+            </Button>
+          </div>
+        </article>
+      ) : (
+        <Empty>這個模組還沒有模組卡。</Empty>
+      )}
+      <div className="mt-4">
+        <FieldLabel>單元卡（{units.length}）</FieldLabel>
+        {units.length === 0 ? (
+          <p className="mt-1.5 text-sm text-body-muted">這個模組還沒有單元卡。</p>
+        ) : (
+          <ul className="mt-1.5 flex flex-wrap gap-2">
+            {units.map((u) => (
+              <li key={u.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpen({ kind: "unit", id: u.id })}
+                  className="rounded-md bg-white px-3 py-1.5 text-left text-sm text-navy shadow-[0_1px_6px_rgba(1,20,85,0.08)] hover:bg-navy-tint"
+                >
+                  {u.title}（{u.minutes} 分）
+                </button>
               </li>
             ))}
-          </ol>
-        </div>
-
-        <div className="space-y-5">
-          <div>
-            <FieldLabel>版本紀錄</FieldLabel>
-            <ul className="mt-1.5 space-y-1.5 text-sm">
-              {versions.map((v) => {
-                const from = v.fromCourseId ? getCourse(st, v.fromCourseId) : undefined;
-                return (
-                  <li key={v.version} className="flex gap-2.5">
-                    <span className="w-8 shrink-0 font-bold text-navy">v{v.version}</span>
-                    <span className="min-w-0">
-                      <span className="text-body-muted">{formatDate(v.createdAt)}</span> {v.note}
-                      {from && (
-                        <>
-                          {" "}
-                          <Link href={`/courses/${from.id}`} className="text-body-muted underline underline-offset-2 hover:text-navy">
-                            （來自{from.title}）
-                          </Link>
-                        </>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div>
-            <FieldLabel>用到這個框架的課程</FieldLabel>
-            {users.length === 0 ? (
-              <p className="mt-1.5 text-sm text-body-muted">還沒有課程用過。</p>
-            ) : (
-              <ul className="mt-1.5 space-y-1 text-sm">
-                {users.map((c) => {
-                  const used = c.source!.frameworkVersion;
-                  return (
-                    <li key={c.id}>
-                      <Link href={`/courses/${c.id}`} className="font-bold text-navy underline underline-offset-2">
-                        {c.title}
-                      </Link>{" "}
-                      用 v{used}
-                      {used < latest && <span className="text-xs text-body-muted">（不是最新版，藍圖不會跟著變）</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
+          </ul>
+        )}
       </div>
-    </article>
+    </section>
   );
 }
