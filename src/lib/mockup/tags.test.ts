@@ -42,8 +42,11 @@ describe("specOfHours 規格由總時數推得", () => {
     expect(specOfMinutes(0)).toBeNull();
   });
 
-  it("小數時數不會因浮點誤差掉到下一檔（0.1×3 小時 ×… 等於 18H）", () => {
-    expect(specOfHours(0.1 * 180)).toBe("系列班");
+  it("比 18H 只差浮點誤差的時數，仍算系列班（先四捨五入到分鐘）", () => {
+    const almost18 = 18 - 1e-12;
+    // 前提：這個時數換成分鐘後，在浮點數上真的比 1080 小一點點
+    expect(almost18 * 60).toBeLessThan(18 * 60);
+    expect(specOfHours(almost18)).toBe("系列班");
   });
 });
 
