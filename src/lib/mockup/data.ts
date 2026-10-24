@@ -145,6 +145,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: "2026-03",
     industry: "服務零售",
     audience: "行政與業務助理",
+    tools: ["Claude", "Claude Project"],
     unitIds: ["uc-a1-first-chat", "uc-a1-limits", "uc-b2-four-parts", "uc-a1-project", "uc-b1-three-things"],
   },
   {
@@ -155,6 +156,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: "2026-01",
     industry: "金融",
     audience: "財務與行政",
+    tools: ["Power Automate", "Microsoft Teams"],
     unitIds: ["uc-a4-cloud-first", "uc-a4-approval", "uc-a4-overdue", "uc-b3-golive"],
   },
   {
@@ -165,6 +167,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: "2026-02",
     industry: "HR",
     audience: "人資與行政",
+    tools: ["Google 試算表", "Google Apps Script"],
     unitIds: ["uc-b1-inventory", "uc-a4-first-script", "uc-a4-form-trigger", "uc-a4-safety-net"],
   },
   {
@@ -175,6 +178,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: "2026-04",
     industry: "製造",
     audience: "生管與資材",
+    tools: ["Power Automate Desktop", "Excel"],
     unitIds: ["uc-b1-inventory", "uc-a3-first-flow", "uc-a3-merge", "uc-b4-monthly-cost"],
   },
   {
@@ -185,6 +189,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: "2026-05",
     industry: "通用",
     audience: "各部門主管",
+    tools: ["Claude", "NotebookLM"],
     unitIds: ["uc-a2-handbook", "uc-a2-cited", "uc-b3-data-rules"],
   },
   {
@@ -195,6 +200,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: null,
     industry: "製造",
     audience: "種子團隊",
+    tools: ["Claude Code", "Claude Skills"],
     unitIds: ["uc-b1-inventory", "uc-a5-skill", "uc-a5-tool", "uc-b1-dept"],
   },
   {
@@ -205,6 +211,7 @@ export const COURSE_RECIPES: CourseRecipe[] = [
     heldOn: null,
     industry: "金融",
     audience: "部門主管",
+    tools: ["Claude"],
     unitIds: ["uc-a1-limits", "uc-b3-data-rules", "uc-b3-maintain"],
   },
 ];

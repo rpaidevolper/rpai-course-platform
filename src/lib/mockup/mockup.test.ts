@@ -37,6 +37,7 @@ import {
   recipeModules,
   recipesUsingModule,
   recipesUsingUnit,
+  industriesOfUnit,
   requirementMappingOfCourse,
   unassignedRequirements,
   unitCardsOfModule,
@@ -524,6 +525,17 @@ describe("知識庫查詢：課程配方、模組與單元卡", () => {
 
   it("用到某張單元卡的配方，依知識庫的配方順序", () => {
     expect(recipesUsingUnit(st, "uc-b1-inventory").map((r) => r.id)).toEqual(["rc-h-gas-2602", "rc-l-rpa-2604", "rc-j-agent"]);
+  });
+
+  it("單元卡的產業：用過它的配方的產業聯集，依配方順序、不重複；沒人用過則為空", () => {
+    // 流程盤點被 H（HR）、L（製造）、J（製造）用過
+    expect(industriesOfUnit(st, "uc-b1-inventory")).toEqual(["HR", "製造"]);
+    expect(industriesOfUnit(st, "uc-a5-skill")).toEqual(["製造"]);
+    expect(industriesOfUnit(st, "no-such-unit")).toEqual([]);
+  });
+
+  it("每份課程配方都記錄用到的工具", () => {
+    for (const r of st.recipes) expect(r.tools.length).toBeGreaterThan(0);
   });
 
   it("用到某模組的配方：至少一張該模組的單元卡", () => {

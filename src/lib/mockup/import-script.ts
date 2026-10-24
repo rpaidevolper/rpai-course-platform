@@ -38,7 +38,7 @@ const unitCardOf = (moduleId: ModuleId, title: string): Omit<UnitCard, "id"> => 
   outcome: "一份可以帶回工作的成果",
 });
 
-/** 依檔名與講師選的模組，產生一份課程配方草稿（沒有來源課程、沒有日期，對象待確認）。 */
+/** 依檔名與講師選的模組，產生一份課程配方草稿（沒有來源課程、沒有日期，對象與工具待確認）。 */
 export function importProposal(fileName: string, moduleId: ModuleId): Extract<DraftProposal, { kind: "new_course_recipe" }> {
   return {
     kind: "new_course_recipe",
@@ -49,6 +49,7 @@ export function importProposal(fileName: string, moduleId: ModuleId): Extract<Dr
       heldOn: null,
       industry: "通用",
       audience: "待確認",
+      tools: [],
     },
     unitCards: SCRIPT[moduleId].map((title) => unitCardOf(moduleId, title)),
   };

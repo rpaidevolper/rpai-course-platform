@@ -11,6 +11,7 @@ import {
   type ClientDocument,
   type Course,
   type CourseRecipe,
+  type Industry,
   type IndustryPack,
   type IsoTime,
   type Link,
@@ -93,6 +94,11 @@ export const recipeModules = (st: DemoState, recipe: CourseRecipe): ModuleId[] =
 
 /** 用到某張單元卡的課程配方；單元卡被哪些配方用過由此推得，不另存。 */
 export const recipesUsingUnit = (st: DemoState, unitId: string) => st.recipes.filter((r) => r.unitIds.includes(unitId));
+
+/** 單元卡的產業：用過它的課程配方的產業聯集，依配方順序、不重複；使用次數即 recipesUsingUnit 的長度。 */
+export const industriesOfUnit = (st: DemoState, unitId: string): Industry[] => [
+  ...new Set(recipesUsingUnit(st, unitId).map((r) => r.industry)),
+];
 
 /** 至少用到該模組一張單元卡的課程配方。 */
 export const recipesUsingModule = (st: DemoState, moduleId: ModuleId) =>

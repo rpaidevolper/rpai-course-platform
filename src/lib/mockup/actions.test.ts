@@ -273,7 +273,7 @@ describe("知識庫草稿", () => {
         fileName: "2025 行政班講義.pdf",
         proposal: {
           kind: "new_course_recipe",
-          recipe: { title: "試算表自動化", client: "匯入的講義", status: "delivered", heldOn: null, industry: "通用", audience: "待確認" },
+          recipe: { title: "試算表自動化", client: "匯入的講義", status: "delivered", heldOn: null, industry: "通用", audience: "待確認", tools: [] },
           unitCards: [
             { moduleId: "A2", title: "甲", minutes: 60, objective: "o", method: "m", outcome: "r" },
             { moduleId: "B3", title: "乙", minutes: 90, objective: "o", method: "m", outcome: "r" },

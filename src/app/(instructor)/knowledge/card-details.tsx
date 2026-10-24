@@ -7,6 +7,7 @@ import {
   formatDate,
   getCourse,
   getUnitCard,
+  industriesOfUnit,
   latestModuleCardVersion,
   moduleLabel,
   recipeMinutes,
@@ -181,6 +182,8 @@ function unitDetail(st: DemoState, unitId: string, onOpen: (card: OpenCard) => v
         <Section label="目標">{u.objective}</Section>
         <Section label="教學方式">{u.method}</Section>
         <Section label="成果">{u.outcome}</Section>
+        <Section label="產業">{industriesOfUnit(st, u.id).join("、") || "還沒有配方用過"}</Section>
+        <Section label="使用次數">{recipes.length} 次</Section>
         <Section label="用過它的課程配方">
           {recipes.length === 0 ? (
             <p className="text-body-muted">還沒有配方用過。</p>
@@ -216,6 +219,7 @@ function recipeDetail(st: DemoState, recipeId: string, onOpen: (card: OpenCard) 
     body: (
       <>
         <Section label="對象">{r.audience}</Section>
+        <Section label="工具">{r.tools.length > 0 ? r.tools.join("、") : "待確認"}</Section>
         <Section label="用到的模組">
           {recipeModules(st, r)
             .map((m) => moduleLabel(m))

@@ -92,6 +92,8 @@ export interface CourseRecipe {
   heldOn: string | null;
   industry: Industry;
   audience: string;
+  /** 課堂用到的工具 */
+  tools: string[];
   /** 依序用到的單元卡 id */
   unitIds: string[];
 }
