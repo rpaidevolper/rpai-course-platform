@@ -57,7 +57,7 @@ claude plugin install mattpocock-skills@mattpocock
 - 工作量大到一個 session 裝不下時，先用 `/wayfinder` 畫決策地圖。
 - 修 bug 走 `diagnosing-bugs`，不要直接猜。
 - 動模組介面／切分層時，用 `codebase-design` 的詞彙（deep module、seam），不要自創「service」「component」等說法。
-- merge / rebase 衝突走 `resolving-merge-conflicts`，一律解完，不要 `--abort`。
+- merge / rebase 衝突一律解完，不要 `--abort`。先讀衝突兩邊原始的 commit、PR 與 issue，弄清楚各自要達成什麼，再合成同時保留兩邊意圖的結果，不要整段選 ours／theirs 了事；解完跑過 `pnpm lint && pnpm typecheck && pnpm test` 再繼續 merge / rebase。這不需要專用 skill，直接處理。
 
 `/to-spec`、`/to-tickets`、`triage` 讀的 issue tracker 設定已經建好，見下方「Agent skills」，不需要再跑 `/setup-matt-pocock-skills`。
 
