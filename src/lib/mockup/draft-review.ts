@@ -35,11 +35,33 @@ function dropUnit(st: DemoState, fromCourseId: string | null, unitCardId: string
   return { ...st, drafts };
 }
 
+/**
+ * 能不能從課程配方草稿排除這個單元。已經在知識庫、又沒有待審更新草稿的單元（單獨收進的新單元卡，
+ * 或已接受更新的卡）不能排除：排除只會把它從配方拿掉，留下沒有配方的孤兒單元卡。
+ * 還沒收進的新單元卡，以及有待審更新草稿的既有單元卡，排除後相關草稿一併拿掉，知識庫維持一致。
+ */
+export function canExcludeUnit(st: DemoState, draftId: string, unitCardId: string): boolean {
+  const draft = st.drafts.find((d) => d.id === draftId);
+  if (!draft || draft.proposal.kind !== "new_course_recipe" || !draft.proposal.unitCardIds.includes(unitCardId)) return false;
+  if (!st.unitCards.some((u) => u.id === unitCardId)) return true;
+  return st.drafts.some((d) => d.fromCourseId === draft.fromCourseId && d.proposal.kind === "update_unit_card" && d.proposal.unitCardId === unitCardId);
+}
+
 /** 排除課程配方草稿裡的某個單元：配方、單元卡草稿、更新草稿與模組卡改動一起拿掉。 */
 export function excludeUnit(st: DemoState, draftId: string, unitCardId: string): DemoState {
   const draft = st.drafts.find((d) => d.id === draftId);
-  if (!draft || draft.proposal.kind !== "new_course_recipe" || !draft.proposal.unitCardIds.includes(unitCardId)) return st;
+  if (!draft || !canExcludeUnit(st, draftId, unitCardId)) return st;
   return dropUnit(st, draft.fromCourseId, unitCardId);
+}
+
+/**
+ * 更新單元卡草稿要不要預告「用過的配方 +1」：只有同一門課程的課程配方草稿還待審、而且引用這張卡時才會。
+ * 配方收進後 recipesUsingUnit 已經算進去，捨棄後則不會發生。
+ */
+export function pendingUsageIncrease(st: DemoState, update: KnowledgeDraft): boolean {
+  const p = update.proposal;
+  if (p.kind !== "update_unit_card") return false;
+  return st.drafts.some((d) => d.fromCourseId === update.fromCourseId && d.proposal.kind === "new_course_recipe" && d.proposal.unitCardIds.includes(p.unitCardId));
 }
 
 /** 捨棄草稿。捨棄新單元卡等於排除那個單元（配方不能指向不會存在的單元卡）；其他種類只是不收。 */

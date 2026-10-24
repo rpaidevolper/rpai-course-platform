@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
+import { closingGate, isCourseClosed } from "@/lib/mockup/closing";
 import { filterRecipes, filterUnitCards, hasFilter, noFilter } from "@/lib/mockup/browse";
 import { IMPORT_ACCEPT, importProposals } from "@/lib/mockup/import-script";
 import {
@@ -35,6 +37,8 @@ const HIGHLIGHT = "ring-2 ring-navy";
 export function KnowledgeView() {
   const st = useDemoState();
   const drafts = pendingDrafts(st);
+  // 結案閘全過、還沒結案的課程：空草稿區指給講師看從哪裡產生草稿
+  const closable = st.courses.find((c) => !isCourseClosed(c) && closingGate(st, c, st.now).canClose);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -97,7 +101,22 @@ export function KnowledgeView() {
           )}
         </div>
         {drafts.length === 0 ? (
-          !importing && <Empty>目前沒有草稿。課程結案後，內容會拆成待審核的草稿。</Empty>
+          !importing && (
+            <Empty>
+              目前沒有草稿。課程結案後，內容會拆成待審核的草稿
+              {closable ? (
+                <>
+                  ，例如{" "}
+                  <Link href={`/courses/${closable.id}#closing`} className="font-bold text-navy underline underline-offset-2">
+                    「{closable.title}」
+                  </Link>
+                  已可結案：到課程頁按「結案」。
+                </>
+              ) : (
+                "。"
+              )}
+            </Empty>
+          )
         ) : (
           <ul className="space-y-4">
             {drafts.map((d) => (
@@ -172,7 +191,7 @@ export function KnowledgeView() {
           <span id="packs-title">產業素材包</span>
         </SectionTitle>
         {st.industryPacks.length === 0 ? (
-          <Empty>還沒有產業素材包。審核通過課後草稿裡的素材包後，會出現在這裡。</Empty>
+          <Empty>還沒有產業素材包。</Empty>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
             {st.industryPacks.map((s) => (

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { demoReducer, type DemoAction } from "./actions";
 import { finalArtifacts } from "./closing";
+import { canExcludeUnit, pendingUsageIncrease } from "./draft-review";
 import { getModuleCard, getRecipe, getUnitCard, latestModuleCardVersion, recipeUnitCards, recipesUsingUnit } from "./logic";
 import { importProposals } from "./import-script";
 import { initialState, type DemoState } from "./state";
@@ -296,5 +297,33 @@ describe("匯入過往講義", () => {
       ["A2", "設定只根據文件回答"],
     ]);
     expect(st.drafts).toEqual([]);
+  });
+});
+
+describe("審核的邊界：已經定案的單元", () => {
+  it("「用過的配方 +1」只在課程配方還待審時預告；配方收進或捨棄後不再預告", () => {
+    const st0 = closed();
+    const update = updateDraftFor(st0, "uc-a4-approval")!;
+    const recipeDraft = only(st0, "new_course_recipe");
+    expect(pendingUsageIncrease(st0, update)).toBe(true);
+    const accepted = run([accept(recipeDraft.id)], st0);
+    expect(pendingUsageIncrease(accepted, updateDraftFor(accepted, "uc-a4-approval")!)).toBe(false);
+    const discarded = run([{ type: "draft/discard", draftId: recipeDraft.id }], st0);
+    expect(pendingUsageIncrease(discarded, updateDraftFor(discarded, "uc-a4-approval")!)).toBe(false);
+  });
+
+  it("新單元卡已經單獨收進知識庫後，不能再從配方排除（否則留下沒有配方的孤兒單元卡）", () => {
+    const st0 = closed();
+    const unit = unitDraftByTitle(st0, NEW_UNIT_TITLE);
+    const recipeDraft = only(st0, "new_course_recipe");
+    const st1 = run([accept(unit.id)], st0);
+    expect(canExcludeUnit(st1, recipeDraft.id, unit.proposal.unitCard.id)).toBe(false);
+    expect(run([{ type: "draft/excludeUnit", draftId: recipeDraft.id, unitCardId: unit.proposal.unitCard.id }], st1)).toEqual({
+      ...st1,
+      now: expect.any(String),
+    });
+    // 還沒收進的新單元卡、待審更新草稿的既有單元卡可以排除
+    expect(canExcludeUnit(st0, recipeDraft.id, unit.proposal.unitCard.id)).toBe(true);
+    expect(canExcludeUnit(st0, recipeDraft.id, "uc-a4-approval")).toBe(true);
   });
 });

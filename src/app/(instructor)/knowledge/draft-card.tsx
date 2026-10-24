@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import type { DraftRewrite } from "@/lib/mockup/draft-review";
 import { formatDate, getCourse, getModuleCard, getUnitCard, latestModuleCardVersion, moduleLabel, recipesUsingUnit, seriesLabel } from "@/lib/mockup/logic";
+import { canExcludeUnit, pendingUsageIncrease } from "@/lib/mockup/draft-review";
 import type { DemoState } from "@/lib/mockup/state";
 import { dispatch } from "@/lib/mockup/store";
 import type { KnowledgeDraft, UnitCard } from "@/lib/mockup/types";
@@ -133,15 +134,19 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
                           {card ? `${card.title}（${moduleLabel(card.moduleId)}・${card.minutes} 分）` : id}
                         </span>
                         {existing ? <Badge tone="neutral">既有・用過的配方 {used} → {used + 1}</Badge> : <Badge tone="outline">新單元卡</Badge>}
-                        <TextButton
-                          tone="danger"
-                          onClick={() => {
-                            dispatch({ type: "draft/excludeUnit", draftId: draft.id, unitCardId: id });
-                            toast("已排除這個單元，相關草稿一併拿掉");
-                          }}
-                        >
-                          排除
-                        </TextButton>
+                        {canExcludeUnit(st, draft.id, id) ? (
+                          <TextButton
+                            tone="danger"
+                            onClick={() => {
+                              dispatch({ type: "draft/excludeUnit", draftId: draft.id, unitCardId: id });
+                              toast("已排除這個單元，相關草稿一併拿掉");
+                            }}
+                          >
+                            排除
+                          </TextButton>
+                        ) : (
+                          <span className="text-xs text-body-muted">已收進知識庫，不能排除</span>
+                        )}
                       </li>
                     );
                   })}
@@ -228,7 +233,9 @@ function UpdateBody({ st, draft, accept, buttons }: BodyProps) {
   return (
     <>
       <h3 className="mt-2 text-base font-bold text-navy">建議更新單元卡「{card?.title ?? p.unitCardId}」</h3>
-      <p className="mt-2 text-sm">這門課沿用了它。用過的配方 {used} → {used + 1}（課程配方收進後計入）。</p>
+      <p className="mt-2 text-sm">
+        這門課沿用了它。{pendingUsageIncrease(st, draft) ? `用過的配方 ${used} → ${used + 1}（課程配方收進後計入）。` : `用過的配方 ${used}。`}
+      </p>
       <p className="mt-1 text-sm">{added.length > 0 ? `補上新標籤：${added.join("、")}` : "沒有新標籤，只是多一次使用。"}</p>
       {buttons(
         <Button onClick={() => accept(`已更新單元卡「${card?.title ?? ""}」`, `module-${card?.moduleId ?? ""}`)} disabled={!card} title={card ? undefined : "找不到原單元卡"}>
