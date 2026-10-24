@@ -6,7 +6,8 @@ import { initialState, type DemoState } from "./state";
 import type { Artifact, Course, Session } from "./types";
 
 /**
- * 結案閘：每天的最終版簡報（講師上傳的版本）都齊了、所有場次都已結束，才能結案。
+ * 結案閘：每天的最終版簡報、含動手環節的天另外要有最終版學員手冊（講師上傳的版本）都齊了，
+ * 而且所有場次都已結束，才能結案。
  * 每個測試自己組一份兩天課程的快照，不依賴 fixture 示範的狀態。
  */
 
@@ -57,7 +58,27 @@ function world(artifacts: Artifact[], sessions: Session[] = [session("s1", PAST)
   };
 }
 const gate = (st: DemoState) => closingGate(st, getCourse(st, COURSE)!, st.now);
-const FULL = [...uploaded("slides", 1), ...uploaded("slides", 2)];
+const SLIDES = [...uploaded("slides", 1), ...uploaded("slides", 2)];
+const HANDBOOKS = [...uploaded("handbook", 1), ...uploaded("handbook", 2)];
+const FULL = [...SLIDES, ...HANDBOOKS];
+
+/** 把指定的天改成純講述（所有單元的 activity 為 null）；兩天課程的兩天原本都有動手環節 */
+const withLectureOnlyDays = (st: DemoState, days: number[]): DemoState => ({
+  ...st,
+  courses: st.courses.map((c) =>
+    c.id !== COURSE
+      ? c
+      : {
+          ...c,
+          blueprint: {
+            ...c.blueprint,
+            days: c.blueprint.days.map((d, i) =>
+              days.includes(i + 1) ? { ...d, slots: d.slots.map((s) => ({ ...s, units: s.units.map((u) => ({ ...u, activity: null })) })) } : d,
+            ),
+          },
+        },
+  ),
+});
 const run = (actions: DemoAction[], from: DemoState) => actions.reduce(demoReducer, from);
 
 describe("結案閘：缺哪一天的哪一種最終版", () => {
@@ -69,21 +90,23 @@ describe("結案閘：缺哪一天的哪一種最終版", () => {
   });
 
   it("只缺某一天的簡報時，只回報那一天的簡報", () => {
-    const g = gate(world([...uploaded("slides", 1), ...aiOnly("slides", 2)]));
+    const g = gate(world([...uploaded("slides", 1), ...aiOnly("slides", 2), ...HANDBOOKS]));
     expect(g.missingFinals).toEqual([{ kind: "slides", day: 2 }]);
     expect(g.canClose).toBe(false);
   });
 
   it("AI 產的版本沒改過也不算，要講師重新上傳", () => {
-    const g = gate(world([...aiOnly("slides", 1), ...uploaded("slides", 2)]));
+    const g = gate(world([...aiOnly("slides", 1), ...uploaded("slides", 2), ...HANDBOOKS]));
     expect(g.missingFinals).toEqual([{ kind: "slides", day: 1 }]);
   });
 
-  it("還沒產過簡報的天也算缺，依天數列出", () => {
+  it("還沒產過簡報與手冊的天也算缺，依天數列出，同一天簡報在前、手冊在後", () => {
     const g = gate(world([]));
     expect(g.missingFinals).toEqual([
       { kind: "slides", day: 1 },
+      { kind: "handbook", day: 1 },
       { kind: "slides", day: 2 },
+      { kind: "handbook", day: 2 },
     ]);
   });
 
@@ -92,19 +115,50 @@ describe("結案閘：缺哪一天的哪一種最終版", () => {
     expect(g.missingFinals).toEqual([]);
   });
 
-  it("最終版只看簡報：學員手冊有沒有上傳、課程大綱、講師準備單都不在結案閘裡", () => {
-    const g = gate(world([...FULL, ...aiOnly("handbook", 1)]));
-    expect(g.missingFinals).toEqual([]);
-    expect(gate(world([...uploaded("handbook", 1), ...uploaded("handbook", 2)])).missingFinals).toEqual([
+  it("有動手環節的天缺最終版學員手冊就不能結案；補上就可以", () => {
+    const missing = gate(world([...SLIDES, ...uploaded("handbook", 1), ...aiOnly("handbook", 2)]));
+    expect(missing.missingFinals).toEqual([{ kind: "handbook", day: 2 }]);
+    expect(missing.canClose).toBe(false);
+    const fixed = gate(world([...SLIDES, ...uploaded("handbook", 1), ...uploaded("handbook", 2)]));
+    expect(fixed.missingFinals).toEqual([]);
+    expect(fixed.canClose).toBe(true);
+  });
+
+  it("AI 產的手冊沒上傳不算最終版；講師上傳後 AI 又重產的版本不會讓它消失", () => {
+    expect(gate(world([...SLIDES, ...aiOnly("handbook", 1), ...uploaded("handbook", 2)])).missingFinals).toEqual([{ kind: "handbook", day: 1 }]);
+    const regenerated = art({ id: "handbook-1-3", kind: "handbook", day: 1, version: 3 });
+    expect(gate(world([...FULL, regenerated])).missingFinals).toEqual([]);
+  });
+
+  it("手冊的最終版不能代替簡報的最終版", () => {
+    expect(gate(world(HANDBOOKS)).missingFinals).toEqual([
       { kind: "slides", day: 1 },
       { kind: "slides", day: 2 },
     ]);
+  });
+
+  it("純講述的天不要求手冊；含動手環節的天仍要求", () => {
+    const st = (artifacts: Artifact[]) => withLectureOnlyDays(world(artifacts), [2]);
+    const g = gate(st([...SLIDES, ...uploaded("handbook", 1)]));
+    expect(g.missingFinals).toEqual([]);
+    expect(g.canClose).toBe(true);
+    expect(gate(st(SLIDES)).missingFinals).toEqual([{ kind: "handbook", day: 1 }]);
+  });
+
+  it("整門課程都是純講述時，只要簡報的最終版就能結案", () => {
+    const g = gate(withLectureOnlyDays(world(SLIDES), [1, 2]));
+    expect(g.missingFinals).toEqual([]);
     expect(g.canClose).toBe(true);
   });
 
   it("缺漏的文字寫出天與產物種類", () => {
-    const g = gate(world([...uploaded("slides", 1)]));
+    const g = gate(world([...uploaded("slides", 1), ...HANDBOOKS]));
     expect(closingGateReasons(g).join("；")).toContain("第 2 天簡報");
+  });
+
+  it("缺手冊時，文字寫出是第幾天的學員手冊", () => {
+    const g = gate(world([...SLIDES, ...uploaded("handbook", 1)]));
+    expect(closingGateReasons(g)).toEqual(["還缺最終版：第 2 天學員手冊"]);
   });
 });
 
@@ -147,7 +201,7 @@ describe("結案", () => {
   });
 
   it("閘沒過時結案被拒絕，狀態不變", () => {
-    const st = world([...uploaded("slides", 1)]);
+    const st = world([...uploaded("slides", 1), ...HANDBOOKS]);
     expect(demoReducer(st, { type: "course/close", courseId: COURSE })).toBe(st);
     expect(isCourseClosed(getCourse(st, COURSE)!)).toBe(false);
   });
