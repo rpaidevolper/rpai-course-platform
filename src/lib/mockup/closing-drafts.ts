@@ -1,8 +1,8 @@
 import { latestBlueprintVersion, moduleCardSkeleton, sessionEndsAt, sessionsOfCourse } from "./logic";
 import { finalArtifacts } from "./closing";
 import type { DemoState } from "./state";
-import { courseSpec, uniqueTags } from "./tags";
-import { moduleLabel } from "@/lib/blueprint/modules";
+import { courseSpec, courseTools, uniqueTags } from "./tags";
+import { getModule, moduleLabel } from "@/lib/blueprint/modules";
 import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId, UnitCard } from "./types";
 
 /**
@@ -18,6 +18,10 @@ import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId,
  * - 單元來源是某模組卡（目前骨架）裡的單元卡、而且沿用程度是「要改」→ 那個模組卡的新版本，每個這樣的單元一條改動，
  *   記下被換掉的骨架單元（replacesUnitCardId）與換上的新單元卡；接受時新版本的骨架就是上一版把它換掉。
  *   沒有骨架被改過的模組不提議升版。
+ *
+ * 標籤來源（#74）：課程配方 = 課程存的對象、產業、應用場景，加上由藍圖推得的工具（courseTools）；
+ * 單元卡（新的與更新的）= 對象與應用場景沿用課程，工具只給 A 模組的單元（取課程的工具），
+ * B 模組是不綁工具的方法，不給工具標籤。
  *
  * 「用過的配方 +1」不存計數：單元卡被哪些配方用過由配方推得（logic.ts 的 recipesUsingUnit），
  * 所以 +1 發生在新課程配方被接受、把單元卡寫進 unitIds 的那一刻。
@@ -37,9 +41,11 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
   const units = course.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units)).map((unit, i) => ({ unit, n: i + 1 }));
   const courseTags = {
     audiences: uniqueTags(course.audiences),
-    tools: uniqueTags(course.tools),
+    tools: courseTools(course),
     scenarios: uniqueTags(course.scenarios),
   };
+  // 單元卡的標籤：工具只給 A 模組的單元
+  const unitTagsFor = (module: ModuleId) => ({ ...courseTags, tools: getModule(module).kind === "A" ? courseTags.tools : [] });
 
   const newCards: UnitCard[] = [];
   const updates: Extract<DraftProposal, { kind: "update_unit_card" }>[] = [];
@@ -49,6 +55,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
   for (const { unit, n } of units) {
     const source = unit.source;
     const existing = source?.kind === "unit_card" ? st.unitCards.find((u) => u.id === source.id) : undefined;
+    const tags = unitTagsFor(unit.module);
     if (existing && unit.reuse === "reuse") {
       if (!cardIds.includes(existing.id)) {
         cardIds.push(existing.id);
@@ -56,9 +63,9 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
           kind: "update_unit_card",
           unitCardId: existing.id,
           addTags: {
-            audiences: courseTags.audiences.filter((a) => !existing.audiences.includes(a)),
-            tools: courseTags.tools.filter((t) => !existing.tools.includes(t)),
-            scenarios: courseTags.scenarios.filter((s) => !existing.scenarios.includes(s)),
+            audiences: tags.audiences.filter((a) => !existing.audiences.includes(a)),
+            tools: tags.tools.filter((t) => !existing.tools.includes(t)),
+            scenarios: tags.scenarios.filter((s) => !existing.scenarios.includes(s)),
           },
           // 單元卡還沒評、藍圖單元評過了（含純方法 na）才提議補上
           fillLevel: existing.level === null ? unit.level : null,
@@ -75,7 +82,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
       objective: unit.objective,
       method: unit.method,
       outcome: unit.outcome,
-      ...courseTags,
+      ...tags,
     };
     newCards.push(card);
     cardIds.push(card.id);

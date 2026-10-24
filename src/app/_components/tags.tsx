@@ -45,11 +45,22 @@ export function TagList({ tags, spec }: { tags: Partial<TagSet>; spec?: Spec | n
   );
 }
 
-/** 標籤的多選：四組各一排核取方塊，規格不在這裡挑（由總時數推得）。 */
-export function TagPicker({ value, onChange }: { value: TagSet; onChange: (next: TagSet) => void }) {
+/**
+ * 標籤的多選：各組一排核取方塊，規格不在這裡挑（由總時數推得）。
+ * 課程的標籤沒有「工具」（由藍圖推得），傳 groups 只列要挑的幾組，value 與 onChange 的型別就不含沒列的組。
+ */
+export function TagPicker<K extends keyof TagSet = keyof TagSet>({
+  value,
+  onChange,
+  groups = Object.keys(OPTIONS) as K[],
+}: {
+  value: Pick<TagSet, K>;
+  onChange: (next: Pick<TagSet, K>) => void;
+  groups?: readonly K[];
+}) {
   return (
     <div className="grid gap-3">
-      {TAG_GROUPS.map((g) => (
+      {TAG_GROUPS.filter((g): g is { key: K; label: string } => (groups as readonly string[]).includes(g.key)).map((g) => (
         <fieldset key={g.key}>
           <legend className="text-xs font-bold text-body-muted">{g.label}（可多選）</legend>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">

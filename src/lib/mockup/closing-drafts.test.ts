@@ -5,7 +5,8 @@ import { canExcludeUnit, moduleChangeText, pendingUsageIncrease } from "./draft-
 import { getModuleCard, getRecipe, getUnitCard, latestModuleCardVersion, recipeUnitCards, recipesUsingUnit } from "./logic";
 import { importProposals } from "./import-script";
 import { initialState, type DemoState } from "./state";
-import { recipeSpec } from "./tags";
+import { closingDrafts } from "./closing-drafts";
+import { courseTools, recipeSpec } from "./tags";
 import type { DraftProposal, KnowledgeDraft } from "./types";
 
 /**
@@ -82,9 +83,10 @@ describe("結案產生草稿", () => {
     const approval = updateDraftFor(st, "uc-a4-approval")!.proposal;
     // 單元卡原本是 財務、行政／Power Automate、Teams／文書；課程多了「客服與信件」
     expect(approval.addTags).toEqual({ audiences: [], tools: [], scenarios: ["客服與信件"] });
+    // B 模組（不綁工具的方法）的單元不補工具標籤
     expect(updateDraftFor(st, "uc-b3-golive")!.proposal.addTags).toEqual({
       audiences: ["行政"],
-      tools: ["Power Automate", "Microsoft Teams"],
+      tools: [],
       scenarios: ["客服與信件"],
     });
   });
@@ -184,7 +186,7 @@ describe("接受提案後，知識庫的變化", () => {
     const st = run([accept(d.id)], st0);
     const card = getUnitCard(st, "uc-b3-golive")!;
     expect(card.audiences).toEqual(["財務", "人資", "部門主管", "行政"]);
-    expect(card.tools).toEqual(["Power Automate", "Microsoft Teams"]);
+    expect(card.tools).toEqual([]);
     expect(card.scenarios).toEqual(["文書", "客服與信件"]);
     expect(card.id).toBe("uc-b3-golive");
     expect(st.unitCards).toHaveLength(st0.unitCards.length);
@@ -412,5 +414,50 @@ describe("審核的邊界：已經定案的單元", () => {
     // 還沒收進的新單元卡、待審更新草稿的既有單元卡可以排除
     expect(canExcludeUnit(st0, recipeDraft.id, unit.proposal.unitCard.id)).toBe(true);
     expect(canExcludeUnit(st0, recipeDraft.id, "uc-a4-approval")).toBe(true);
+  });
+});
+
+describe("結案草稿的標籤來源（#74）", () => {
+  const pilot = (st: DemoState) => st.courses.find((c) => c.id === COURSE)!;
+  const newCards = (drafts: KnowledgeDraft[]) =>
+    drafts.flatMap((d) => (d.proposal.kind === "new_unit_card" ? [d.proposal.unitCard] : []));
+
+  it("課程配方：課程的三組標籤，加上由藍圖推得的工具", () => {
+    const st = initialState();
+    const course = {
+      ...pilot(st),
+      audiences: ["品保" as const],
+      industries: ["製造" as const],
+      scenarios: ["簡報" as const],
+      blueprint: { ...pilot(st).blueprint, tools: [{ name: "Excel", plan: "paid" as const, confirmedWithClient: true }] },
+    };
+    const recipe = closingDrafts(st, course).flatMap((d) => (d.proposal.kind === "new_course_recipe" ? [d.proposal.recipe] : []))[0];
+    expect(recipe).toMatchObject({ audiences: ["品保"], tools: ["Excel"], industries: ["製造"], scenarios: ["簡報"] });
+  });
+
+  it("新單元卡：對象與場景沿用課程；A 模組的單元有工具，B 模組的單元沒有", () => {
+    const st = initialState();
+    const base = pilot(st);
+    const blueprint = structuredClone(base.blueprint);
+    // 把下午第一個單元（新做的 A4）換成新做的 B3
+    const unit = blueprint.days[0].slots[1].units[0];
+    blueprint.days[0].slots[1].units[0] = { ...unit, module: "B3", title: "資料分級討論", level: "na" };
+    const cards = newCards(closingDrafts(st, { ...base, blueprint }));
+    const a = cards.find((c) => c.title === MODIFIED_TITLE)!;
+    const b = cards.find((c) => c.title === "資料分級討論")!;
+    expect(a.moduleId).toBe("A4");
+    expect(a.tools).toEqual(courseTools(base));
+    expect(a.tools).toEqual(["Power Automate", "Microsoft Teams"]);
+    expect(b.moduleId).toBe("B3");
+    expect(b.tools).toEqual([]);
+    for (const c of [a, b]) expect(c).toMatchObject({ audiences: base.audiences, scenarios: base.scenarios });
+  });
+
+  it("工具來自藍圖，不是課程上的舊標籤：藍圖換了工具，草稿跟著換", () => {
+    const st = initialState();
+    const base = pilot(st);
+    const blueprint = { ...base.blueprint, tools: [{ name: "Claude Code", plan: "paid" as const, confirmedWithClient: true }] };
+    const drafts = closingDrafts(st, { ...base, blueprint });
+    for (const c of newCards(drafts)) expect(c.tools).toEqual(c.moduleId.startsWith("A") ? ["Claude Code"] : []);
   });
 });

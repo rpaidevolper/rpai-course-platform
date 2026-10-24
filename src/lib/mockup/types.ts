@@ -254,8 +254,15 @@ export interface CourseModuleSource {
   version: number;
 }
 
-/** 課程的標籤是開課時挑的（預設帶入產業素材包的標籤）；規格不存，由藍圖總時數推得（tags.ts 的 courseSpec）。 */
-export interface Course extends TagSet {
+/** 課程自己存的三組標籤：對象、產業、應用場景（藍圖沒有對應的結構化欄位）。工具不存，見 Course。 */
+export type CourseTagSet = Omit<TagSet, "tools">;
+
+/**
+ * 課程的對象、產業、應用場景是開課時挑的（預設帶入產業素材包的標籤），之後可以在課程頁改。
+ * 工具標籤不存：由藍圖的 tools 推得（tags.ts 的 courseTools），藍圖是工具的唯一來源。
+ * 規格也不存，由藍圖總時數推得（tags.ts 的 courseSpec）。
+ */
+export interface Course extends CourseTagSet {
   id: string;
   projectId: string;
   title: string;
