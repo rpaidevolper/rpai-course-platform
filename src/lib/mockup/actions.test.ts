@@ -245,8 +245,21 @@ describe("從零開一門課到準備好", () => {
     expect(units.map((u) => u.source)).toEqual(
       moduleCardSkeleton(card).map((id) => ({ kind: "unit_card", id, version: null, unit: getUnitCard(st, id)!.title })),
     );
-    expect(units.every((u) => u.reuse === "modify" && u.module === "A1" && u.level === null)).toBe(true);
+    expect(units.every((u) => u.reuse === "modify" && u.module === "A1")).toBe(true);
+    // 層級從單元卡帶入：已評的照抄，單元卡是 na 仍是 na
+    expect(units.map((u) => u.level)).toEqual(moduleCardSkeleton(card).map((id) => getUnitCard(st, id)!.level));
+    expect(units.map((u) => u.level)).toEqual(["L1", "L1", "L3"]);
     expect(bp.days[0].theme).toBe("A1 通用生成 AI");
+  });
+
+  it("單元卡是未評（null）時，起始藍圖的單元也是未評；純方法的單元卡（na）帶成 na", () => {
+    const st = initialState();
+    const card = getModuleCard(st, "A1")!;
+    const [first, second] = moduleCardSkeleton(card);
+    const unitCards = st.unitCards.map((u) => (u.id === first ? { ...u, level: null } : u.id === second ? { ...u, level: "na" as const } : u));
+    const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, moduleCards: [card], unitCards });
+    const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
+    expect(units.map((u) => u.level)).toEqual([null, "na", "L3"]);
   });
 
   it("模組卡的骨架單元查不到單元卡時退回預設單元，且不記來源", () => {

@@ -44,7 +44,7 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 `minutes`（預設 180，不另排休息）與 `units`（單元）；單元有 `title`、`minutes`、`objective`（學習目標）、
 `method`（教學方式）、`outcome`（成果）、`keyPoints`、`activity`（動手環節，`null` 代表純講述單元）、
 `elements`、`carriesFrom`（承接自哪個較早單元的標題，沒有則 `null`）、`module`（單元所屬的模組：A1–A5 是工具環境、B1–B4 是方法）、
-`level`（應用層級 L1–L5，由問答、產出、工作流、助理到自動化；純方法、沒有用 AI 做事的單元為 `null`）、
+`level`（應用層級 L1–L5，由問答、產出、工作流、助理到自動化；評過了、但是純方法、沒有用 AI 做事的單元為 `"na"`；還沒評為 `null`，兩者不同，`null` 會被列進準備度）、
 `source`（出自知識庫哪張單元卡、或哪門過去課程的哪個單元：`{ kind: "unit_card" | "course", id, version, unit }`；
 `unit_card` 的 `version` 為 `null`，`course` 的 `version` 是該課程藍圖的版本；新做則 `source` 為 `null`）、`reuse`（沿用程度：`reuse` 沿用、`modify` 要改、`new` 新做）。
 `reuse` 是 `modify` 或 `new` 的單元，產檔時要依藍圖重寫，不要照搬來源的舊內容。總時長是各時段 `minutes` 的加總，

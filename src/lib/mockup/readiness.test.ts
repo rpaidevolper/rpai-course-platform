@@ -107,6 +107,19 @@ describe("準備度：要改或新做的單元", () => {
   });
 });
 
+describe("準備度：未評應用層級的單元", () => {
+  it("列出還沒評的單元；純方法（na）與已評的不算", () => {
+    const [item] = ofKind(items(session("s-gas-1020")), "units_unrated");
+    expect(item).toEqual({ kind: "units_unrated", units: ["交接與維護"] });
+    expect(readinessText(item)).toBe("有 1 個單元還沒評應用層級：交接與維護");
+  });
+
+  it("未評的單元歸在藍圖，每個單元都評過時不列", () => {
+    expect(readinessGroups(items(session("s-gas-1020"))).find((g) => g.source === "blueprint")?.items.map((i) => i.kind)).toContain("units_unrated");
+    expect(ofKind(items(session("s-pa-1029")), "units_unrated")).toEqual([]);
+  });
+});
+
 describe("準備度：需求對照缺口", () => {
   it("⚠️ 與 ❌ 的需求條目都列出，依需求對照的順序", () => {
     const [item] = ofKind(items(session("s-ci-1022")), "requirement_gaps");

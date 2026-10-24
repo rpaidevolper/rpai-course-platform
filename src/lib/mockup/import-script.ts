@@ -34,6 +34,7 @@ const unitCardOf = (id: string, moduleId: ModuleId, title: string): UnitCard => 
   moduleId,
   title,
   minutes: 60,
+  level: null,
   objective: `練習「${title}」的做法`,
   method: "講述＋動手練習",
   outcome: "一份可以帶回工作的成果",

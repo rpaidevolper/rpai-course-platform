@@ -117,6 +117,19 @@ describe("BlueprintSchema", () => {
     expect(() => BlueprintSchema.parse(withUnit({ module: undefined }))).toThrow();
   });
 
+  it("單元的應用層級可為 L1–L5、na（不適用，純方法）或 null（未評）", () => {
+    const bp = sampleBlueprint();
+    const u = bp.days[0].slots[0].units[0];
+    for (const level of ["L1", "L2", "L3", "L4", "L5", "na", null]) {
+      const days = [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, level }] }] }];
+      expect(BlueprintSchema.parse({ ...bp, days }).days[0].slots[0].units[0].level).toBe(level);
+    }
+    for (const level of ["L0", "L6", "NA", "n/a", ""]) {
+      const days = [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, level }] }] }];
+      expect(() => BlueprintSchema.parse({ ...bp, days })).toThrow();
+    }
+  });
+
   it("來源種類只有單元卡與課程：框架來源不再通過", () => {
     const bp = sampleBlueprint();
     const u = bp.days[0].slots[0].units[0];
@@ -213,6 +226,14 @@ describe("checkBlueprint", () => {
 
   it("沿用的單元不列出", () => {
     expect(checkBlueprint(sampleBlueprint()).map((i) => i.kind)).not.toContain("unit_needs_work");
+  });
+
+  it("未評的單元（level 為 null）列出位置；已評與不適用（na）的不列", () => {
+    const bp = sampleBlueprint();
+    bp.days[0].slots[1].units[0].level = null;
+    bp.days[1].slots[0].units[0].level = "na";
+    expect(checkBlueprint(bp)).toEqual([{ kind: "unit_unrated", day: 1, slot: 2, unit: "檢查與修正" }]);
+    expect(checkBlueprint(sampleBlueprint()).map((i) => i.kind)).not.toContain("unit_unrated");
   });
 
   it("待確認事項逐條列出，帶著對象與受影響單元", () => {
