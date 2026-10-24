@@ -59,7 +59,11 @@ claude plugin install mattpocock-skills@mattpocock
 - 動模組介面／切分層時，用 `codebase-design` 的詞彙（deep module、seam），不要自創「service」「component」等說法。
 - merge / rebase 衝突一律解完，不要 `--abort`。先讀衝突兩邊原始的 commit、PR 與 issue，弄清楚各自要達成什麼，再合成同時保留兩邊意圖的結果，不要整段選 ours／theirs 了事；解完跑過 `pnpm lint && pnpm typecheck && pnpm test` 再繼續 merge / rebase。這不需要專用 skill，直接處理。
 
-`/to-spec`、`/to-tickets`、`triage` 讀的 issue tracker 設定已經建好，見下方「Agent skills」，不需要再跑 `/setup-matt-pocock-skills`。
+`/to-spec`、`/to-tickets`、`triage` 讀的 issue tracker 設定已經建好（見下方「Agent skills」與 `docs/agents/`），平常不必再跑 `/setup-matt-pocock-skills`。例外是 mattpocock-skills 的 setup 範本改版時：
+
+- 判斷方式是比對範本，不要只看版號或 CHANGELOG：雲端 session 每次都從 `mattpocock/skills` 的最新 commit 安裝（`.claude/hooks/session-start.sh`），範本改了版號不一定跟著變。`docs/agents/` 三份檔案沒有自訂，是 setup 範本原樣；它們跟已安裝 plugin 的 `skills/engineering/setup-matt-pocock-skills/` 裡的範本（`issue-tracker-github.md` 對應 `issue-tracker.md`）不一致，就代表該重跑。
+- 這個 skill 只能由人輸入指令觸發，agent 不能自己跑；發現需要時提醒使用者。
+- 重跑會改寫 `docs/agents/*.md` 與下方「Agent skills」區塊。提交前看過差異，保留本 repo 自己的寫法（例如「Agent skills」的中文說明），照一般流程開 issue 與 PR。
 
 ### 4. 內容生產流程——維持原有 RPAI 鏈，不要換
 
