@@ -110,7 +110,7 @@
 
 ### F1 對話（後台）
 
-- 模型 `claude-opus-5`，adaptive thinking，`client.messages.stream`。
+- 預設模型 `claude-opus-5-5`，adaptive thinking，`client.messages.stream`。
 - System prompt 順序：教練角色設定（固定，`cache_control`）→ 目前最新藍圖 JSON（若有，`cache_control`）。
 - 對話紀錄以 Anthropic content blocks 原樣存 `messages.content`，送回 API 時不重組。
 - 一門課的藍圖對話只有一個 conversation（`purpose=blueprint`）。

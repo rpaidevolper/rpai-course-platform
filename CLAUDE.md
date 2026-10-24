@@ -103,7 +103,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 ### 技術棧
 
 - Next.js 16（App Router、`src/` 目錄）+ TypeScript strict + Tailwind v4
-- Anthropic TypeScript SDK `@anthropic-ai/sdk`，模型 `claude-opus-5`（後台的藍圖對話與抽藍圖）
+- Anthropic TypeScript SDK `@anthropic-ai/sdk`，預設模型 `claude-opus-5-5`（後台的藍圖對話與抽藍圖）
 - MCP server：`mcp-handler` + `@modelcontextprotocol/server` v2，掛在 `src/app/api/mcp/route.ts`
 - Supabase（Postgres + Auth + Storage），schema 在 `supabase/migrations/`
 - zod v4（藍圖 schema、結構化輸出、MCP 工具輸入）、vitest
@@ -146,7 +146,7 @@ docs/                 架構與決策記錄
 
 動任何 `src/lib/claude/` 程式前，先載入 `claude-api` skill 確認 API 形狀，不要憑記憶寫。
 
-- 模型由每場對話的 `conversations.model` 決定（清單與預設在 `src/lib/claude/models.ts`），呼叫端一律把 `ModelId` 傳進來，不要寫死模型字串。各模型參數支援不同（例如 `claude-haiku-4-5` 不支援 adaptive thinking），新增參數前先確認清單內每個模型都吃得下。
+- 模型由每場對話的 `conversations.model` 決定（清單與預設在 `src/lib/claude/models.ts`），呼叫端一律把 `ModelId` 傳進來，不要寫死模型字串。清單一律用各系列的最新版（Haiku 用最新版 Haiku，目前是 `claude-haiku-5-5`）。各模型參數支援不同（例如 effort 的預設值不一樣），新增參數前先確認清單內每個模型都吃得下。
 - thinking 預設 adaptive（可省略參數），用 `output_config.effort` 控制深度。**不要**用 `budget_tokens`、`temperature`，**不要**做 assistant prefill——這些在現行模型都會回 400。
 - 對話一律 streaming（`client.messages.stream`）；非串流 `max_tokens` 約 16000，串流約 64000。
 - 從對話抽藍圖用 `client.messages.parse` + `zodOutputFormat(BlueprintSchema)`；schema 只有一份，在 `src/lib/blueprint/schema.ts`，不要另外手刻 JSON schema。

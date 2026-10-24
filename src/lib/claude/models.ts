@@ -5,9 +5,9 @@ import { z } from "zod";
  * 刻意不依賴 Anthropic SDK，前端下拉選單可以直接 import。
  */
 export const MODEL_OPTIONS = [
-  { id: "claude-opus-5", label: "Claude Opus 5" },
+  { id: "claude-opus-5-5", label: "Claude Opus 5.5" },
   { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5" },
-  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
+  { id: "claude-haiku-5-5", label: "Claude Haiku 5.5" },
   { id: "claude-fable-5-1", label: "Claude Fable 5.1" },
 ] as const;
 
@@ -19,4 +19,4 @@ const MODEL_IDS = MODEL_OPTIONS.map((m) => m.id) as [ModelId, ...ModelId[]];
 export const ModelIdSchema = z.enum(MODEL_IDS);
 
 /** 新對話的預設模型，對應 `conversations.model` 的資料庫預設值。 */
-export const DEFAULT_MODEL: ModelId = "claude-opus-5";
+export const DEFAULT_MODEL: ModelId = "claude-opus-5-5";
