@@ -156,7 +156,7 @@ docs/                 架構與決策記錄
 ### MCP 與 plugin 規範
 
 - 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，`plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
-- 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。
+- 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）
 - 檔案不走 MCP 傳：`request_upload` 給 signed URL，plugin 用 curl 上傳，再 `complete_job`。
 - `plugin/skills/rpai-*` 是從帳號層 skill 複製來的；改內容以 repo 為準，再同步回帳號層。
 
@@ -165,6 +165,7 @@ docs/                 架構與決策記錄
 - `blueprints.content` 寫入前必須通過 `BlueprintSchema.parse()`。
 - 新增欄位 = 新增一個 migration 檔（`supabase/migrations/NNNN_*.sql`），並同步更新 zod schema 與 `docs/architecture.md`。
 - 所有表都開 RLS；資料只有 `owner_id` 本人可讀寫。
+  - **目標狀態**（[ADR 0004](docs/adr/0004-one-shared-workspace-for-all-instructors.md)）：全團隊共用一個工作區，RLS 與 MCP 都改以工作區過濾，用 service role 時仍要自己加工作區條件。schema v2 實作前，現行程式仍以 `owner_id` 過濾，這條與 MCP 規範的 owner 條件照舊；不要提前改 MCP 或 RLS。
 - Migration 必須向下相容：合併後 CI 會先把 migration 套到 production、再部署程式碼，所以舊版程式碼會短暫面對新 schema。新增欄位可以；移除或改名要拆成兩個 PR（先上線不再使用它的程式碼，下一個 PR 才移除）。有破壞性的 migration 要在 PR 說明標明。
 
 ### 環境變數
