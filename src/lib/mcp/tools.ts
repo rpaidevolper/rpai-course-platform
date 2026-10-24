@@ -98,7 +98,7 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
     {
       title: "取得上傳網址",
       description:
-        "替已認領的工作取得一次性的 signed upload URL。拿到後用 curl 上傳：curl -sS -f -X PUT -H \"Content-Type: <content_type>\" --data-binary @<檔案> \"<upload_url>\"，再呼叫 rpai_platform_complete_job。只接受 .pptx / .docx / .pdf / .md。",
+        "替已認領的工作取得一次性的 signed upload URL。拿到後用 curl 上傳：curl -sS -f -X PUT -H \"Content-Type: <content_type>\" --data-binary @<檔案> \"<upload_url>\"，再呼叫 rpai_platform_complete_job。只接受 .pptx / .docx / .pdf / .md / .html。",
       inputSchema: z.object({
         job_id: JobId,
         filename: z.string().min(1).max(200).describe("要上傳的檔名（含副檔名），例如 週報課_簡報.pptx"),
@@ -107,7 +107,7 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
     },
     async ({ job_id, filename }, ctx) => {
       const contentType = contentTypeFor(filename);
-      if (!contentType) return fail("只接受 .pptx / .docx / .pdf / .md，請確認檔名副檔名。");
+      if (!contentType) return fail("只接受 .pptx / .docx / .pdf / .md / .html，請確認檔名副檔名。");
       const result = await store.createUploadUrl(ownerIdFrom(ctx.http?.authInfo), job_id, filename);
       if (!result) return fail("工作不存在、不屬於你，或還沒認領（要先 rpai_platform_claim_job）。");
       return ok({ ...result, content_type: contentType, expires_in_seconds: 7200 });

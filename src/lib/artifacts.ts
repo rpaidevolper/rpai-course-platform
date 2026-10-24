@@ -10,11 +10,26 @@ export const ARTIFACT_KIND_LABELS: Record<ArtifactKind, string> = {
   handbook: "學員手冊",
 };
 
+/**
+ * 各產物種類上傳的主檔副檔名（ADR 0005）。手冊是 HTML 單檔（一天一份，只給含動手環節的天）。
+ * 內部講師準備單留在本機，不上傳。
+ */
+const ARTIFACT_EXTENSIONS: Record<ArtifactKind, string> = {
+  outline: ".docx",
+  slides: ".pptx",
+  handbook: ".html",
+};
+
+export function artifactExtension(kind: ArtifactKind): string {
+  return ARTIFACT_EXTENSIONS[kind];
+}
+
 const CONTENT_TYPES: Record<string, string> = {
   ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".pdf": "application/pdf",
   ".md": "text/markdown",
+  ".html": "text/html",
 };
 
 /** 允許上傳的副檔名對應 content type；不在清單裡回 null，讓呼叫端拒絕。 */
@@ -40,4 +55,12 @@ export function buildStoragePath(parts: {
   filename: string;
 }): string {
   return [parts.ownerId, parts.courseId, parts.artifactId, sanitizeFilename(parts.filename)].join("/");
+}
+
+/**
+ * 產物下載用的 signed URL 選項，傳給 storage `createSignedUrl(path, expiresIn, options)`。
+ * 帶 `download` 檔名會讓回應是 `Content-Disposition: attachment`，上傳的 HTML 不會在平台網域內渲染（ADR 0005）。
+ */
+export function artifactDownloadOptions(storagePath: string): { download: string } {
+  return { download: sanitizeFilename(storagePath) };
 }

@@ -18,7 +18,7 @@
 │ 抽藍圖（結構化輸出）→ blueprints 新版本       │   │   plugin                               │
 │ 排產檔工作 → artifacts(status=pending)        │◄──┤ MCP：list_jobs / claim_job /           │
 │ MCP server /api/mcp（權杖驗證、owner 過濾）    │   │      request_upload / complete_job     │
-│ Supabase Storage 收成品、簽 URL 給講師下載     │◄──┤ 本機用 rpai-* skill 產 pptx/docx       │
+│ Supabase Storage 收成品、簽 URL 給講師下載     │◄──┤ 本機用 rpai-* skill 產檔             │
 └──────────────────────────────────────────────┘   └────────────────────────────────────────┘
 ```
 
@@ -26,7 +26,7 @@
 
 ## 3. 資料模型
 
-> **名詞正在改版。** 產品模組已改成「專案 → 課程 → 場次」，並新增發布、學員入口與知識庫（名詞見 `GLOSSARY.md`，取捨見 [ADR 0002](adr/0002-each-course-owns-its-blueprint.md)）。下圖仍是目前 schema 的樣子：其中的 `Course` 指「一場課」，對應新名詞的「課程」加上「場次」。schema 會等設計稿（#22）對齊後另外設計。領域模型 v2（多天課程、課綱討論、逐頁腳本與定稿、客戶文件與需求條目）見 #25 與 [ADR 0003](adr/0003-page-script-as-upstream-artifact.md)。領域模型 v3（知識庫改成模組框架、模組卡、單元卡、課程配方與產業素材包；課程結案回存；全團隊共用一個工作區）見 #53、[ADR 0002 的修訂](adr/0002-each-course-owns-its-blueprint.md) 與 [ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)。
+> **名詞正在改版。** 產品模組已改成「專案 → 課程 → 場次」，並新增發布、學員入口與知識庫（名詞見 `GLOSSARY.md`，取捨見 [ADR 0002](adr/0002-each-course-owns-its-blueprint.md)）。下圖仍是目前 schema 的樣子：其中的 `Course` 指「一場課」，對應新名詞的「課程」加上「場次」。schema 會等設計稿（#22）對齊後另外設計。領域模型 v2（多天課程、課綱討論、定稿、客戶文件與需求條目）見 #25 與 [ADR 0003](adr/0003-page-script-as-upstream-artifact.md)；其中「逐頁腳本是產物」已由 [ADR 0005](adr/0005-page-script-merged-into-slides.md) 取代：講稿寫在簡報的 speaker notes，學員手冊的上游是該天的簡報。領域模型 v3（知識庫改成模組框架、模組卡、單元卡、課程配方與產業素材包；課程結案回存；全團隊共用一個工作區）見 #53、[ADR 0002 的修訂](adr/0002-each-course-owns-its-blueprint.md) 與 [ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)。
 
 ```
 Course（一場課）
@@ -61,16 +61,18 @@ zod schema：`src/lib/blueprint/schema.ts`。DB schema：`supabase/migrations/`�
 講師在自己的 Claude Code 說「有沒有待生成的教材」（rpai-platform-runner skill）
   → rpai_platform_list_jobs           列出 pending
   → rpai_platform_claim_job           pending→generating，回傳藍圖 JSON + 講師指示
-  → 本機寫 <課程>_教學藍圖.md，跑對應的 rpai-* skill 產出 .pptx / .docx
+  → 本機寫 <課程>_教學藍圖.md，跑對應的 rpai-* skill 產出 .pptx / .docx / .html
   → rpai_platform_request_upload      拿 Supabase Storage 的 signed upload URL
   → curl PUT 上傳
   → rpai_platform_complete_job        generating→ready，記 storage_path
   （失敗 → rpai_platform_fail_job）
 
-講師回後台下載（後台簽 download URL）
+講師回後台下載（後台簽 download URL，帶 `download` 選項 → attachment）
 ```
 
-kind 對應：`outline` → `rpai-course-outline`（客戶版 .docx）；`slides` → `rpai-pptx-workflow`（.pptx）；`handbook` → `rpai-course-content` 展開內容後用 `docx` skill 排成學員手冊。
+kind 對應：`outline` → `rpai-course-outline`（客戶版 .docx）；`slides` → `rpai-pptx-workflow`（.pptx）；`handbook` → `rpai-course-content`，產出 HTML 單檔學員實作手冊，一天一份，只給含動手環節的天（上游是該天的簡報；v1 只提供下載，不在平台網域內渲染）。簡報的逐頁講稿寫在 speaker notes，不是獨立產物（ADR 0005）。
+
+> 範圍備註：真實 schema 的「按天產出」（`day` 欄位）與遺留路徑 `src/lib/claude/generate-artifact.ts`（仍產 .docx）留給後端母規格 #78。
 
 MCP 工具定義在 `src/lib/mcp/`，plugin 端流程在 `plugin/skills/rpai-platform-runner/SKILL.md`，兩邊的工具名與參數要同步。
 

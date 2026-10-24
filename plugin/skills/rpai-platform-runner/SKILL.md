@@ -62,10 +62,10 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 | kind | 做法 | 上傳的檔案 |
 |---|---|---|
 | `outline` | 用 `rpai-course-outline`，讀教學藍圖、不重問 | 客戶版課程大綱 `.docx`（內部講師準備單也產，但留在本機，告知路徑即可） |
-| `slides` | 用 `rpai-pptx-workflow`（內部呼叫 `pptx` skill）。敘事模型直接用藍圖的 `narrative.model`，**不要再讓使用者挑**，除非使用者主動要換 | `.pptx` |
-| `handbook` | 先用 `rpai-course-content` 展開各單元內容，再用 `docx` skill 依 `rpai-brand-guidelines` 排成學員手冊：課前準備、每單元重點整理與練習欄位、帶走工具清單、延伸資源 | 學員手冊 `.docx` |
+| `slides` | 用 `rpai-pptx-workflow`（內部呼叫 `pptx` skill）。敘事模型直接用藍圖的 `narrative.model`，**不要再讓使用者挑**，除非使用者主動要換。逐頁講稿、互動提示與示範指令寫在 **speaker notes**，不另出逐頁腳本文件；逐頁結構在產簡報前的確認閘（簡報大綱）跟使用者確認 | `.pptx` |
+| `handbook` | 用 `rpai-course-content` 產出學員實作手冊，**HTML 單檔、一天一份**，只給含動手環節（藍圖裡 `activity` 不是 `null`）的天；純講述的天不產手冊，也不以講義取代。上游是那一天的簡報（`.pptx`），前提仍只讀藍圖。`rpai-course-content` 不產逐頁腳本 | 學員手冊 `.html`（每個動手天一份，檔名帶天數，例如 `<課程>_學員手冊_Day1.html`） |
 
-品牌規範一律讀 `rpai-brand-guidelines`。產出前後照各 skill 的自檢清單逐頁檢查。
+手冊是 HTML 檔，平台 v1 只提供下載，不在平台網域內渲染。品牌規範一律讀 `rpai-brand-guidelines`。產出前後照各 skill 的自檢清單逐頁檢查。
 
 ### 4. 上傳成品
 
