@@ -4,7 +4,7 @@ status: accepted
 
 # PoC 階段雲端 session 直接共用正式環境資料庫
 
-Claude Code on the web 的雲端 session 要用資料庫時，原本只能在容器裡手動啟動 Docker 與本機 Supabase。本機 Supabase 要下載約 7.5 GB 映像檔，雲端容器每個新 session 都可能要重新下載，下載來源也有額度限制（實測遇過 `Data limit exceeded`），所以自動啟動不可靠（#49 已關閉）。現在是 PoC 階段，使用者只有團隊自己，所以雲端 session 直接連正式環境的 Supabase，金鑰設在 claude.ai 的雲端環境設定，不進 repo。這推翻了部署設計（`docs/specs/2026-10-02-production-deployment-design.md`）裡「開發者預設不拿 production 金鑰」的部分；本機與 Dev Container 照舊用本機 Supabase。
+Claude Code on the web 的雲端 session 要用資料庫時，原本只能在容器裡手動啟動 Docker 與本機 Supabase。本機 Supabase 要下載約 7.5 GB 映像檔，雲端容器每個新 session 都可能要重新下載，下載來源也有額度限制（實測遇過 `Data limit exceeded`），所以自動啟動不可靠（#49 已關閉）。現在是 PoC 階段，使用者只有團隊自己，所以雲端 session 直接連正式環境的 Supabase，金鑰設在 claude.ai 的雲端環境設定，不進 repo。這推翻了部署設計（`docs/specs/2026-10-02-production-deployment-design.md`）裡「開發者預設不拿 production 金鑰」與「所有人共用同一個 DB 不採用」的部分。該文件列的三個理由中，migration 互相弄壞靠「migration 只由 CI 在合併後套用」避開；資料互相污染、繞過 RLS 的 service role key 外流這兩項，PoC 階段刻意接受。本機與 Dev Container 照舊用本機 Supabase。
 
 ## Considered Options
 
