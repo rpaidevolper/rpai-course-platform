@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BlueprintSchema } from "@/lib/blueprint/schema";
+import { BlueprintSchema, plannedMinutes, totalMinutes } from "@/lib/blueprint/schema";
 import { addMs, demoReducer, newSessionDay, starterBlueprint, type DemoAction } from "./actions";
 import {
   generationGate,
@@ -152,7 +152,7 @@ describe("從零開一門課到準備好", () => {
         status: "negotiating",
         clientContext: { company: "D 公司", industry: "零售", goal: "門市主管會用 AI 回覆客訴", industryPackId: "ip-manufacturing", itConstraints: ["只能用瀏覽器"], brand: null },
       },
-      { type: "course/create", id: "c-x", projectId: "p-x", title: "Claude 門市入門", moduleId: "A1", industryPackId: "ip-manufacturing" },
+      { type: "course/create", id: "c-x", projectId: "p-x", title: "Claude 門市入門", moduleIds: ["A1", "B2"], totalHours: 6, industryPackId: "ip-manufacturing" },
       {
         type: "session/create",
         id: "s-x",
@@ -162,7 +162,7 @@ describe("從零開一門課到準備好", () => {
       },
     ]);
     const course = getCourse(st, "c-x")!;
-    expect(course.source).toEqual({ moduleIds: ["A1"], industryPackId: "ip-manufacturing" });
+    expect(course.source).toEqual({ moduleIds: ["A1", "B2"], industryPackId: "ip-manufacturing" });
     expect(course.blueprint.constraints).toContain("只能用瀏覽器");
     const kinds = () => readiness(st, getSession(st, "s-x")!).map((i) => i.kind);
     expect(kinds()).toEqual(expect.arrayContaining(["open_items", "missing_elements", "units_need_work", "artifact_missing", "no_materials", "no_links", "venue_unset", "unpublished"]));
@@ -200,7 +200,7 @@ describe("從零開一門課到準備好", () => {
   });
 
   it("沒有模組時從零開始：來源為 null、單元都是新做，預設歸在 B1 流程診斷", () => {
-    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleId: null, industryPackId: null }]);
+    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleIds: [], totalHours: 6, industryPackId: null }]);
     const c = getCourse(st, "c-z")!;
     expect(c.source).toBeNull();
     expect(c.blueprint.days[0].slots[0].units.every((u) => u.reuse === "new" && u.source === null && u.module === "B1" && u.level === null)).toBe(true);
@@ -212,7 +212,7 @@ describe("從零開一門課到準備好", () => {
     const bp = starterBlueprint({
       title: "t",
       clientContext: st.projects[0].clientContext,
-      moduleCard: card,
+      moduleCards: [card],
       unitCards: st.unitCards,
       industryPack: getIndustryPack(st, "ip-manufacturing"),
     });
@@ -227,14 +227,14 @@ describe("從零開一門課到準備好", () => {
 
   it("模組卡的骨架單元查不到單元卡時退回預設單元，且不記來源", () => {
     const st = initialState();
-    const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, moduleCard: getModuleCard(st, "A2")!, unitCards: [] });
+    const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, moduleCards: [getModuleCard(st, "A2")!], unitCards: [] });
     const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
     expect(units.map((u) => u.title)).toEqual(["開場與需求盤點"]);
     expect(units.every((u) => u.reuse === "new" && u.source === null && u.module === "A2")).toBe(true);
   });
 
   it("course/create 帶模組：單元依骨架出生，來源記下模組與產業素材包", () => {
-    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleId: "A4", industryPackId: "ip-finance-approval" }]);
+    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleIds: ["A4"], totalHours: 6, industryPackId: "ip-finance-approval" }]);
     const c = getCourse(st, "c-z")!;
     expect(c.source).toEqual({ moduleIds: ["A4"], industryPackId: "ip-finance-approval" });
     expect(c.blueprintHistory[0].note).toBe("從模組卡「A4 雲端自動化」v2 複製出生");
@@ -242,6 +242,33 @@ describe("從零開一門課到準備好", () => {
     expect(units.map((u) => u.title)).toEqual(["雲端流程上手", "表單觸發器", "逾期提醒", "寄送前的安全網"]);
     expect(units.every((u) => u.reuse === "modify" && u.module === "A4" && u.source?.kind === "unit_card")).toBe(true);
     expect(units.map((u) => u.source?.id)).toEqual(["uc-a4-cloud-first", "uc-a4-form-trigger", "uc-a4-overdue", "uc-a4-safety-net"]);
+  });
+
+  it("選多個模組：單元依模組順序（A 在前、B 在後）接續各模組卡的骨架，來源是對應單元卡、module 是所屬模組", () => {
+    // 刻意亂序傳入，順序以模組代號為準，不看選的先後
+    const st = run([{ type: "course/create", id: "c-m", projectId: "p-a-2026", title: "多模組", moduleIds: ["B1", "A4", "A1"], totalHours: 6, industryPackId: "ip-finance-approval" }]);
+    const c = getCourse(st, "c-m")!;
+    expect(c.source).toEqual({ moduleIds: ["A1", "A4", "B1"], industryPackId: "ip-finance-approval" });
+    const units = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
+    const expectedIds = (["A1", "A4", "B1"] as const).flatMap((m) => getModuleCard(st, m)!.skeletonUnitIds);
+    expect(units.map((u) => u.source)).toEqual(expectedIds.map((id) => ({ kind: "unit_card", id, version: null, unit: getUnitCard(st, id)!.title })));
+    expect(units.map((u) => u.module)).toEqual(expectedIds.map((id) => getUnitCard(st, id)!.moduleId));
+    expect(c.blueprintHistory[0].note).toBe("從模組卡「A1 通用生成 AI」v2、「A4 雲端自動化」v2、「B1 流程診斷」v1 複製出生");
+  });
+
+  it("總時數決定藍圖總長：藍圖的總分鐘數就是所選時數（不另存規格）", () => {
+    for (const hours of [2, 3, 6, 12]) {
+      const st = run([{ type: "course/create", id: "c-h", projectId: "p-a-2026", title: "t", moduleIds: ["A1", "A4", "B1"], totalHours: hours, industryPackId: null }]);
+      const bp = getCourse(st, "c-h")!.blueprint;
+      expect(totalMinutes(bp)).toBe(hours * 60);
+      // 每個時段的單元分鐘數加總等於時段長度
+      expect(bp.days.flatMap((d) => d.slots).every((s) => plannedMinutes(s) === s.minutes)).toBe(true);
+    }
+  });
+
+  it("沒有選模組時從零開始，總時數仍照所選", () => {
+    const st = run([{ type: "course/create", id: "c-s", projectId: "p-a-2026", title: "t", moduleIds: [], totalHours: 3, industryPackId: null }]);
+    expect(totalMinutes(getCourse(st, "c-s")!.blueprint)).toBe(180);
   });
 });
 
