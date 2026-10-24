@@ -15,6 +15,7 @@ import {
   portalExpiresAt,
 } from "./logic";
 import type { DemoState } from "./state";
+import { defaultCourseTags, uniqueTags } from "./tags";
 import { MODULES } from "./types";
 import type {
   ArtifactKind,
@@ -24,6 +25,7 @@ import type {
   CourseRecipe,
   DraftProposal,
   IndustryPack,
+  TagSet,
   IsoTime,
   KnowledgeDraft,
   ModuleCard,
@@ -51,7 +53,7 @@ export type DemoAction =
    * 空陣列就從零開始。totalHours 是課程總時數（小時），藍圖的總長就是它（規格由總時數推得，不另存）。
    * 組課提醒（composition.ts）只提醒、不擋建立，所以這裡不檢查。
    */
-  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null }
+  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null; tags?: TagSet }
   | { type: "blueprint/revise"; courseId: string; blueprint: Blueprint; note: string }
   | { type: "blueprint/finalize"; courseId: string }
   // 產物
@@ -166,10 +168,16 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       if (!project) return state;
       const moduleCards = chosenModuleCards(st, action.moduleIds);
       const industryPack = action.industryPackId ? getIndustryPack(st, action.industryPackId) : undefined;
+      // 標籤：講師開課時挑的；沒挑就帶入產業素材包的標籤（多選的值去掉重複）
+      const picked = action.tags ?? defaultCourseTags(industryPack);
       const course: Course = {
         id: action.id,
         projectId: project.id,
         title: action.title,
+        audiences: uniqueTags(picked.audiences),
+        tools: uniqueTags(picked.tools),
+        industries: uniqueTags(picked.industries),
+        scenarios: uniqueTags(picked.scenarios),
         source: moduleCards.length > 0 && industryPack ? { moduleIds: moduleCards.map((c) => c.moduleId), industryPackId: industryPack.id } : null,
         copiedFrom: null,
         blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCards, unitCards: st.unitCards, industryPack, totalHours: action.totalHours }),
@@ -490,7 +498,7 @@ export function starterBlueprint({
           ? `為${clientContext.company}結合${moduleCards.map((c) => moduleLabel(c.moduleId)).join("、")}的課程，內容還在跟 AI 談。`
           : `為${clientContext.company}量身設計的課程，內容還在跟 AI 談。`,
     audience: {
-      who: industryPack ? `${clientContext.company}的${industryPack.audience}` : `${clientContext.company}的學員`,
+      who: industryPack ? `${clientContext.company}的${industryPack.audiences.join("、")}` : `${clientContext.company}的學員`,
       size: null,
       priorKnowledge: "待確認",
       painPoints: [clientContext.goal],

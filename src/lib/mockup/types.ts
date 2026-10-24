@@ -20,9 +20,41 @@ export const MODULES = [
 export type ModuleId = (typeof MODULES)[number]["id"];
 export type ModuleKind = (typeof MODULES)[number]["kind"];
 
-/** 產業：課程配方與產業素材包標註的產業（之後 #57 改成可多選的標籤）。 */
+/** 標籤（GLOSSARY）的四組可多選的值；第五組「規格」不存，由總時數推得（tags.ts 的 specOfMinutes）。 */
 export const INDUSTRIES = ["金融", "製造", "服務零售", "電商客服", "B2B貿易", "HR", "教育", "公益", "通用"] as const;
 export type Industry = (typeof INDUSTRIES)[number];
+
+/** 對象：學員的職務。藍圖裡 audience.who 是這門課自己的描述，這裡是可以篩選的類別。 */
+export const AUDIENCES = ["行政", "業務", "財務", "人資", "生管資材", "品保", "門市店長", "部門主管", "種子團隊"] as const;
+export type Audience = (typeof AUDIENCES)[number];
+
+/** 工具：課堂上用到的工具。藍圖裡的 tools 有方案與確認狀態，這裡只是篩選用的名稱。 */
+export const TOOL_TAGS = [
+  "Claude",
+  "Claude Project",
+  "Claude Code",
+  "Claude Skills",
+  "NotebookLM",
+  "Power Automate",
+  "Power Automate Desktop",
+  "Microsoft Teams",
+  "Excel",
+  "Google 試算表",
+  "Google Apps Script",
+] as const;
+
+/** 應用場景：學員拿 AI 來做的用途，例如簡報、數據分析、文書；它不是模組。 */
+export const SCENARIOS = ["文書", "簡報", "數據分析", "客服與信件", "會議與紀錄", "知識整理"] as const;
+export type Scenario = (typeof SCENARIOS)[number];
+
+/** 標籤：四組可多選的值（規格另由總時數推得）。單元卡以外的東西都帶全部四組。 */
+export interface TagSet {
+  audiences: Audience[];
+  /** 選項見 TOOL_TAGS；型別放寬成 string，因為真實工具名稱會一直長出來 */
+  tools: string[];
+  industries: Industry[];
+  scenarios: Scenario[];
+}
 
 /**
  * 設計稿的產物種類（ADR 0003）。和 `src/lib/artifacts.ts`（MCP／plugin 用的真實種類）是兩回事。
@@ -63,8 +95,11 @@ export interface ModuleCard {
   versions: ModuleCardVersion[];
 }
 
-/** 單元卡：知識庫裡一段可以重複使用的教學。被哪些課程配方用過由配方推得，不另存。 */
-export interface UnitCard {
+/**
+ * 單元卡：知識庫裡一段可以重複使用的教學。被哪些課程配方用過由配方推得，不另存。
+ * 標籤只存對象、工具、應用場景；產業由用過它的課程配方推得（tags.ts 的 unitTags），不另存。
+ */
+export interface UnitCard extends Omit<TagSet, "industries"> {
   id: string;
   moduleId: ModuleId;
   title: string;
@@ -82,28 +117,22 @@ export const RECIPE_STATUS_LABELS: Record<RecipeStatus, string> = {
   preparing: "籌備中",
 };
 
-/** 課程配方：一門過去課程的骨架。總分鐘數與用到的模組由單元卡推得，不另存。它不是藍圖。 */
-export interface CourseRecipe {
+/** 課程配方：一門過去課程的骨架。總分鐘數、用到的模組與規格由單元卡推得，不另存。它不是藍圖。 */
+export interface CourseRecipe extends TagSet {
   id: string;
   title: string;
   client: string;
   status: RecipeStatus;
   /** 上課年月 YYYY-MM；提案與籌備中為 null */
   heldOn: string | null;
-  industry: Industry;
-  audience: string;
-  /** 課堂用到的工具 */
-  tools: string[];
   /** 依序用到的單元卡 id */
   unitIds: string[];
 }
 
 /** 產業素材包：套在模組上的案例、練習與資料檔。一份藍圖只套用一個。 */
-export interface IndustryPack {
+export interface IndustryPack extends TagSet {
   id: string;
   title: string;
-  industry: Industry;
-  audience: string;
   cases: string[];
   materialNames: string[];
 }
@@ -230,7 +259,8 @@ export interface Material {
   sizeKb: number;
 }
 
-export interface Course {
+/** 課程的標籤是開課時挑的（預設帶入產業素材包的標籤）；規格不存，由藍圖總時數推得（tags.ts 的 courseSpec）。 */
+export interface Course extends TagSet {
   id: string;
   projectId: string;
   title: string;

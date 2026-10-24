@@ -7,7 +7,6 @@ import {
   formatDate,
   getCourse,
   getUnitCard,
-  industriesOfUnit,
   latestModuleCardVersion,
   moduleLabel,
   recipeMinutes,
@@ -17,8 +16,10 @@ import {
   recipeUnitCards,
 } from "@/lib/mockup/logic";
 import type { DemoState } from "@/lib/mockup/state";
+import { recipeSpec, unitTags } from "@/lib/mockup/tags";
 import { RECIPE_STATUS_LABELS } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
+import { TagList } from "../../_components/tags";
 import { Badge, FieldLabel } from "../../_components/ui";
 
 /** 知識庫裡正在打開的一張卡。 */
@@ -182,7 +183,10 @@ function unitDetail(st: DemoState, unitId: string, onOpen: (card: OpenCard) => v
         <Section label="目標">{u.objective}</Section>
         <Section label="教學方式">{u.method}</Section>
         <Section label="成果">{u.outcome}</Section>
-        <Section label="產業">{industriesOfUnit(st, u.id).join("、") || "還沒有配方用過"}</Section>
+        <Section label="標籤">
+          <TagList tags={unitTags(st, u)} />
+          <p className="mt-1 text-xs text-body-muted">產業由用過它的課程配方推得。</p>
+        </Section>
         <Section label="使用次數">{recipes.length} 次</Section>
         <Section label="用過它的課程配方">
           {recipes.length === 0 ? (
@@ -212,14 +216,16 @@ function recipeDetail(st: DemoState, recipeId: string, onOpen: (card: OpenCard) 
     title: `課程配方：${r.title}`,
     description: (
       <>
-        {r.client}・{r.industry}・{RECIPE_STATUS_LABELS[r.status]}
+        {r.client}・{RECIPE_STATUS_LABELS[r.status]}
         {r.heldOn ? `・${r.heldOn}` : ""}
       </>
     ),
     body: (
       <>
-        <Section label="對象">{r.audience}</Section>
-        <Section label="工具">{r.tools.length > 0 ? r.tools.join("、") : "待確認"}</Section>
+        <Section label="標籤">
+          <TagList tags={r} spec={recipeSpec(st, r)} />
+          <p className="mt-1 text-xs text-body-muted">規格由單元的總分鐘數推得。</p>
+        </Section>
         <Section label="用到的模組">
           {recipeModules(st, r)
             .map((m) => moduleLabel(m))

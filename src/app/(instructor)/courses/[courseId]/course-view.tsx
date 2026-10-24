@@ -27,12 +27,14 @@ import {
   type ArtifactSeries,
 } from "@/lib/mockup/logic";
 import { dispatch, useDemoState, useHydrated } from "@/lib/mockup/store";
+import { courseSpec } from "@/lib/mockup/tags";
 import type { Artifact, Course, Project } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
 import { toast } from "../../../_components/demo-runtime";
 import { Dialog } from "../../../_components/dialog";
 import { RequirementMappingPanel } from "../../../_components/requirement-mapping-panel";
 import { SessionDays } from "../../../_components/session-days";
+import { TagList } from "../../../_components/tags";
 import {
   Badge,
   Breadcrumb,
@@ -128,6 +130,11 @@ export function CourseView({ courseId }: { courseId: string }) {
       >
         <ButtonLink href={`/courses/${course.id}/chat`}>繼續跟 AI 談藍圖</ButtonLink>
       </PageHeader>
+
+      <div className="-mt-4 mb-8">
+        <TagList tags={course} spec={courseSpec(course)} />
+        <p className="mt-1 text-xs text-body-muted">規格由藍圖的總時數推得，藍圖改了會跟著變。</p>
+      </div>
 
       <section aria-labelledby="artifacts" className="mb-10">
         <SectionTitle aside="產檔在你自己的 Claude Code 裡跑，用 RPAI 課程 skill">

@@ -322,7 +322,7 @@ describe("知識庫草稿", () => {
 
   it("收進產業素材包、捨棄", () => {
     const st = run([{ type: "draft/accept", draftId: "d-pa-pack", newId: "ip-new" }]);
-    expect(getIndustryPack(st, "ip-new")).toMatchObject({ title: "金融業：月結對帳", industry: "金融" });
+    expect(getIndustryPack(st, "ip-new")).toMatchObject({ title: "金融業：月結對帳", industries: ["金融"] });
     expect(st.drafts.map((d) => d.id)).not.toContain("d-pa-pack");
     expect(run([{ type: "draft/discard", draftId: "d-pa-pack" }]).drafts).toHaveLength(1);
   });
@@ -335,10 +335,10 @@ describe("知識庫草稿", () => {
         fileName: "2025 行政班講義.pdf",
         proposal: {
           kind: "new_course_recipe",
-          recipe: { title: "試算表自動化", client: "匯入的講義", status: "delivered", heldOn: null, industry: "通用", audience: "待確認", tools: [] },
+          recipe: { title: "試算表自動化", client: "匯入的講義", status: "delivered", heldOn: null, audiences: [], tools: [], industries: ["通用"], scenarios: [] },
           unitCards: [
-            { moduleId: "A2", title: "甲", minutes: 60, objective: "o", method: "m", outcome: "r" },
-            { moduleId: "B3", title: "乙", minutes: 90, objective: "o", method: "m", outcome: "r" },
+            { moduleId: "A2", title: "甲", minutes: 60, objective: "o", method: "m", outcome: "r", audiences: [], tools: [], scenarios: [] },
+            { moduleId: "B3", title: "乙", minutes: 90, objective: "o", method: "m", outcome: "r", audiences: [], tools: [], scenarios: [] },
           ],
         },
       },

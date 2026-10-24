@@ -36,9 +36,12 @@ const unitCardOf = (moduleId: ModuleId, title: string): Omit<UnitCard, "id"> => 
   objective: `練習「${title}」的做法`,
   method: "講述＋動手練習",
   outcome: "一份可以帶回工作的成果",
+  audiences: [],
+  tools: [],
+  scenarios: [],
 });
 
-/** 依檔名與講師選的模組，產生一份課程配方草稿（沒有來源課程、沒有日期，對象與工具待確認）。 */
+/** 依檔名與講師選的模組，產生一份課程配方草稿（沒有來源課程、沒有日期，對象、工具與應用場景待確認）。 */
 export function importProposal(fileName: string, moduleId: ModuleId): Extract<DraftProposal, { kind: "new_course_recipe" }> {
   return {
     kind: "new_course_recipe",
@@ -47,9 +50,10 @@ export function importProposal(fileName: string, moduleId: ModuleId): Extract<Dr
       client: "匯入的講義",
       status: "delivered",
       heldOn: null,
-      industry: "通用",
-      audience: "待確認",
+      audiences: [],
       tools: [],
+      industries: ["通用"],
+      scenarios: [],
     },
     unitCards: SCRIPT[moduleId].map((title) => unitCardOf(moduleId, title)),
   };

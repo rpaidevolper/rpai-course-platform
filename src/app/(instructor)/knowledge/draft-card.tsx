@@ -9,6 +9,7 @@ import { dispatch } from "@/lib/mockup/store";
 import type { KnowledgeDraft } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
+import { TagList } from "../../_components/tags";
 import { Button, CARD, FieldLabel } from "../../_components/ui";
 
 const TRIGGER_TEXT: Record<KnowledgeDraft["trigger"], string> = {
@@ -103,13 +104,11 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
         <>
           <h3 className="mt-2 text-base font-bold text-navy">建議新增課程配方「{p.recipe.title}」</h3>
           <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <FieldLabel>產業</FieldLabel>
-              <dd className="mt-0.5 text-navy">{p.recipe.industry}</dd>
-            </div>
-            <div>
-              <FieldLabel>對象</FieldLabel>
-              <dd className="mt-0.5 text-navy">{p.recipe.audience}</dd>
+            <div className="sm:col-span-2">
+              <FieldLabel>標籤</FieldLabel>
+              <dd className="mt-1">
+                <TagList tags={p.recipe} />
+              </dd>
             </div>
             <div className="sm:col-span-2">
               <FieldLabel>同時新增的單元卡（{p.unitCards.length}）</FieldLabel>
@@ -138,13 +137,11 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
         <>
           <h3 className="mt-2 text-base font-bold text-navy">建議新增產業素材包「{p.industryPack.title}」</h3>
           <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <FieldLabel>產業</FieldLabel>
-              <dd className="mt-0.5 text-navy">{p.industryPack.industry}</dd>
-            </div>
-            <div>
-              <FieldLabel>受眾</FieldLabel>
-              <dd className="mt-0.5 text-navy">{p.industryPack.audience}</dd>
+            <div className="sm:col-span-2">
+              <FieldLabel>標籤</FieldLabel>
+              <dd className="mt-1">
+                <TagList tags={p.industryPack} />
+              </dd>
             </div>
             <div>
               <FieldLabel>案例</FieldLabel>

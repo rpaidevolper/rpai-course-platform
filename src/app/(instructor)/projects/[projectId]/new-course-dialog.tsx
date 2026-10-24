@@ -5,23 +5,18 @@ import { compositionWarnings, compositionWarningText } from "@/lib/mockup/compos
 import { chosenModuleCards } from "@/lib/mockup/actions";
 import { getIndustryPack, latestModuleCardVersion, moduleLabel } from "@/lib/mockup/logic";
 import { useDemoState } from "@/lib/mockup/store";
-import { MODULES, type ModuleId, type Project } from "@/lib/mockup/types";
+import { defaultCourseTags, specOfHours } from "@/lib/mockup/tags";
+import { MODULES, type ModuleId, type Project, type TagSet } from "@/lib/mockup/types";
 import { Dialog } from "../../../_components/dialog";
+import { TagPicker } from "../../../_components/tags";
 import { Field, Select, TextInput } from "../../../_components/ui";
 
 const NO_B = "";
 
-/** 總時數的選項（小時）：對應規格標籤的各檔，標籤由總時數推得、不另存 */
-const HOUR_OPTIONS: { hours: number; label: string }[] = [
-  { hours: 2, label: "2 小時（短講座）" },
-  { hours: 3, label: "3 小時（半日）" },
-  { hours: 6, label: "6 小時（一日）" },
-  { hours: 12, label: "12 小時（兩日）" },
-  { hours: 18, label: "18 小時（系列班）" },
-  { hours: 30, label: "30 小時（長期班）" },
-];
+/** 總時數的選項（小時）；括號裡的規格由 specOfHours 推得，不寫死 */
+const HOUR_OPTIONS = [2, 3, 6, 12, 18, 30];
 
-export type NewCourseValues = { title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null };
+export type NewCourseValues = { title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null; tags: TagSet };
 
 const A_MODULES = MODULES.filter((m) => m.kind === "A");
 const B_MODULES = MODULES.filter((m) => m.kind === "B");
@@ -45,11 +40,14 @@ export function NewCourseDialog({
   const [aIds, setAIds] = useState<ModuleId[]>([]);
   const [bId, setBId] = useState<string>(NO_B);
   const [industryPackId, setIndustryPackId] = useState(project.clientContext.industryPackId);
+  // 標籤預設帶入所選素材包的標籤；講師動過之後就以講師挑的為準，換素材包不再覆蓋
+  const [pickedTags, setPickedTags] = useState<TagSet | null>(null);
 
   const moduleIds = [...aIds, ...(bId === NO_B ? [] : [bId as ModuleId])];
   const cards = chosenModuleCards(st, moduleIds);
   const warnings = compositionWarnings({ moduleIds, totalHours });
   const pack = getIndustryPack(st, industryPackId);
+  const tags = pickedTags ?? defaultCourseTags(pack);
   const valid = title.trim() !== "" && pack !== undefined;
   const itNote = project.clientContext.itConstraints.length > 0 ? `客戶的 ${project.clientContext.itConstraints.length} 條 IT 限制也會一併複製進藍圖。` : "";
   const toggleA = (id: ModuleId) => setAIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
@@ -66,16 +64,16 @@ export function NewCourseDialog({
       description={`AI 會先把「${project.clientContext.company}」的客戶背景帶進新藍圖，接著跟你把缺的部分談完。`}
       submitLabel="開課程並開始談藍圖"
       submitDisabled={!valid}
-      onSubmit={() => onSubmit({ title: title.trim(), moduleIds, totalHours, industryPackId: pack?.id ?? null })}
+      onSubmit={() => onSubmit({ title: title.trim(), moduleIds, totalHours, industryPackId: pack?.id ?? null, tags })}
     >
       <Field label="課程名稱">
         <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="例如：Claude 入門工作坊" />
       </Field>
       <Field label="總時數" hint="藍圖的總長就是這個數字，規格（短講座、半日、一日…）由它推得。">
         <Select value={totalHours} onChange={(e) => setTotalHours(Number(e.target.value))}>
-          {HOUR_OPTIONS.map((o) => (
-            <option key={o.hours} value={o.hours}>
-              {o.label}
+          {HOUR_OPTIONS.map((hours) => (
+            <option key={hours} value={hours}>
+              {hours} 小時（{specOfHours(hours)}）
             </option>
           ))}
         </Select>
@@ -112,11 +110,16 @@ export function NewCourseDialog({
         <Select value={industryPackId} onChange={(e) => setIndustryPackId(e.target.value)} required>
           {st.industryPacks.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.title}（{s.industry}）
+              {s.title}（{s.industries.join("、")}）
             </option>
           ))}
         </Select>
       </Field>
+      <div>
+        <p className="mb-1 text-xs font-bold text-navy">標籤</p>
+        <p className="mb-2 text-xs text-body-muted">預設帶入所選產業素材包的標籤，可以自己改；規格由總時數推得，不用挑。</p>
+        <TagPicker value={tags} onChange={setPickedTags} />
+      </div>
       {warnings.length > 0 && (
         <ul role="status" aria-label="組課提醒" className="grid gap-1 rounded-md bg-warning-tint px-3 py-2 text-xs text-warning">
           {warnings.map((w) => (
