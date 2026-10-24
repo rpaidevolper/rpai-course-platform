@@ -68,9 +68,9 @@ describe("關鍵字搜尋", () => {
     expect(unitIds(f({ keyword: "NotebookLM" }))).toEqual(["uc-a2-handbook", "uc-a2-cited"]);
     expect(unitIds(f({ keyword: "成本節費" }))).toEqual(["uc-b4-monthly-cost"]);
   });
-  it("課程配方比對標題、客戶、模組名稱、單元標題與標籤", () => {
+  it("課程配方比對標題、模組名稱、單元標題與標籤", () => {
     expect(recipeIds(f({ keyword: "簽核自動化" }))).toEqual(["rc-g-pa-2601"]); // 標題
-    expect(recipeIds(f({ keyword: "H 公司" }))).toEqual(["rc-h-gas-2602"]); // 客戶
+    expect(recipeIds(f({ keyword: "人資表單" }))).toEqual(["rc-h-gas-2602"]);
     expect(recipeIds(f({ keyword: "Agent 與 AI 編碼" }))).toEqual(["rc-j-agent"]); // 模組名稱
     expect(recipeIds(f({ keyword: "逾期提醒" }))).toEqual(["rc-g-pa-2601"]); // 單元標題
     expect(recipeIds(f({ keyword: "金融" }))).toEqual(["rc-g-pa-2601", "rc-m-governance"]); // 標籤

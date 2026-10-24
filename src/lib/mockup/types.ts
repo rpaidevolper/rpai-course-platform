@@ -111,7 +111,6 @@ export const RECIPE_STATUS_LABELS: Record<RecipeStatus, string> = {
 export interface CourseRecipe extends TagSet {
   id: string;
   title: string;
-  client: string;
   status: RecipeStatus;
   /** 上課年月 YYYY-MM；提案與籌備中為 null */
   heldOn: string | null;
@@ -340,14 +339,13 @@ export interface KnowledgeDraft {
 }
 
 /**
- * 模組卡新版本的一條改動；unitCardId 指向造成這條改動的單元卡提案（排除該單元時一併拿掉），沒有則為 null。
- * replacesUnitCardId 是被換掉的骨架單元（上一版骨架裡的單元卡 id）；接受時新版本的骨架把它換成 unitCardId。
- * 兩者缺一就只是文字改動，骨架不變。
+ * 模組卡新版本的一條改動，只存結構化的參照，不存文字：把骨架裡的 replacesUnitCardId 換成 unitCardId
+ * （那張單元卡提案或已收進的單元卡）。說明文字在顯示時才用目前的標題組出（draft-review.ts 的 moduleChangeText），
+ * 所以講師改寫單元標題後，說明跟著變，不會留下原本含客戶機密的字樣。排除 unitCardId 那個單元時這條改動一併拿掉。
  */
 export interface ModuleCardChange {
-  text: string;
-  unitCardId: string | null;
-  replacesUnitCardId: string | null;
+  unitCardId: string;
+  replacesUnitCardId: string;
 }
 
 /**

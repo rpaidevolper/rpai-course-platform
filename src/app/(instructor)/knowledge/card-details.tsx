@@ -234,7 +234,7 @@ function recipeDetail(st: DemoState, recipeId: string, onOpen: (card: OpenCard) 
     title: `課程配方：${r.title}`,
     description: (
       <>
-        {r.client}・{RECIPE_STATUS_LABELS[r.status]}
+        {RECIPE_STATUS_LABELS[r.status]}
         {r.heldOn ? `・${r.heldOn}` : ""}
       </>
     ),

@@ -55,7 +55,6 @@ export function importProposals(fileName: string, moduleId: ModuleId, baseId: st
       recipe: {
         id: baseId,
         title: titleFromFileName(fileName),
-        client: "匯入的講義",
         status: "delivered",
         heldOn: null,
         audiences: [],
