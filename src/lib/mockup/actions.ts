@@ -28,7 +28,7 @@ import type {
   Course,
   DraftProposal,
   IndustryPack,
-  TagSet,
+  CourseTagSet,
   IsoTime,
   KnowledgeDraft,
   CourseModuleSource,
@@ -57,7 +57,9 @@ export type DemoAction =
    * 空陣列就從零開始。totalHours 是課程總時數（小時），藍圖的總長就是它（規格由總時數推得，不另存）。
    * 組課提醒（composition.ts）只提醒、不擋建立，所以這裡不檢查。
    */
-  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; moduleVersions?: ModuleVersionPick; totalHours: number; industryPackId: string | null; tags?: TagSet }
+  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; moduleVersions?: ModuleVersionPick; totalHours: number; industryPackId: string | null; tags?: CourseTagSet }
+  /** 課程頁改對象、產業、應用場景（工具由藍圖推得，不在這裡改）；結案後不能改 */
+  | { type: "course/updateTags"; courseId: string; tags: CourseTagSet }
   | { type: "blueprint/revise"; courseId: string; blueprint: Blueprint; note: string }
   | { type: "blueprint/finalize"; courseId: string }
   // 產物
@@ -180,7 +182,6 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         projectId: project.id,
         title: action.title,
         audiences: uniqueTags(picked.audiences),
-        tools: uniqueTags(picked.tools),
         industries: uniqueTags(picked.industries),
         scenarios: uniqueTags(picked.scenarios),
         source: modules.length > 0 && industryPack ? { modules, industryPackId: industryPack.id } : null,
@@ -202,6 +203,17 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         materials: [],
       };
       return { ...st, courses: [...st.courses, course] };
+    }
+
+    case "course/updateTags": {
+      const course = findCourse(action.courseId);
+      if (!course || isCourseClosed(course)) return state;
+      return mapCourse(course.id, (c) => ({
+        ...c,
+        audiences: uniqueTags(action.tags.audiences),
+        industries: uniqueTags(action.tags.industries),
+        scenarios: uniqueTags(action.tags.scenarios),
+      }));
     }
 
     case "blueprint/revise": {

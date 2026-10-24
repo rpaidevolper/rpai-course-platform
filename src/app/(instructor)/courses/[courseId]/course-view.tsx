@@ -29,14 +29,14 @@ import {
   type ArtifactSeries,
 } from "@/lib/mockup/logic";
 import { dispatch, useDemoState, useHydrated } from "@/lib/mockup/store";
-import { courseSpec } from "@/lib/mockup/tags";
+import { COURSE_TAG_GROUPS, courseSpec, courseTags } from "@/lib/mockup/tags";
 import type { Artifact, Course, Project } from "@/lib/mockup/types";
 import { BlueprintPanel } from "../../../_components/blueprint-panel";
 import { toast } from "../../../_components/demo-runtime";
 import { Dialog } from "../../../_components/dialog";
 import { RequirementMappingPanel } from "../../../_components/requirement-mapping-panel";
 import { SessionDays } from "../../../_components/session-days";
-import { TagList } from "../../../_components/tags";
+import { TagList, TagPicker } from "../../../_components/tags";
 import {
   Badge,
   Breadcrumb,
@@ -58,6 +58,38 @@ const STATUS_TEXT = { pending: "排隊中", generating: "產出中", ready: "可
 const STATUS_TONE = { pending: "neutral", generating: "neutral", ready: "success", failed: "danger" } as const;
 
 const formatSize = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
+
+/**
+ * 課程標籤：對象、產業、應用場景存在課程上、可以在這裡改；工具由藍圖的 tools 推得、規格由總時數推得，
+ * 這兩組不能在這裡改（改藍圖）。結案後不能改。
+ */
+function CourseTags({ course }: { course: Course }) {
+  const [editing, setEditing] = useState(false);
+  const closed = isCourseClosed(course);
+  return (
+    <div>
+      <TagList tags={courseTags(course)} spec={courseSpec(course)} />
+      <p className="mt-1 text-xs text-body-muted">
+        工具由藍圖的工具清單推得、規格由藍圖的總時數推得，藍圖改了會跟著變。
+        {!closed && (
+          <>
+            {" "}
+            <TextButton onClick={() => setEditing((e) => !e)}>{editing ? "完成" : "編輯對象、產業、應用場景"}</TextButton>
+          </>
+        )}
+      </p>
+      {editing && !closed && (
+        <div className="mt-3 max-w-2xl rounded-lg bg-white p-4 shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
+          <TagPicker
+            groups={COURSE_TAG_GROUPS}
+            value={course}
+            onChange={(tags) => dispatch({ type: "course/updateTags", courseId: course.id, tags })}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CourseView({ courseId }: { courseId: string }) {
   const st = useDemoState();
@@ -137,8 +169,7 @@ export function CourseView({ courseId }: { courseId: string }) {
       </PageHeader>
 
       <div className="-mt-4 mb-8">
-        <TagList tags={course} spec={courseSpec(course)} />
-        <p className="mt-1 text-xs text-body-muted">規格由藍圖的總時數推得，藍圖改了會跟著變。</p>
+        <CourseTags course={course} />
       </div>
 
       <section aria-labelledby="artifacts" className="mb-10">

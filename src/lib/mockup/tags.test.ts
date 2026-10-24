@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { COURSE_RECIPES, COURSES, INDUSTRY_PACKS, UNIT_CARDS } from "./data";
 import { totalMinutes } from "@/lib/blueprint/schema";
 import { demoReducer } from "./actions";
-import { initialState } from "./state";
-import { courseSpec, defaultCourseTags, recipeSpec, specOfHours, specOfMinutes, toggleTag, unitTags } from "./tags";
-import { AUDIENCES, INDUSTRIES, SCENARIOS, TOOL_TAGS, type TagSet } from "./types";
+import { initialState, type DemoState } from "./state";
+import { courseSpec, courseTags, courseTools, defaultCourseTags, recipeSpec, specOfHours, specOfMinutes, toggleTag, unitTags } from "./tags";
+import { AUDIENCES, INDUSTRIES, SCENARIOS, TOOL_TAGS, type CourseTagSet } from "./types";
 
 describe("specOfHours 規格由總時數推得", () => {
   // 每一檔的邊界：[時數, 規格]
@@ -68,7 +68,7 @@ describe("toggleTag 多選", () => {
 });
 
 describe("開課程時挑標籤", () => {
-  const create = (tags?: TagSet) =>
+  const create = (tags?: CourseTagSet) =>
     demoReducer(initialState(), {
       type: "course/create",
       id: "c-t",
@@ -80,15 +80,13 @@ describe("開課程時挑標籤", () => {
       tags,
     }).courses.find((c) => c.id === "c-t")!;
 
-  it("四組標籤都可以多選，存在課程上", () => {
+  it("對象、產業、應用場景三組都可以多選，存在課程上", () => {
     const c = create({
       audiences: ["生管資材", "品保"],
-      tools: ["Claude", "Excel"],
       industries: ["製造", "金融"],
       scenarios: ["文書", "數據分析", "簡報"],
     });
     expect(c.audiences).toEqual(["生管資材", "品保"]);
-    expect(c.tools).toEqual(["Claude", "Excel"]);
     expect(c.industries).toEqual(["製造", "金融"]);
     expect(c.scenarios).toEqual(["文書", "數據分析", "簡報"]);
   });
@@ -99,16 +97,75 @@ describe("開課程時挑標籤", () => {
     expect(c.audiences).toEqual(pack.audiences);
     expect(c.industries).toEqual(pack.industries);
     expect(c.scenarios).toEqual(pack.scenarios);
-    expect(c.tools).toEqual(pack.tools);
   });
 
   it("沒有素材包也沒有挑：標籤是空的", () => {
-    expect(defaultCourseTags(undefined)).toEqual({ audiences: [], tools: [], industries: [], scenarios: [] });
+    expect(defaultCourseTags(undefined)).toEqual({ audiences: [], industries: [], scenarios: [] });
   });
 
   it("重複的標籤只留一個", () => {
-    const c = create({ audiences: ["財務", "財務"], tools: [], industries: [], scenarios: [] });
+    const c = create({ audiences: ["財務", "財務"], industries: [], scenarios: [] });
     expect(c.audiences).toEqual(["財務"]);
+  });
+});
+
+describe("課程的工具標籤：由藍圖推得，課程不另存", () => {
+  const course = (id: string) => initialState().courses.find((c) => c.id === id)!;
+
+  it("課程上沒有 tools 欄位：示範資料與新開的課程都一樣", () => {
+    for (const c of initialState().courses) expect(c).not.toHaveProperty("tools");
+    const created = demoReducer(initialState(), {
+      type: "course/create", id: "c-t2", projectId: "p-a-2026", title: "t", moduleIds: [], totalHours: 6, industryPackId: "ip-manufacturing",
+    }).courses.find((c) => c.id === "c-t2")!;
+    expect(created).not.toHaveProperty("tools");
+    expect(courseTools(created)).toEqual([]); // 新藍圖還沒談出工具
+  });
+
+  it("工具取藍圖 tools 的名稱（原樣、依藍圖順序、去重）", () => {
+    expect(courseTools(course("c-pa-finance"))).toEqual(["Power Automate", "Microsoft Teams"]);
+    expect(courseTools(course("c-claude-intro"))).toEqual(["Claude"]);
+    const c = course("c-claude-intro");
+    const dup = { ...c, blueprint: { ...c.blueprint, tools: [...c.blueprint.tools, { name: "Claude", plan: "free" as const, confirmedWithClient: false }, { name: "Excel", plan: "paid" as const, confirmedWithClient: true }] } };
+    expect(courseTools(dup)).toEqual(["Claude", "Excel"]);
+  });
+
+  it("藍圖改了工具，課程的工具跟著變（顯示用的 courseTags 也是）", () => {
+    const st = demoReducer(initialState(), {
+      type: "blueprint/revise", courseId: "c-claude-intro", note: "改用 NotebookLM",
+      blueprint: { ...course("c-claude-intro").blueprint, tools: [{ name: "NotebookLM", plan: "free", confirmedWithClient: false }] },
+    });
+    const c = st.courses.find((x) => x.id === "c-claude-intro")!;
+    expect(courseTools(c)).toEqual(["NotebookLM"]);
+    expect(courseTags(c).tools).toEqual(["NotebookLM"]);
+    expect(courseTags(c).audiences).toEqual(c.audiences);
+  });
+});
+
+describe("課程頁編輯標籤", () => {
+  const update = (st: DemoState, courseId: string, tags: CourseTagSet) => demoReducer(st, { type: "course/updateTags", courseId, tags });
+  const find = (st: DemoState, id: string) => st.courses.find((c) => c.id === id)!;
+
+  it("對象、產業、應用場景可以改，重複的只留一個；其他欄位與別的課程不動", () => {
+    const st0 = initialState();
+    const st = update(st0, "c-claude-intro", { audiences: ["財務", "財務"], industries: ["金融"], scenarios: ["簡報"] });
+    const c = find(st, "c-claude-intro");
+    expect(c).toMatchObject({ audiences: ["財務"], industries: ["金融"], scenarios: ["簡報"] });
+    expect(c.blueprint).toEqual(find(st0, "c-claude-intro").blueprint);
+    expect(c).not.toHaveProperty("tools");
+    expect(find(st, "c-pa-finance")).toEqual(find(st0, "c-pa-finance"));
+  });
+
+  it("可以清空某一組；不存在的課程不動", () => {
+    expect(find(update(initialState(), "c-claude-intro", { audiences: [], industries: [], scenarios: [] }), "c-claude-intro").audiences).toEqual([]);
+    const st0 = initialState();
+    expect(update(st0, "c-nope", { audiences: [], industries: [], scenarios: [] }).courses).toEqual(st0.courses);
+  });
+
+  it("結案後不能再改（結案草稿已經依當時的標籤產生）", () => {
+    const closed = demoReducer(initialState(), { type: "course/close", courseId: "c-pa-pilot" });
+    expect(find(closed, "c-pa-pilot").closedAt).not.toBeNull();
+    const st = update(closed, "c-pa-pilot", { audiences: ["品保"], industries: [], scenarios: [] });
+    expect(find(st, "c-pa-pilot").audiences).toEqual(find(closed, "c-pa-pilot").audiences);
   });
 });
 
@@ -152,7 +209,7 @@ describe("fixture 的標籤都在清單內", () => {
   it("對象、工具、產業、應用場景", () => {
     for (const x of [...COURSE_RECIPES, ...INDUSTRY_PACKS, ...COURSES]) {
       for (const a of x.audiences) expect(AUDIENCES, x.id).toContain(a);
-      for (const t of x.tools) expect(TOOL_TAGS, x.id).toContain(t);
+      if ("tools" in x) for (const t of x.tools) expect(TOOL_TAGS, x.id).toContain(t);
       for (const i of x.industries) expect(INDUSTRIES, x.id).toContain(i);
       for (const s of x.scenarios) expect(SCENARIOS, x.id).toContain(s);
     }

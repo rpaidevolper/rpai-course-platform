@@ -21,7 +21,7 @@ import {
   unassignedRequirements,
 } from "@/lib/mockup/logic";
 import { dispatch, useDemoState, useHydrated } from "@/lib/mockup/store";
-import { courseSpec } from "@/lib/mockup/tags";
+import { courseSpec, courseTags } from "@/lib/mockup/tags";
 import { toast } from "../../../_components/demo-runtime";
 import { TagList } from "../../../_components/tags";
 import {
@@ -290,7 +290,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
                         )}
                       </p>
                       <div className="mt-2">
-                        <TagList tags={c} spec={courseSpec(c)} />
+                        <TagList tags={courseTags(c)} spec={courseSpec(c)} />
                       </div>
                     </div>
                     {isCourseClosed(c) ? (

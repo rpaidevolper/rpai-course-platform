@@ -1,7 +1,7 @@
 import { totalMinutes } from "@/lib/blueprint/schema";
 import { industriesOfUnit, recipeMinutes } from "./logic";
 import type { DemoState } from "./state";
-import type { Course, CourseRecipe, IndustryPack, TagSet, UnitCard } from "./types";
+import type { Course, CourseRecipe, CourseTagSet, IndustryPack, TagSet, UnitCard } from "./types";
 
 /**
  * 標籤（GLOSSARY）：對象、工具、產業、應用場景四組可多選，存在單元卡、課程配方、產業素材包與課程上；
@@ -55,10 +55,25 @@ export const uniqueTags = <T extends string>(values: readonly T[]): T[] => [...n
 
 export const emptyTags = (): TagSet => ({ audiences: [], tools: [], industries: [], scenarios: [] });
 
-/** 開課程時標籤的預設值：帶入所選產業素材包的標籤；沒有素材包就是空的。講師之後可以改。 */
-export function defaultCourseTags(pack: IndustryPack | undefined): TagSet {
-  if (!pack) return emptyTags();
-  return { audiences: [...pack.audiences], tools: [...pack.tools], industries: [...pack.industries], scenarios: [...pack.scenarios] };
+/**
+ * 課程的工具標籤：由藍圖 tools 的名稱推得（原樣、依藍圖順序、去重），課程上不另存。
+ * 藍圖的工具名稱是自由文字，標籤的「工具」一組也不限定詞彙（TOOL_TAGS 只是篩選的建議選項），所以直接沿用。
+ * 顯示、篩選、結案回存都只從這裡取課程的工具。
+ */
+export const courseTools = (course: Course): string[] => uniqueTags(course.blueprint.tools.map((t) => t.name));
+
+/** 課程的完整標籤（顯示用）：自己存的三組，加上由藍圖推得的工具。 */
+export const courseTags = (course: Course): TagSet => ({
+  audiences: course.audiences,
+  tools: courseTools(course),
+  industries: course.industries,
+  scenarios: course.scenarios,
+});
+
+/** 開課程時標籤的預設值：帶入所選產業素材包的對象、產業、應用場景；沒有素材包就是空的。講師之後可以改。工具不帶（由藍圖談出）。 */
+export function defaultCourseTags(pack: IndustryPack | undefined): CourseTagSet {
+  if (!pack) return { audiences: [], industries: [], scenarios: [] };
+  return { audiences: [...pack.audiences], industries: [...pack.industries], scenarios: [...pack.scenarios] };
 }
 
 /** 單元卡的完整標籤：對象、工具、應用場景存在卡上；產業由用過它的課程配方推得（不另存）。 */
@@ -73,3 +88,6 @@ export const TAG_GROUPS: { key: keyof TagSet; label: string }[] = [
   { key: "industries", label: "產業" },
   { key: "scenarios", label: "應用場景" },
 ];
+
+/** 課程自己存、可以編輯的三組標籤（工具由藍圖推得，不在其中）。 */
+export const COURSE_TAG_GROUPS = ["audiences", "industries", "scenarios"] as const satisfies readonly (keyof TagSet)[];

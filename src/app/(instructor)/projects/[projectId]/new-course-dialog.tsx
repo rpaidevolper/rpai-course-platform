@@ -5,8 +5,8 @@ import { compositionWarnings, compositionWarningText } from "@/lib/mockup/compos
 import { chosenModuleCards, chosenModuleSources, type ModuleVersionPick } from "@/lib/mockup/actions";
 import { getIndustryPack, latestModuleCardVersion, moduleCardVersionsLabel, moduleLabel } from "@/lib/mockup/logic";
 import { useDemoState } from "@/lib/mockup/store";
-import { defaultCourseTags, specOfHours } from "@/lib/mockup/tags";
-import { MODULES, type ModuleId, type Project, type TagSet } from "@/lib/mockup/types";
+import { COURSE_TAG_GROUPS, defaultCourseTags, specOfHours } from "@/lib/mockup/tags";
+import { MODULES, type ModuleId, type Project, type CourseTagSet } from "@/lib/mockup/types";
 import { Dialog } from "../../../_components/dialog";
 import { TagPicker } from "../../../_components/tags";
 import { Field, Select, TextInput } from "../../../_components/ui";
@@ -16,7 +16,7 @@ const NO_B = "";
 /** 總時數的選項（小時）；括號裡的規格由 specOfHours 推得，不寫死 */
 const HOUR_OPTIONS = [2, 3, 6, 12, 18, 30];
 
-export type NewCourseValues = { title: string; moduleIds: ModuleId[]; moduleVersions: ModuleVersionPick; totalHours: number; industryPackId: string | null; tags: TagSet };
+export type NewCourseValues = { title: string; moduleIds: ModuleId[]; moduleVersions: ModuleVersionPick; totalHours: number; industryPackId: string | null; tags: CourseTagSet };
 
 const A_MODULES = MODULES.filter((m) => m.kind === "A");
 const B_MODULES = MODULES.filter((m) => m.kind === "B");
@@ -43,7 +43,7 @@ export function NewCourseDialog({
   const [versionPicks, setVersionPicks] = useState<ModuleVersionPick>({});
   const [industryPackId, setIndustryPackId] = useState(project.clientContext.industryPackId);
   // 標籤預設帶入所選素材包的標籤；講師動過之後就以講師挑的為準，換素材包不再覆蓋
-  const [pickedTags, setPickedTags] = useState<TagSet | null>(null);
+  const [pickedTags, setPickedTags] = useState<CourseTagSet | null>(null);
 
   const moduleIds = [...aIds, ...(bId === NO_B ? [] : [bId as ModuleId])];
   const cards = chosenModuleCards(st, moduleIds);
@@ -149,8 +149,8 @@ export function NewCourseDialog({
       </Field>
       <div>
         <p className="mb-1 text-xs font-bold text-navy">標籤</p>
-        <p className="mb-2 text-xs text-body-muted">預設帶入所選產業素材包的標籤，可以自己改；規格由總時數推得，不用挑。</p>
-        <TagPicker value={tags} onChange={setPickedTags} />
+        <p className="mb-2 text-xs text-body-muted">預設帶入所選產業素材包的對象、產業、應用場景，之後在課程頁還能改。工具由藍圖談出來，規格由總時數推得，這裡都不用挑。</p>
+        <TagPicker groups={COURSE_TAG_GROUPS} value={tags} onChange={setPickedTags} />
       </div>
       {warnings.length > 0 && (
         <ul role="status" aria-label="組課提醒" className="grid gap-1 rounded-md bg-warning-tint px-3 py-2 text-xs text-warning">
