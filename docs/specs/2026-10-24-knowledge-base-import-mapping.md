@@ -33,7 +33,7 @@
 
 | 文件 | 數量 | 形狀 |
 | --- | --- | --- |
-| 模組框架文件 | 1 | frontmatter 4 個鍵，內文 6 節 |
+| 模組框架文件 | 1 | frontmatter 4 個鍵，內文 7 節（兩層分類一節含 A、B 兩張表） |
 | 模組卡 | 9 | 每個模組一張。frontmatter 8 個鍵，內文 5 節 |
 | 單元卡 | 276 | frontmatter 7 個鍵（其中 15 張多 1 個鍵），內文 4 節（同樣 15 張多 1 節） |
 | 課程配方 | 67 | 29 份有抽出來的單元序列，1 份抽取失敗、單元序列是空的，37 份是 stub |
@@ -155,7 +155,7 @@
 | frontmatter 的 `units` | `units[].unitCardId` | 照原本的順序。同一張卡可以出現兩次（有 2 份配方是這樣）。解析不到單元卡時是硬錯誤（現況 0 筆） |
 | frontmatter 的 `extract` | `skeletonOrigin` | 各值的份數：`table` 25、`slash` 3、`manual` 1、`deck` 1、`stub` 37。`manual` 代表抽取失敗，單元序列是空的 |
 | frontmatter 的 `source` | — | 不匯入。內容是原檔路徑，其中 50 份含客戶名稱。狀態已經由 `status` 表達 |
-| 「課程重點」 | `highlights: string[]` | 佔位字串「原文無重點介紹段落」轉成 `[]`（12 份一般配方是這樣） |
+| 「課程重點」 | — | 不匯入。ADR 0002 的修訂規定配方只帶單元序列、分鐘數、產業、對象與工具，不帶重點；而且來源的值多半是佔位字串「原文無重點介紹段落」（12 份一般配方是這樣） |
 | 「單元序列」或「單元序列（自簡報抽取）」表格 | `units[].minutes`（可為 null） | 每一列的分鐘數屬於這份配方，不是單元卡的中位數。「—」轉成 null（316 列裡有 43 列）。表格「單元」欄的標題只拿來核對，不匯入 |
 | 「單元合計 N 分鐘」 | — | 不匯入，改由 `units[].minutes` 推得。拿來核對 `declaredHours`，見 Q8 |
 | 「原始檔」 | — | 不匯入 |
@@ -164,7 +164,6 @@
 
 | 來源 | 目標 | 處理 |
 | --- | --- | --- |
-| 「課程重點」的佔位字串 | `highlights: []` | |
 | 「主簡報」（簡報路徑清單） | — | 路徑不匯入。只把簡報數量記進匯入報告，作為補單元序列的優先順序：22 份列了 1–12 個簡報，15 份一個都沒有 |
 | 「教材模組分佈」（每行格式為 `- <模組>_<名稱>：N 檔`） | `materialModules` | 只記下有檔案的模組代號。這是 stub 唯一的模組線索：25 份有，12 份寫「無已分類教材」。frontmatter 的 `modules` 和它 37 份全部相同，兩者取一即可 |
 | 「場次總檔數 N」 | — | 不匯入 |
@@ -433,7 +432,7 @@
 
 ### 規則
 
-1. **知識庫沒有客戶綁定欄位。** 單元卡、課程配方、模組卡與模組框架的文字欄位，包括配方的 `title`、`audience`、`highlights`，一律是可重用欄位，不可以含客戶名稱。`sourceKey` 是追蹤用的鍵，不是內容，但配方的 id 含客戶段，怎麼存見待決問題。
+1. **知識庫沒有客戶綁定欄位。** 單元卡、課程配方、模組卡與模組框架的文字欄位，包括配方的 `title`、`audience`，一律是可重用欄位，不可以含客戶名稱。`sourceKey` 是追蹤用的鍵，不是內容，但配方的 id 含客戶段，怎麼存見待決問題。
 2. **名稱表在匯入時建立，只放在記憶體，不進 repo，也不存進平台。**
    - 來源：配方的 `client` 欄位、一般配方 id 與 stub id 裡的客戶段（現況 44 個名稱，不含團隊自己的品牌），再加上維護者提供的別名表。別名表包含簡稱、英文名稱、客戶的產品或專案名稱、外部講師的姓名；它放在資料夾裡，不放在 repo。
    - 2 個字以下的名稱（現況 6 個）只比對完整的詞，並讓維護者列出例外，避免誤判。
@@ -456,7 +455,7 @@
 | `ModuleCard` | `skeletonUnitIds: string[]` | 改成 `skeleton: { text, unitCardId \| null }[]` | 36 個骨架項目只有 1 個對得到單元卡 |
 | `ModuleCard` | 沒有代表配方、時數、層級範圍、工具 | 加上 `representativeRecipeIds`、`durationGuide`、`levelRange`、`typicalTools` | 使用者故事 5 要顯示代表配方；層級範圍用在 Q2 |
 | `CourseRecipe` | `unitIds: string[]`，總分鐘數由單元卡推得 | 改成 `units: { unitCardId, minutes \| null }[]`，並加上 `declaredHours`（可為 null） | 有 5 張卡在不同配方裡的分鐘數不同，配方每一列的分鐘數也和單元卡的中位數不同；ADR 0002 的修訂寫明配方自帶分鐘數；另有 44 份沒有時數 |
-| `CourseRecipe` | 沒有這些欄位 | 加上 `skeletonOrigin`、`materialModules`、`highlights` | stub 要找得到，也要能被排除 |
+| `CourseRecipe` | 沒有這些欄位 | 加上 `skeletonOrigin`、`materialModules` | stub 要找得到，也要能被排除 |
 | 所有匯入的實體 | 沒有 | 加上 `origin`、`sourceKey`、`sourceHash`、`importedAt`、`retiredAt`、`mergedIntoId`、`importFlags` | 才能重跑、才能退役 |
 | 模組框架 | 沒有對應的實體 | 一份有版本的文件，欄位為 `title`、`sourceVersion`、`revision`、`body` | 藍圖對話一律先讀它 |
 
