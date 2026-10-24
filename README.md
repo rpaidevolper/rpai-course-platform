@@ -76,9 +76,12 @@ npx @devcontainers/cli exec --workspace-folder . bash
 ```bash
 gh auth login     # 登入 GitHub
 pnpm db:start     # 啟動本機 Supabase，連線資訊自動寫入 .env.local；第一次要下載映像檔
+pnpm member:add --email you@example.com --name 你的名字 --password devpass123   # 建一個本機講師帳號
 pnpm dev          # http://localhost:3000
 ```
 
+- 後台要登入。本機沒有 Google 金鑰也能用：登入頁展開「本機開發用：email ＋ 密碼」，用上面建的帳號登入（這個表單只在連本機 Supabase 時出現）。要在本機測 Google 登入，把 Google OAuth 的 client id 與 secret 設成 `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`、`SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`（在同一個 shell 先 export）再 `pnpm db:start`。
+- 設計稿在 http://localhost:3000/demo （資料存在瀏覽器，不接資料庫與 AI）。
 - 本機 Supabase 會自動套用 `supabase/migrations/`。管理介面在 http://localhost:54323 。
 - 藍圖對話需要 Anthropic API key：向團隊索取後填入 `.env.local` 的 `ANTHROPIC_API_KEY`。只跑 `lint`、`typecheck`、`test` 不需要任何金鑰。
 - `pnpm db:stop` 停止資料庫；`pnpm db:reset` 清空並重新套用 migrations。
@@ -87,6 +90,7 @@ pnpm dev          # http://localhost:3000
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test
+pnpm test:db      # DB 整合測試（RLS 與 MCP 的工作區隔離），要先 pnpm db:start
 ```
 
 ### 不用容器
@@ -110,7 +114,7 @@ session 開好就能跑 `pnpm lint && pnpm typecheck && pnpm test`，也能用 `
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ANTHROPIC_API_KEY`（藍圖對話需要）
 
-環境變數優先於 `.env.local`，所以雲端 session 不需要 `.env.local`。這是正式資料：不要刪改既有資料，也不要手動套 migration。
+環境變數優先於 `.env.local`，所以雲端 session 不需要 `.env.local`。這是正式資料：不要刪改既有資料，也不要手動套 migration。`pnpm test:db` 會建立並刪除測試帳號，只接本機 Supabase，連到正式環境時會拒絕執行；它在 CI 的 `migrations` job 裡跑。
 
 ## 3. 啟用 AI workflow
 
@@ -195,8 +199,10 @@ claude plugin install mattpocock-skills@mattpocock
 | 型別檢查 | `pnpm typecheck` |
 | 測試 | `pnpm test`（單檔：`pnpm test src/lib/blueprint/schema.test.ts`） |
 | Build | `pnpm build` |
+| DB 整合測試 | `pnpm test:db`（要先 `pnpm db:start`） |
 | 本機資料庫 | `pnpm db:start`、`pnpm db:stop`、`pnpm db:reset` |
-| 建講師權杖 | `pnpm token:create --user <auth.users.id> --label 名稱` |
+| 加入／移除講師 | `pnpm member:add --email <email> --name 顯示名稱`、`pnpm member:remove --email <email>`（production 由 owner 執行，見 [`docs/runbook.md`](docs/runbook.md)） |
+| 建講師權杖 | 後台「設定」頁自己產生；owner 代建用 `pnpm token:create --user <auth.users.id> --label 名稱` |
 | 測講師端 plugin | `claude --plugin-dir ./plugin`（安裝說明見 [`plugin/README.md`](plugin/README.md)） |
 
 ## 10. 文件地圖
@@ -228,13 +234,13 @@ claude plugin install mattpocock-skills@mattpocock
 1. `main` 上的 CI 通過。
 2. 把新的 migration 套到 production 資料庫。
 3. 部署到 Vercel。
-4. Smoke test：`/api/health`（資料庫連線與 commit）、首頁、`/api/mcp` 未帶權杖回 401。
+4. Smoke test：`/api/health`（資料庫連線與 commit）、登入頁回 200、未登入打首頁會被導去登入頁、`/api/mcp` 未帶權杖回 401。
 
 任何一步失敗就中止，workflow 標紅。到 Actions 頁的 **Deploy** 看紀錄；回滾與手動重跑見 [`docs/runbook.md`](docs/runbook.md)。
 
 寫 migration 時的規則：
 
-- PR 階段 CI 的 `migrations` job 會在全新資料庫上從頭套用所有 migration，壞掉的 SQL 會被擋下。
+- PR 階段 CI 的 `migrations` job 會在全新資料庫上從頭套用所有 migration，再跑 `pnpm test:db`，壞掉的 SQL 與 RLS 會被擋下。
 - Migration 比程式碼先上線，所以**必須向下相容**：新增欄位可以，移除或改名舊欄位要拆成兩個 PR（先上線不再使用它的程式碼，下一個 PR 才移除）。
 - 有破壞性的 migration 要在 PR 說明標明，並在合併前請 owner 先備份。
 - 本機驗證：`pnpm db:reset`。

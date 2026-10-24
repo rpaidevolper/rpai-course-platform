@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { DemoRuntime } from "./_components/demo-runtime";
 import { ThemeScript } from "./_components/theme-toggle";
 
 export const metadata: Metadata = {
@@ -15,10 +14,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <ThemeScript />
       </head>
-      <body>
-        {children}
-        <DemoRuntime />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

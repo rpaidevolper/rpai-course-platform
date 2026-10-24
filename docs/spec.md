@@ -27,7 +27,7 @@
 
 ### MVP 包含
 
-1. 講師登入（Supabase Auth，email）
+1. 講師登入（Supabase Auth，Google 帳號；只有工作區成員看得到資料）
 2. 建立課程、與 AI 對話談藍圖（串流）
 3. 從對話抽出藍圖、存成新版本；顯示五元素完整性與待確認事項
 4. 排產檔工作（三種產物）、顯示狀態與過期標示、下載成品
@@ -104,7 +104,7 @@
 - 設定頁可產生權杖（需填標籤）；明文只顯示一次。
 - 列表顯示標籤、前綴、建立時間、最後使用時間；可撤銷。
 - 撤銷後該權杖的 MCP 請求回 401。
-- 未有 UI 之前，`pnpm token:create` 可替代。
+- 設定頁已上線（#87）；`pnpm token:create` 保留給 owner 代為建立。
 
 ## 5. 功能需求
 
@@ -132,7 +132,7 @@
 
 - 路徑 `/api/mcp`，無狀態 Streamable HTTP，`mcp-handler` + MCP SDK v2。
 - 驗證：`Authorization: Bearer rcp_…`，比對 `api_tokens.token_hash`，`revoked_at` 為 null；成功更新 `last_used_at`。
-- 所有工具以權杖對應的 `owner_id` 過濾；使用 service role client，**不依賴 RLS**。
+- 權杖對應到講師所屬的工作區，所有工具以 `workspace_id` 過濾；使用 service role client，**不依賴 RLS**。被移出工作區的講師，權杖回 401。
 - 工具契約見第 7 節。
 
 ### F5 Plugin
@@ -144,7 +144,7 @@
 
 ### F6 產物儲存
 
-- Bucket `artifacts`（私有）。路徑 `owner_id/course_id/artifact_id/檔名`。
+- Bucket `artifacts`（私有）。路徑 `workspace_id/course_id/artifact_id/檔名`（0005 之前上傳的舊檔以 `owner_id` 開頭，保留原路徑）。
 - 上傳：`createSignedUploadUrl`（`upsert: true`），plugin 用 curl PUT。
 - 下載：`createSignedUrl`，10 分鐘，選項帶 `download`（檔名；見 `artifactDownloadOptions`），回應是 `Content-Disposition: attachment`，上傳的 HTML 不會在平台網域內渲染。
 - 只接受 `.pptx`、`.docx`、`.pdf`、`.md`、`.html`。
@@ -152,11 +152,12 @@
 
 ## 6. 資料模型
 
-已落在 `supabase/migrations/0001_init.sql`、`0002_local_runner.sql`：
+已落在 `supabase/migrations/`（`0001_init.sql`、`0002_local_runner.sql`、`0005_workspaces.sql` 等）：
 
 | 表 | 用途 | 關鍵欄位 |
 |---|---|---|
-| `courses` | 課程 | `owner_id` |
+| `workspaces` / `workspace_members` | 工作區與講師（全團隊一個工作區） | `workspace_id`、`user_id`、`display_name`、`preferences` |
+| `courses` | 課程 | `workspace_id`（RLS 以它過濾）、`owner_id`（建立者） |
 | `blueprints` | 藍圖版本（不可變） | `course_id`、`version`（唯一）、`content` jsonb、`change_note` |
 | `conversations` / `messages` | 對話 | `purpose`、`content` jsonb（content blocks） |
 | `artifacts` | 產物＋佇列 | `blueprint_id`、`kind`、`version`、`status`、`runner`、`claimed_by/at`、`storage_path`、`filename`、`error`、`meta.instructions` |
@@ -184,10 +185,10 @@
 
 ## 8. 非功能需求
 
-- **隔離**：任何講師只能碰到自己的課程、藍圖、產物、權杖；MCP 與頁面兩條路徑都要有測試覆蓋跨 owner 存取回 404/401。
+- **隔離**：講師只碰得到自己所屬工作區的課程、藍圖、對話、產物（同工作區的講師彼此共用，ADR 0004）；權杖只有本人看得到。不是成員的帳號與匿名者讀不到任何資料。MCP 與頁面兩條路徑都要有測試覆蓋跨工作區存取（`pnpm test:db`）。
 - **權杖**：明文不落地、不寫 log；DB 只存 sha256；撤銷即時生效。
 - **成本**：藍圖對話的 `cache_read_input_tokens` 在第二輪起應大於 0（品牌規範與藍圖在前段）。
-- **可觀測**：MCP 每次工具呼叫記錄 owner、工具名、耗時、成功與否（不記參數內容）。
+- **可觀測**：MCP 每次工具呼叫記錄講師、工作區、工具名、耗時、成功與否（不記參數內容）。
 - **品質門檻**：`pnpm lint && pnpm typecheck && pnpm test` 全綠才能合併。
 
 ## 9. 端到端驗收腳本

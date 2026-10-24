@@ -47,14 +47,17 @@ export function sanitizeFilename(filename: string): string {
   return cleaned && cleaned !== "." && cleaned !== ".." ? cleaned : "artifact";
 }
 
-/** Storage 物件路徑：owner / course / artifact / 檔名，前三層都是 uuid，靠它們隔離。 */
+/**
+ * Storage 物件路徑：workspace / course / artifact / 檔名，前三層都是 uuid，靠它們隔離（#78）。
+ * 0005 之前上傳的舊列以 owner id 開頭，保留原本的 storage_path，不搬檔。
+ */
 export function buildStoragePath(parts: {
-  ownerId: string;
+  workspaceId: string;
   courseId: string;
   artifactId: string;
   filename: string;
 }): string {
-  return [parts.ownerId, parts.courseId, parts.artifactId, sanitizeFilename(parts.filename)].join("/");
+  return [parts.workspaceId, parts.courseId, parts.artifactId, sanitizeFilename(parts.filename)].join("/");
 }
 
 /**

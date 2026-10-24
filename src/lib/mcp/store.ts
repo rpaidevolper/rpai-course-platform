@@ -33,25 +33,25 @@ export interface ClaimedJob extends JobSummary {
 }
 
 /**
- * MCP 工具要用的資料存取。用 service role client，所以每個方法都自己用 ownerId 過濾——
- * 這裡沒有 RLS 幫忙擋。
+ * MCP 工具要用的資料存取。用 service role client，所以每個方法都自己用 workspaceId 過濾——
+ * 這裡沒有 RLS 幫忙擋。同一個工作區的課程與工作，每位成員都看得到（ADR 0004）。
  */
 export interface JobStore {
-  listCourses(ownerId: string): Promise<CourseSummary[]>;
-  getBlueprint(ownerId: string, courseId: string, version?: number): Promise<BlueprintRecord | null>;
-  listPendingJobs(ownerId: string): Promise<JobSummary[]>;
+  listCourses(workspaceId: string): Promise<CourseSummary[]>;
+  getBlueprint(workspaceId: string, courseId: string, version?: number): Promise<BlueprintRecord | null>;
+  listPendingJobs(workspaceId: string): Promise<JobSummary[]>;
   /** 原子地把 pending 改成 generating；已被認領或不存在回 null。 */
-  claimJob(ownerId: string, jobId: string, claimedBy: string): Promise<ClaimedJob | null>;
+  claimJob(workspaceId: string, jobId: string, claimedBy: string): Promise<ClaimedJob | null>;
   createUploadUrl(
-    ownerId: string,
+    workspaceId: string,
     jobId: string,
     filename: string,
   ): Promise<{ uploadUrl: string; storagePath: string } | null>;
-  completeJob(ownerId: string, jobId: string, storagePath: string): Promise<"ok" | "not_found" | "missing_file">;
-  failJob(ownerId: string, jobId: string, error: string): Promise<boolean>;
+  completeJob(workspaceId: string, jobId: string, storagePath: string): Promise<"ok" | "not_found" | "missing_file">;
+  failJob(workspaceId: string, jobId: string, error: string): Promise<boolean>;
 }
 
-/** artifacts 連 courses（owner 檢查）與 blueprints 的查詢結果。 */
+/** artifacts 連 courses（工作區檢查）與 blueprints 的查詢結果。 */
 interface ArtifactRow {
   id: string;
   kind: ArtifactKind;
@@ -59,12 +59,12 @@ interface ArtifactRow {
   status: string;
   created_at: string;
   meta: { instructions?: string } | null;
-  course: { id: string; title: string; owner_id: string };
+  course: { id: string; title: string; workspace_id: string };
   blueprint: { version: number; content: Blueprint };
 }
 
 const ARTIFACT_SELECT =
-  "id, kind, version, status, created_at, meta, course:courses!inner(id, title, owner_id), blueprint:blueprints!inner(version, content)";
+  "id, kind, version, status, created_at, meta, course:courses!inner(id, title, workspace_id), blueprint:blueprints!inner(version, content)";
 
 function toSummary(row: ArtifactRow): JobSummary {
   return {
@@ -81,33 +81,33 @@ function toSummary(row: ArtifactRow): JobSummary {
 export function createSupabaseJobStore(): JobStore {
   const supabase = createAdminClient();
 
-  async function getOwnedJob(ownerId: string, jobId: string): Promise<ArtifactRow | null> {
+  async function getWorkspaceJob(workspaceId: string, jobId: string): Promise<ArtifactRow | null> {
     const { data } = await supabase
       .from("artifacts")
       .select(ARTIFACT_SELECT)
       .eq("id", jobId)
-      .eq("course.owner_id", ownerId)
+      .eq("course.workspace_id", workspaceId)
       .maybeSingle();
     return (data as unknown as ArtifactRow | null) ?? null;
   }
 
   return {
-    async listCourses(ownerId) {
+    async listCourses(workspaceId) {
       const { data, error } = await supabase
         .from("courses")
         .select("id, title, updated_at")
-        .eq("owner_id", ownerId)
+        .eq("workspace_id", workspaceId)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data as CourseSummary[];
     },
 
-    async getBlueprint(ownerId, courseId, version) {
+    async getBlueprint(workspaceId, courseId, version) {
       const { data: course } = await supabase
         .from("courses")
         .select("id")
         .eq("id", courseId)
-        .eq("owner_id", ownerId)
+        .eq("workspace_id", workspaceId)
         .maybeSingle();
       if (!course) return null;
 
@@ -120,20 +120,20 @@ export function createSupabaseJobStore(): JobStore {
       return (data as BlueprintRecord | null) ?? null;
     },
 
-    async listPendingJobs(ownerId) {
+    async listPendingJobs(workspaceId) {
       const { data, error } = await supabase
         .from("artifacts")
         .select(ARTIFACT_SELECT)
         .eq("status", "pending")
         .eq("runner", "claude_code")
-        .eq("course.owner_id", ownerId)
+        .eq("course.workspace_id", workspaceId)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as ArtifactRow[]).map(toSummary);
     },
 
-    async claimJob(ownerId, jobId, claimedBy) {
-      const row = await getOwnedJob(ownerId, jobId);
+    async claimJob(workspaceId, jobId, claimedBy) {
+      const row = await getWorkspaceJob(workspaceId, jobId);
       if (!row) return null;
 
       // 條件式 update：兩台機器同時認領，只有一台會改到列
@@ -148,12 +148,12 @@ export function createSupabaseJobStore(): JobStore {
       return { ...toSummary(row), blueprint: row.blueprint.content };
     },
 
-    async createUploadUrl(ownerId, jobId, filename) {
-      const row = await getOwnedJob(ownerId, jobId);
+    async createUploadUrl(workspaceId, jobId, filename) {
+      const row = await getWorkspaceJob(workspaceId, jobId);
       if (!row || row.status !== "generating") return null;
 
       const storagePath = buildStoragePath({
-        ownerId,
+        workspaceId,
         courseId: row.course.id,
         artifactId: row.id,
         filename,
@@ -167,8 +167,8 @@ export function createSupabaseJobStore(): JobStore {
       return { uploadUrl: data.signedUrl, storagePath: data.path };
     },
 
-    async completeJob(ownerId, jobId, storagePath) {
-      const row = await getOwnedJob(ownerId, jobId);
+    async completeJob(workspaceId, jobId, storagePath) {
+      const row = await getWorkspaceJob(workspaceId, jobId);
       if (!row) return "not_found";
 
       // 確認檔案真的到了，才標 ready
@@ -184,8 +184,8 @@ export function createSupabaseJobStore(): JobStore {
       return "ok";
     },
 
-    async failJob(ownerId, jobId, error) {
-      const row = await getOwnedJob(ownerId, jobId);
+    async failJob(workspaceId, jobId, error) {
+      const row = await getWorkspaceJob(workspaceId, jobId);
       if (!row) return false;
       await supabase.from("artifacts").update({ status: "failed", error }).eq("id", jobId);
       return true;

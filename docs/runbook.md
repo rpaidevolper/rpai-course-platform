@@ -49,6 +49,38 @@ Supabase 免費方案沒有自動備份。有資料要保護的話，需要 owne
 pnpm exec supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" -f backup-$(date +%F).sql
 ```
 
+## 登入與成員
+
+講師用 Google 帳號登入（Supabase Auth）。公開註冊是關的，只有 owner 用 `pnpm member:add` 加進工作區的人進得來（ADR 0004、#87）。
+
+### 第一次啟用 Google 登入（owner，一次性）
+
+#87 合併、部署之前做完；否則部署後所有講師頁都會導去登入頁，卻沒有人登入得了。
+
+1. Google Cloud Console → APIs & Services → Credentials → **Create credentials → OAuth client ID**，類型選 Web application。Authorized redirect URIs 填 `https://<project-ref>.supabase.co/auth/v1/callback`（Supabase 的 callback，不是後台網址）。第一次建立要先設定 OAuth consent screen。
+2. Supabase Dashboard → Authentication → **Sign In / Providers**：
+   - Google：開啟，貼上 Client ID 與 Client Secret。
+   - **Allow new users to sign up**：關閉。沒被加入的人用 Google 登入會被擋下，畫面顯示「這個帳號還沒被加進後台」。
+3. Supabase Dashboard → Authentication → **URL Configuration**：Site URL 填 production 網址；Redirect URLs 加上 `<production 網址>/auth/callback`。
+4. 用下一節的方式把自己加成第一位成員，再到 production 用 Google 登入確認。
+
+### 加入與移除講師
+
+在自己的終端機對 production 執行（service role key 在 Supabase Dashboard → Project Settings → API Keys；不要寫進檔案或貼到任何地方）：
+
+```bash
+read -rs SUPABASE_SERVICE_ROLE_KEY && export SUPABASE_SERVICE_ROLE_KEY   # 貼上後按 Enter，畫面不會顯示
+export NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+pnpm member:add --email someone@gmail.com --name "王小明"     # 用他登入 Google 的 email
+pnpm member:remove --email someone@gmail.com
+unset SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_URL
+```
+
+shell 裡的變數優先於 `.env.local`，所以就算本機有 `.env.local` 也會打到 production。
+
+- 加入：還沒有帳號就先建一個（email 已驗證），他之後用同一個 email 的 Google 帳號登入，Supabase 會把 Google 身分連到這個帳號。重跑只會更新顯示名稱。
+- 移除：帳號保留，但他登入後只會看到「尚未加入工作區」，權杖在 MCP 驗證時立刻失效（回 401）。
+
 ## 故障排除
 
 | 症狀 | 看哪裡 | 常見原因與處理 |
@@ -61,6 +93,10 @@ pnpm exec supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" -f backup
 | Smoke test 失敗：commit 不符 | Deploy 紀錄 | 別名還沒切換（腳本會重試約兩分鐘）；或 `PRODUCTION_URL` 指到別的網域 |
 | Smoke test 失敗：`/api/mcp` 沒回 401 | Vercel → Logs | MCP 路由或權杖驗證壞了，這是真正的問題，先回滾 |
 | 前端連到錯的 Supabase | — | `NEXT_PUBLIC_*` 是 build 時寫入的。改了 Vercel 環境變數之後要重新部署，不是重啟 |
+| Smoke test 失敗：未登入 `GET /` 沒有導去 `/login` | Vercel → Logs | `src/proxy.ts` 壞了，或 Vercel 上缺 `NEXT_PUBLIC_SUPABASE_ANON_KEY`。講師頁可能對外公開，先回滾 |
+| 講師用 Google 登入後看到「這個帳號還沒被加進後台」 | — | 還沒 `pnpm member:add`，或加入時用的 email 和他的 Google 帳號不同。用他的 Google email 重新加入 |
+| 登入後看到「尚未加入工作區」 | — | 帳號存在但不是成員（例如被移除過）。`pnpm member:add` 加回去 |
+| Google 登入回來顯示「登入沒有完成」 | Supabase → Authentication → Logs | Redirect URLs 沒有 `<production 網址>/auth/callback`，或 Google OAuth client 的 redirect URI 不是 Supabase 的 `/auth/v1/callback` |
 
 ## 輪替金鑰
 

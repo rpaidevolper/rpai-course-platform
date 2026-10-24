@@ -52,13 +52,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: docker build -t rpai-course-platform .
-      - name: Home page responds
+      # 每個頁面請求都會經過 src/proxy.ts，它要 NEXT_PUBLIC_SUPABASE_*（build 時寫進 bundle）。
+      # 這裡不連資料庫，給假值就好：沒有 session 時不會真的打 Supabase。
+      - run: >-
+          docker build -t rpai-course-platform
+          --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+          --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=build-placeholder .
+      - name: Login page responds and / redirects to it
         run: |
           docker run -d --name app -p 3000:3000 rpai-course-platform
           for i in $(seq 1 30); do
-            if curl --fail --silent --output /dev/null http://localhost:3000; then
-              echo "OK"; exit 0
+            if curl --fail --silent --output /dev/null http://localhost:3000/login; then
+              location=$(curl --silent --output /dev/null --write-out '%{redirect_url}' http://localhost:3000/)
+              if [[ "$location" == http://localhost:3000/login* ]]; then
+                echo "OK"; exit 0
+              fi
+              echo "GET / 沒有導去登入頁：${location:-（沒有 Location）}"
+              break
             fi
             sleep 1
           done
