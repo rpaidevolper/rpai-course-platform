@@ -12,7 +12,9 @@ import {
   latestArtifact,
   latestBlueprintVersion,
   latestReadyArtifact,
+  moduleCardSkeleton,
   moduleCardVersionsLabel,
+  latestModuleCardVersion,
   moduleLabel,
   portalExpiresAt,
 } from "./logic";
@@ -29,6 +31,7 @@ import type {
   TagSet,
   IsoTime,
   KnowledgeDraft,
+  CourseModuleSource,
   ModuleCard,
   ModuleId,
   ProjectStatus,
@@ -54,7 +57,7 @@ export type DemoAction =
    * 空陣列就從零開始。totalHours 是課程總時數（小時），藍圖的總長就是它（規格由總時數推得，不另存）。
    * 組課提醒（composition.ts）只提醒、不擋建立，所以這裡不檢查。
    */
-  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null; tags?: TagSet }
+  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; moduleVersions?: ModuleVersionPick; totalHours: number; industryPackId: string | null; tags?: TagSet }
   | { type: "blueprint/revise"; courseId: string; blueprint: Blueprint; note: string }
   | { type: "blueprint/finalize"; courseId: string }
   // 產物
@@ -168,6 +171,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       const project = st.projects.find((p) => p.id === action.projectId);
       if (!project) return state;
       const moduleCards = chosenModuleCards(st, action.moduleIds);
+      const modules = chosenModuleSources(moduleCards, action.moduleVersions);
       const industryPack = action.industryPackId ? getIndustryPack(st, action.industryPackId) : undefined;
       // 標籤：講師開課時挑的；沒挑就帶入產業素材包的標籤（多選的值去掉重複）
       const picked = action.tags ?? defaultCourseTags(industryPack);
@@ -179,17 +183,17 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         tools: uniqueTags(picked.tools),
         industries: uniqueTags(picked.industries),
         scenarios: uniqueTags(picked.scenarios),
-        source: moduleCards.length > 0 && industryPack ? { moduleIds: moduleCards.map((c) => c.moduleId), industryPackId: industryPack.id } : null,
+        source: modules.length > 0 && industryPack ? { modules, industryPackId: industryPack.id } : null,
         copiedFrom: null,
         closedAt: null,
-        blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCards, unitCards: st.unitCards, industryPack, totalHours: action.totalHours }),
+        blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCards, moduleVersions: action.moduleVersions, unitCards: st.unitCards, industryPack, totalHours: action.totalHours }),
         blueprintHistory: [
           {
             version: 1,
             createdAt: now,
             note:
-              moduleCards.length > 0
-                ? `從模組卡${moduleCardVersionsLabel(moduleCards)} 複製出生`
+              modules.length > 0
+                ? `從模組卡${moduleCardVersionsLabel(modules)} 複製出生`
                 : "從零開始的藍圖草稿",
             finalizedAt: null,
           },
@@ -404,6 +408,20 @@ export function chosenModuleCards(st: Pick<DemoState, "moduleCards">, moduleIds:
   });
 }
 
+/** 開課時各模組要用哪一版模組卡；沒列或版本不存在就用最新版本。 */
+export type ModuleVersionPick = Partial<Record<ModuleId, number>>;
+
+/** 實際採用的版本：指定的版本存在才用它，否則退回最新版本。 */
+function pickedVersion(card: ModuleCard, picks: ModuleVersionPick | undefined): number {
+  const want = picks?.[card.moduleId];
+  return want !== undefined && card.versions.some((v) => v.version === want) ? want : latestModuleCardVersion(card);
+}
+
+/** 所選模組卡與各自採用的版本，順序同 chosenModuleCards；課程的 source 與起始藍圖都用它。 */
+export function chosenModuleSources(cards: ModuleCard[], picks?: ModuleVersionPick): CourseModuleSource[] {
+  return cards.map((c) => ({ moduleId: c.moduleId, version: pickedVersion(c, picks) }));
+}
+
 /** 把 list 依序切成 n 份，前面的份多拿一個（n ≤ list.length） */
 function splitInto<T>(list: T[], n: number): T[][] {
   const base = Math.floor(list.length / n);
@@ -438,6 +456,7 @@ export function starterBlueprint({
   title,
   clientContext,
   moduleCards = [],
+  moduleVersions,
   unitCards = [],
   industryPack,
   totalHours = 6,
@@ -446,6 +465,8 @@ export function starterBlueprint({
   clientContext: ClientContext;
   /** 所選模組的模組卡，順序由 chosenModuleCards 決定（通常傳它的結果） */
   moduleCards?: ModuleCard[];
+  /** 各模組用哪一版的骨架；沒列或版本不存在就用最新版本 */
+  moduleVersions?: ModuleVersionPick;
   /** 用來查骨架單元的單元卡（通常傳 st.unitCards） */
   unitCards?: UnitCard[];
   industryPack?: IndustryPack;
@@ -453,7 +474,7 @@ export function starterBlueprint({
   totalHours?: number;
 }): Blueprint {
   // 各模組卡的骨架依序查出單元卡；查不到的 id 略過
-  const cards = moduleCards.flatMap((mc) => mc.skeletonUnitIds.map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined));
+  const cards = moduleCards.flatMap((mc) => moduleCardSkeleton(mc, pickedVersion(mc, moduleVersions)).map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined));
   const entries: { title: string; module: ModuleId; source: UnitSource | null }[] =
     cards.length > 0
       ? cards.map((u) => ({ title: u.title, module: u.moduleId, source: { kind: "unit_card", id: u.id, version: null, unit: u.title } }))

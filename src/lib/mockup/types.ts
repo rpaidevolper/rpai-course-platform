@@ -68,6 +68,8 @@ export interface ModuleCardVersion {
   note: string;
   /** 由哪門課程的課後草稿升版；直接整理則為 null */
   fromCourseId: string | null;
+  /** 這一版的核心單元骨架快照：依序排列的單元卡 id，都屬於這個模組。模組卡「目前的骨架」由最新版本推得（logic.ts 的 moduleCardSkeleton） */
+  skeletonUnitIds: string[];
 }
 
 /** 模組卡：一個模組彙整後的最新版課綱模板。一個模組一張，有版本。 */
@@ -76,8 +78,6 @@ export interface ModuleCard {
   summary: string;
   /** A 類寫學員打開的環境，B 類寫學員帶走的產出 */
   scope: string;
-  /** 核心單元骨架：依序排列的單元卡 id，都屬於這個模組 */
-  skeletonUnitIds: string[];
   /** 常見搭配，例如「常以 B1 流程診斷定錨」 */
   combos: string[];
   versions: ModuleCardVersion[];
@@ -247,13 +247,23 @@ export interface Material {
   sizeKb: number;
 }
 
+/** 課程出生時所選的一個模組，與當時用的模組卡版本。 */
+export interface CourseModuleSource {
+  moduleId: ModuleId;
+  version: number;
+}
+
 /** 課程的標籤是開課時挑的（預設帶入產業素材包的標籤）；規格不存，由藍圖總時數推得（tags.ts 的 courseSpec）。 */
 export interface Course extends TagSet {
   id: string;
   projectId: string;
   title: string;
-  /** 藍圖誕生時複製自哪些模組、哪個產業素材包（ADR 0002：記錄來源，不引用） */
-  source: { moduleIds: ModuleId[]; industryPackId: string } | null;
+  /**
+   * 藍圖誕生時複製自哪些模組（連同各自的模組卡版本）、哪個產業素材包（ADR 0002：記錄來源，不引用）。
+   * 模組依 MODULES 順序。從零談出的課程為 null；以另一門課程為底複製的課程（copiedFrom 不為 null）
+   * 仍保留它自己的 source，記錄它當初是用哪些模組卡版本談的。
+   */
+  source: { modules: CourseModuleSource[]; industryPackId: string } | null;
   /**
    * 以另一門課程的某一版藍圖為底建立時，記錄複製自哪裡（ADR 0002：複製，之後兩邊各改各的）。
    * 從模組卡或從零談出的課程為 null。
@@ -327,10 +337,15 @@ export interface KnowledgeDraft {
   proposal: DraftProposal;
 }
 
-/** 模組卡新版本的一條改動；unitCardId 指向造成這條改動的單元卡提案（排除該單元時一併拿掉），沒有則為 null。 */
+/**
+ * 模組卡新版本的一條改動；unitCardId 指向造成這條改動的單元卡提案（排除該單元時一併拿掉），沒有則為 null。
+ * replacesUnitCardId 是被換掉的骨架單元（上一版骨架裡的單元卡 id）；接受時新版本的骨架把它換成 unitCardId。
+ * 兩者缺一就只是文字改動，骨架不變。
+ */
 export interface ModuleCardChange {
   text: string;
   unitCardId: string | null;
+  replacesUnitCardId: string | null;
 }
 
 /**

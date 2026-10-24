@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { compositionWarnings, compositionWarningText } from "@/lib/mockup/composition";
-import { chosenModuleCards } from "@/lib/mockup/actions";
+import { chosenModuleCards, chosenModuleSources, type ModuleVersionPick } from "@/lib/mockup/actions";
 import { getIndustryPack, latestModuleCardVersion, moduleCardVersionsLabel, moduleLabel } from "@/lib/mockup/logic";
 import { useDemoState } from "@/lib/mockup/store";
 import { defaultCourseTags, specOfHours } from "@/lib/mockup/tags";
@@ -16,7 +16,7 @@ const NO_B = "";
 /** 總時數的選項（小時）；括號裡的規格由 specOfHours 推得，不寫死 */
 const HOUR_OPTIONS = [2, 3, 6, 12, 18, 30];
 
-export type NewCourseValues = { title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null; tags: TagSet };
+export type NewCourseValues = { title: string; moduleIds: ModuleId[]; moduleVersions: ModuleVersionPick; totalHours: number; industryPackId: string | null; tags: TagSet };
 
 const A_MODULES = MODULES.filter((m) => m.kind === "A");
 const B_MODULES = MODULES.filter((m) => m.kind === "B");
@@ -39,12 +39,16 @@ export function NewCourseDialog({
   const [totalHours, setTotalHours] = useState(6);
   const [aIds, setAIds] = useState<ModuleId[]>([]);
   const [bId, setBId] = useState<string>(NO_B);
+  // 講師特別指定的模組卡版本；沒指定的模組用最新版本
+  const [versionPicks, setVersionPicks] = useState<ModuleVersionPick>({});
   const [industryPackId, setIndustryPackId] = useState(project.clientContext.industryPackId);
   // 標籤預設帶入所選素材包的標籤；講師動過之後就以講師挑的為準，換素材包不再覆蓋
   const [pickedTags, setPickedTags] = useState<TagSet | null>(null);
 
   const moduleIds = [...aIds, ...(bId === NO_B ? [] : [bId as ModuleId])];
   const cards = chosenModuleCards(st, moduleIds);
+  const sources = chosenModuleSources(cards, versionPicks);
+  const moduleVersions: ModuleVersionPick = Object.fromEntries(sources.map((m) => [m.moduleId, m.version]));
   const warnings = compositionWarnings({ moduleIds, totalHours });
   const pack = getIndustryPack(st, industryPackId);
   const tags = pickedTags ?? defaultCourseTags(pack);
@@ -64,7 +68,7 @@ export function NewCourseDialog({
       description={`AI 會先把「${project.clientContext.company}」的客戶背景帶進新藍圖，接著跟你把缺的部分談完。`}
       submitLabel="開課程並開始談藍圖"
       submitDisabled={!valid}
-      onSubmit={() => onSubmit({ title: title.trim(), moduleIds, totalHours, industryPackId: pack?.id ?? null, tags })}
+      onSubmit={() => onSubmit({ title: title.trim(), moduleIds, moduleVersions, totalHours, industryPackId: pack?.id ?? null, tags })}
     >
       <Field label="課程名稱">
         <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="例如：Claude 入門工作坊" />
@@ -106,6 +110,34 @@ export function NewCourseDialog({
           </label>
         </div>
       </fieldset>
+      {cards.some((c) => c.versions.length > 1) && (
+        <fieldset>
+          <legend className="text-xs font-bold text-body-muted">模組卡版本（預設最新版；選舊版會用那一版的骨架出生）</legend>
+          <div className="mt-1 grid gap-1">
+            {cards
+              .filter((c) => c.versions.length > 1)
+              .map((c) => (
+                <label key={c.moduleId} className="flex items-center gap-2 text-sm text-navy">
+                  <span className="min-w-0 flex-1">{moduleLabel(c.moduleId)}</span>
+                  <Select
+                    aria-label={`${moduleLabel(c.moduleId)} 的模組卡版本`}
+                    value={moduleVersions[c.moduleId]}
+                    onChange={(e) => setVersionPicks({ ...versionPicks, [c.moduleId]: Number(e.target.value) })}
+                  >
+                    {[...c.versions]
+                      .sort((a, b) => b.version - a.version)
+                      .map((v) => (
+                        <option key={v.version} value={v.version}>
+                          v{v.version}
+                          {v.version === latestModuleCardVersion(c) ? "（最新）" : ""}，{v.skeletonUnitIds.length} 個單元
+                        </option>
+                      ))}
+                  </Select>
+                </label>
+              ))}
+          </div>
+        </fieldset>
+      )}
       <Field label="產業素材包" hint="預設是客戶背景選定的素材包。">
         <Select value={industryPackId} onChange={(e) => setIndustryPackId(e.target.value)} required>
           {st.industryPacks.map((s) => (
@@ -130,7 +162,7 @@ export function NewCourseDialog({
       )}
       <p className="rounded-md bg-iced px-3 py-2 text-xs">
         {cards.length > 0 && pack
-          ? `藍圖會依序從模組卡${moduleCardVersionsLabel(cards)}的核心單元骨架，加上產業素材包「${pack.title}」複製內容出生；之後模組卡升版，這門課的藍圖不會跟著變。`
+          ? `藍圖會依序從模組卡${moduleCardVersionsLabel(sources)}的核心單元骨架，加上產業素材包「${pack.title}」複製內容出生；之後模組卡升版，這門課的藍圖不會跟著變。`
           : "沒選任何模組：藍圖會從零開始，只帶入客戶背景與素材包的受眾；之後一樣可以跟 AI 談。"}
         {itNote}
       </p>

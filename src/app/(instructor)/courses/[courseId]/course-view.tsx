@@ -110,12 +110,13 @@ export function CourseView({ courseId }: { courseId: string }) {
             <>
               <p>
                 從模組卡「
-                {course.source.moduleIds.map((m, i) => (
-                  <span key={m}>
+                {course.source.modules.map((m, i) => (
+                  <span key={m.moduleId}>
                     {i > 0 && "、"}
-                    <Link href={`/knowledge#module-${m}`} className="font-bold text-navy underline underline-offset-2">
-                      {moduleLabel(m)}
-                    </Link>
+                    <Link href={`/knowledge#module-${m.moduleId}`} className="font-bold text-navy underline underline-offset-2">
+                      {moduleLabel(m.moduleId)}
+                    </Link>{" "}
+                    v{m.version}
                   </span>
                 ))}
                 」與產業素材包「

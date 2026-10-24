@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { chosenModuleCards, makeId } from "@/lib/mockup/actions";
+import { chosenModuleCards, chosenModuleSources, makeId } from "@/lib/mockup/actions";
 import { isCourseClosed, isProjectClosed } from "@/lib/mockup/closing";
 import { ARTIFACT_LABELS, CLIENT_DOCUMENT_LABELS } from "@/lib/mockup/types";
 import {
@@ -277,12 +277,13 @@ export function ProjectView({ projectId }: { projectId: string }) {
                         ) : c.source && (
                           <>
                             ，來自{" "}
-                            {c.source.moduleIds.map((m, i) => (
-                              <span key={m}>
+                            {c.source.modules.map((m, i) => (
+                              <span key={m.moduleId}>
                                 {i > 0 && "、"}
-                                <Link href={`/knowledge#module-${m}`} className="text-navy underline underline-offset-2">
-                                  {moduleLabel(m)}
-                                </Link>
+                                <Link href={`/knowledge#module-${m.moduleId}`} className="text-navy underline underline-offset-2">
+                                  {moduleLabel(m.moduleId)}
+                                </Link>{" "}
+                                v{m.version}
                               </span>
                             ))}
                           </>
@@ -353,7 +354,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
             const cards = chosenModuleCards(st, v.moduleIds);
             dispatch({ type: "course/create", id, projectId: project.id, ...v });
             close();
-            toast(cards.length > 0 ? `已建立課程，藍圖從模組卡${moduleCardVersionsLabel(cards)} 複製出生` : "已建立課程，藍圖從零開始");
+            toast(cards.length > 0 ? `已建立課程，藍圖從模組卡${moduleCardVersionsLabel(chosenModuleSources(cards, v.moduleVersions))} 複製出生` : "已建立課程，藍圖從零開始");
             router.push(`/courses/${id}/chat`);
           }}
         />
