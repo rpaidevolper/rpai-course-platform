@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoReducer, newSessionDay, type DemoAction } from "./actions";
-import { isFrozenByClosing, isProjectClosed, reopenWithdrawals } from "./closing";
+import { FROZEN_AFTER_CLOSING, isFrozenByClosing, isProjectClosed, reopenWithdrawals } from "./closing";
 import { getCourse } from "./logic";
 import { initialState, type DemoState } from "./state";
 import type { KnowledgeDraft } from "./types";
@@ -16,7 +16,7 @@ const SESSION = "s-pp-0904";
 const LINK = { label: "錄影", url: "https://example.com/rec" };
 const day = newSessionDay("2026-12-01T09:00:00+08:00", "2026-12-01T16:00:00+08:00", null);
 
-/** 先導班加上連結、素材，、藍圖還沒定稿、大綱還沒寄出，凍結前每個操作才都有東西可以改 */
+/** 先導班加上連結、素材、藍圖還沒定稿、大綱還沒寄出，凍結前每個操作才都有東西可以改 */
 const prepared = (): DemoState => {
   const st = initialState();
   return {
@@ -32,7 +32,7 @@ const prepared = (): DemoState => {
 const closed = (): DemoState => demoReducer(prepared(), { type: "course/close", courseId: COURSE });
 const bp = (st: DemoState) => getCourse(st, COURSE)!.blueprint;
 
-const FROZEN: Record<string, (st: DemoState) => DemoAction> = {
+const FROZEN: Record<(typeof FROZEN_AFTER_CLOSING)[number], (st: DemoState) => DemoAction> = {
   "session/create": () => ({ type: "session/create", id: "s-new", courseId: COURSE, days: [day], portalCode: "z1" }),
   "session/updateDays": () => ({ type: "session/updateDays", sessionId: SESSION, days: [day] }),
   "link/add": () => ({ type: "link/add", sessionId: SESSION, label: "回饋表單", url: "https://example.com/form" }),
@@ -50,16 +50,20 @@ const FROZEN: Record<string, (st: DemoState) => DemoAction> = {
 };
 
 describe("結案後凍結的操作，reducer 一律拒絕", () => {
-  for (const [type, make] of Object.entries(FROZEN)) {
+  it("測試涵蓋凍結名單的每一個操作，不多不少", () => {
+    expect(Object.keys(FROZEN).sort()).toEqual([...FROZEN_AFTER_CLOSING].sort());
+  });
+
+  for (const [type, make] of Object.entries(FROZEN) as [DemoAction["type"], (st: DemoState) => DemoAction][]) {
     it(`${type}：結案後回傳原狀態，結案前可以做`, () => {
       const st = closed();
       expect(demoReducer(st, make(st))).toBe(st);
-      expect(isFrozenByClosing(getCourse(st, COURSE), type as DemoAction["type"])).toBe(true);
+      expect(isFrozenByClosing(getCourse(st, COURSE), type)).toBe(true);
       // 對照：沒結案時同一個操作真的會改到課程或場次，所以上面的拒絕是凍結造成的
       const open = prepared();
       const done = demoReducer(open, make(open));
       expect([done.courses, done.sessions]).not.toEqual([open.courses, open.sessions]);
-      expect(isFrozenByClosing(getCourse(open, COURSE), type as DemoAction["type"])).toBe(false);
+      expect(isFrozenByClosing(getCourse(open, COURSE), type)).toBe(false);
     });
   }
 
