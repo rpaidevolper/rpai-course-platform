@@ -10,7 +10,12 @@ describe("ModelIdSchema", () => {
 
   it("拒絕清單外的模型", () => {
     expect(ModelIdSchema.safeParse("gpt-5").success).toBe(false);
-    expect(ModelIdSchema.safeParse("claude-opus-5-20260101").success).toBe(false);
+    expect(ModelIdSchema.safeParse("claude-opus-5-5-20260101").success).toBe(false);
+  });
+
+  it("拒絕已換成新版的舊模型", () => {
+    expect(ModelIdSchema.safeParse("claude-opus-5").success).toBe(false);
+    expect(ModelIdSchema.safeParse("claude-haiku-4-5").success).toBe(false);
   });
 
   it("預設模型在清單內", () => {
