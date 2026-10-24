@@ -93,9 +93,26 @@ pnpm lint && pnpm typecheck && pnpm test
 
 也可以直接在主機開發：安裝 [Node.js](https://nodejs.org/) 24、[pnpm](https://pnpm.io/installation)、[GitHub CLI](https://cli.github.com/)、[Claude Code](https://claude.com/claude-code) 與 Docker（本機 Supabase 需要），然後執行 `pnpm install`、`pnpm db:start`、`pnpm dev`。
 
+### Claude Code on the web
+
+在 [Claude Code on the web](https://claude.ai/code) 開的雲端 session 不用 Dev Container。每個 session 開始時，`.claude/hooks/session-start.sh` 會：
+
+- 用容器內的 nvm 安裝 Node 24，並讓之後的指令都用它（容器預設是 Node 22）
+- `pnpm install`
+- 安裝 `mattpocock-skills` plugin（雲端 session 不會自動安裝 `.claude/settings.json` 宣告的 plugin）
+
+session 開好就能跑 `pnpm lint && pnpm typecheck && pnpm test`，也能用 `/grill-with-docs` 等指令。hook 只在雲端（`CLAUDE_CODE_REMOTE=true`）執行，本機與 Dev Container 不受影響。
+
+本機 Supabase 需要 Docker，但雲端容器的 Docker daemon 預設沒有啟動，要用資料庫時先手動啟動（自動啟動見 [#49](https://github.com/rpaidevolper/rpai-course-platform/issues/49)）：
+
+```bash
+dockerd > /tmp/dockerd.log 2>&1 &
+pnpm db:start
+```
+
 ## 3. 啟用 AI workflow
 
-在容器的終端機執行 `claude`，第一次需要登入（登入狀態在重建容器後會保留）。接著會詢問是否信任這個專案並安裝 `mattpocock-skills` plugin，選同意。之後輸入 `/` 應該能看到 `/grill-with-docs`、`/to-spec`、`/to-tickets`、`/implement`、`/triage` 等指令。
+在容器的終端機執行 `claude`，第一次需要登入（登入狀態在重建容器後會保留）。接著會詢問是否信任這個專案並安裝 `mattpocock-skills` plugin，選同意。之後輸入 `/` 應該能看到 `/grill-with-docs`、`/to-spec`、`/to-tickets`、`/implement`、`/triage` 等指令。Claude Code on the web 不用做這一步，SessionStart hook 會自動安裝。
 
 沒有出現的話手動安裝：
 

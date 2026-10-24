@@ -12,19 +12,21 @@ cd "$CLAUDE_PROJECT_DIR"
 
 # --- Node 24 -------------------------------------------------------------
 # 容器預設是 Node 22，但 CI、Dev Container、Dockerfile 都用 24（改版本時要一起改）。
-# 容器有 nvm 但沒裝任何版本；已裝過就不重裝，免得每次 session 都連網查新版。
+# 容器有 nvm 但沒裝任何版本；已裝過（例如 resume）就不重裝，免得每次都連網查新版。
+# 裝不起來（例如網路政策擋 nodejs.org）就沿用預設版本，不擋後面的 pnpm install。
 NODE_MAJOR=24
 export NVM_DIR="${NVM_DIR:-/opt/nvm}"
+node_bin=""
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   # --no-use：不自動切到 default alias（指向未安裝的版本時會讓 set -e 直接中止）
   . "$NVM_DIR/nvm.sh" --no-use
-  if ! node_path="$(nvm which "$NODE_MAJOR" 2>/dev/null)"; then
-    nvm install "$NODE_MAJOR" >&2
-    node_path="$(nvm which "$NODE_MAJOR")"
+  if nvm which "$NODE_MAJOR" >/dev/null 2>&1 || nvm install "$NODE_MAJOR" >&2; then
+    node_bin="$(dirname "$(nvm which "$NODE_MAJOR")")"
   fi
-  node_bin="$(dirname "$node_path")"
-  export PATH="$node_bin:$PATH"
+fi
 
+if [ -n "$node_bin" ]; then
+  export PATH="$node_bin:$PATH"
   # Bash 工具用的是 session 開始時的 shell 快照，改 ~/.bashrc 沒用；
   # 寫進 CLAUDE_ENV_FILE 才會套用到之後的每個指令。resume 時 hook 會再跑一次，所以先檢查。
   if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
@@ -32,7 +34,8 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
     grep -qxF "$path_line" "$CLAUDE_ENV_FILE" 2>/dev/null || echo "$path_line" >>"$CLAUDE_ENV_FILE"
   fi
 else
-  echo "找不到 nvm（$NVM_DIR），沿用容器預設的 Node $(node --version)" >&2
+  # stdout 會進 Claude 的 context，讓它知道結果可能和 CI 不同
+  echo "無法切到 Node $NODE_MAJOR，沿用容器預設的 Node $(node --version)；CI 用 Node $NODE_MAJOR"
 fi
 
 # --- 依賴 ----------------------------------------------------------------
