@@ -4,12 +4,12 @@ import type { Artifact, Course, IsoTime, Project, ProjectStatus } from "./types"
 
 /**
  * 結案閘與結案狀態（#59）。純函式，不碰 UI；結案動作在 actions.ts 的 course/close。
- * 最終版（GLOSSARY）：課後由講師上傳、代表實際上課內容的逐頁腳本或簡報版本。
+ * 最終版（GLOSSARY）：課後由講師上傳、代表實際上課內容的簡報版本（講稿在簡報備忘稿裡，不另算）。
  * 它和定稿不同：定稿是產下游之前的認可，最終版是課上實際用過的版本。
  */
 
 /** 結案要有最終版的產物種類 */
-export const FINAL_KINDS = ["page_script", "slides"] as const;
+export const FINAL_KINDS = ["slides"] as const;
 export type FinalKind = (typeof FINAL_KINDS)[number];
 
 export interface MissingFinal {
@@ -19,7 +19,7 @@ export interface MissingFinal {
 }
 
 export interface ClosingGate {
-  /** 缺最終版的天與產物種類，依天數、逐頁腳本在前簡報在後排列 */
+  /** 缺最終版的天與產物種類，依天數排列 */
   missingFinals: MissingFinal[];
   /** 這門課程有沒有任何場次；沒有場次代表還沒上過課，不能結案 */
   hasSessions: boolean;
@@ -37,7 +37,7 @@ function latestFinal(course: Course, kind: FinalKind, day: number): Artifact | u
   return uploads.reduce<Artifact | undefined>((best, a) => (best === undefined || a.version > best.version ? a : best), undefined);
 }
 
-/** 各天各種類的最終版，依天數排列、逐頁腳本在前簡報在後；沒有最終版的那一份不出現。 */
+/** 各天簡報的最終版，依天數排列；沒有最終版的那一份不出現。 */
 export function finalArtifacts(course: Course): Artifact[] {
   return course.blueprint.days.flatMap((_, i) =>
     FINAL_KINDS.flatMap((kind) => {

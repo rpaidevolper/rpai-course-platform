@@ -721,15 +721,13 @@ export const COURSES: Course[] = [
     artifacts: [
       artifact({ id: "a-ci-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-09-28T09:30:00+08:00", createdAt: "2026-09-27T10:00:00+08:00" }),
       artifact({ id: "a-ci-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-09-27T10:05:00+08:00" }),
-      artifact({ id: "a-ci-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-09-28T18:00:00+08:00", createdAt: "2026-09-28T15:00:00+08:00" }),
-      artifact({ id: "a-ci-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-ci-script-d1-1"], createdAt: "2026-09-28T21:30:00+08:00" }),
-      artifact({ id: "a-ci-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-ci-script-d1-1"], createdAt: "2026-09-29T20:10:00+08:00" }),
+      artifact({ id: "a-ci-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-09-28T22:30:00+08:00", createdAt: "2026-09-28T21:30:00+08:00" }),
+      artifact({ id: "a-ci-handbook-1", kind: "handbook", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-ci-slides-1"], createdAt: "2026-09-29T20:10:00+08:00" }),
       artifact({ id: "a-ci-outline-2", kind: "outline", version: 2, blueprintVersion: 3, createdAt: "2026-10-07T17:00:00+08:00" }),
       artifact({ id: "a-ci-prep-2", kind: "prep_sheet", version: 2, blueprintVersion: 3, createdAt: "2026-10-07T17:05:00+08:00" }),
-      artifact({ id: "a-ci-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 3, finalizedAt: "2026-10-07T21:00:00+08:00", createdAt: "2026-10-07T19:00:00+08:00" }),
-      artifact({ id: "a-ci-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 3, upstreamIds: ["a-ci-script-d1-2"], createdAt: "2026-10-07T22:15:00+08:00" }),
-      // 講師把 v2 改過再上傳：沿用 v2 的藍圖與上游綁定
-      artifact({ id: "a-ci-slides-3", kind: "slides", day: 1, version: 3, blueprintVersion: 3, upstreamIds: ["a-ci-script-d1-2"], editedFromId: "a-ci-slides-2", createdAt: "2026-10-08T08:30:00+08:00" }),
+      artifact({ id: "a-ci-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 3, finalizedAt: "2026-10-07T23:00:00+08:00", createdAt: "2026-10-07T22:15:00+08:00" }),
+      // 講師把 v2 改過再上傳：沿用 v2 的藍圖綁定，要重新定稿；第 1 天學員手冊因此過期
+      artifact({ id: "a-ci-slides-3", kind: "slides", day: 1, version: 3, blueprintVersion: 3, editedFromId: "a-ci-slides-2", createdAt: "2026-10-08T08:30:00+08:00" }),
     ],
     materials: [
       { id: "m-ci-complaint", name: "客訴信範例（去識別化）.docx", sizeKb: 48 },
@@ -791,9 +789,8 @@ export const COURSES: Course[] = [
     artifacts: [
       artifact({ id: "a-pa-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-09-10T15:00:00+08:00", createdAt: "2026-09-10T12:00:00+08:00" }),
       artifact({ id: "a-pa-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-09-10T12:05:00+08:00" }),
-      artifact({ id: "a-pa-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-09-12T10:00:00+08:00", createdAt: "2026-09-11T20:00:00+08:00" }),
-      artifact({ id: "a-pa-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pa-script-d1-1"], createdAt: "2026-09-12T22:00:00+08:00" }),
-      artifact({ id: "a-pa-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-pa-script-d1-1"], createdAt: "2026-09-13T20:00:00+08:00" }),
+      artifact({ id: "a-pa-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-09-12T23:00:00+08:00", createdAt: "2026-09-12T22:00:00+08:00" }),
+      artifact({ id: "a-pa-handbook-1", kind: "handbook", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pa-slides-1"], createdAt: "2026-09-13T20:00:00+08:00" }),
     ],
     materials: [{ id: "m-pa-fields", name: "請款單欄位對照.xlsx", sizeKb: 36 }],
   },
@@ -813,21 +810,21 @@ export const COURSES: Course[] = [
       { version: 1, createdAt: "2026-09-22T10:00:00+08:00", note: "由模組卡與製造業的產業素材包談出初版，一天", finalizedAt: null },
       { version: 2, createdAt: "2026-10-01T15:30:00+08:00", note: "拆成兩天：第一天彙整、第二天通知，每天上午下午各 180 分鐘", finalizedAt: "2026-10-02T12:00:00+08:00" },
     ],
-    // 示範只改第一天逐頁腳本：第一天簡報與學員手冊過期，第二天簡報不受影響
+    // 示範只改第一天簡報：第一天學員手冊過期，第二天簡報與學員手冊不受影響
     artifacts: [
       artifact({ id: "a-gas-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-10-02T11:00:00+08:00", createdAt: "2026-10-01T17:00:00+08:00" }),
       artifact({ id: "a-gas-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-10-01T17:05:00+08:00" }),
-      artifact({ id: "a-gas-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-10-04T10:00:00+08:00", createdAt: "2026-10-03T14:00:00+08:00" }),
-      artifact({ id: "a-gas-script-d2-1", kind: "page_script", day: 2, version: 1, blueprintVersion: 2, finalizedAt: "2026-10-04T11:00:00+08:00", createdAt: "2026-10-03T16:00:00+08:00" }),
-      artifact({ id: "a-gas-slides-d1-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d1-1"], createdAt: "2026-10-04T20:00:00+08:00" }),
-      artifact({ id: "a-gas-slides-d2-1", kind: "slides", day: 2, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d2-1"], createdAt: "2026-10-04T22:00:00+08:00" }),
-      artifact({ id: "a-gas-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d1-1", "a-gas-script-d2-1"], createdAt: "2026-10-05T10:00:00+08:00" }),
-      artifact({ id: "a-gas-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 2, editedFromId: "a-gas-script-d1-1", createdAt: "2026-10-06T21:00:00+08:00" }),
+      artifact({ id: "a-gas-slides-d1-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-10-04T21:00:00+08:00", createdAt: "2026-10-04T20:00:00+08:00" }),
+      artifact({ id: "a-gas-slides-d2-1", kind: "slides", day: 2, version: 1, blueprintVersion: 2, finalizedAt: "2026-10-04T23:00:00+08:00", createdAt: "2026-10-04T22:00:00+08:00" }),
+      artifact({ id: "a-gas-handbook-d1-1", kind: "handbook", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-slides-d1-1"], createdAt: "2026-10-05T10:00:00+08:00" }),
+      artifact({ id: "a-gas-handbook-d2-1", kind: "handbook", day: 2, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-slides-d2-1"], createdAt: "2026-10-05T10:30:00+08:00" }),
+      // 講師把第 1 天簡報改過再上傳：新版本要重新定稿，第 1 天學員手冊因此過期
+      artifact({ id: "a-gas-slides-d1-2", kind: "slides", day: 1, version: 2, blueprintVersion: 2, editedFromId: "a-gas-slides-d1-1", createdAt: "2026-10-06T21:00:00+08:00" }),
     ],
     materials: [],
   },
   {
-    // 示範「可以結案」：場次已上完、每天的逐頁腳本與簡報都有講師上傳的最終版，結案閘全過
+    // 示範「可以結案」：場次已上完、每天的簡報都有講師上傳的最終版，結案閘全過
     id: "c-pa-pilot",
     projectId: "p-f-2026",
     title: "請款簽核先導班",
@@ -846,11 +843,9 @@ export const COURSES: Course[] = [
     artifacts: [
       artifact({ id: "a-pp-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-08-19T15:00:00+08:00", createdAt: "2026-08-19T12:00:00+08:00" }),
       artifact({ id: "a-pp-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-08-19T12:05:00+08:00" }),
-      artifact({ id: "a-pp-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-08-21T10:00:00+08:00", createdAt: "2026-08-20T20:00:00+08:00" }),
-      artifact({ id: "a-pp-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pp-script-d1-1"], createdAt: "2026-08-21T22:00:00+08:00" }),
-      // 課後講師上傳實際上課用的版本：兩個都是最終版
-      artifact({ id: "a-pp-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 2, upstreamIds: [], editedFromId: "a-pp-script-d1-1", createdAt: "2026-09-05T20:00:00+08:00" }),
-      artifact({ id: "a-pp-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 2, upstreamIds: ["a-pp-script-d1-1"], editedFromId: "a-pp-slides-1", createdAt: "2026-09-05T20:30:00+08:00" }),
+      artifact({ id: "a-pp-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-08-21T23:00:00+08:00", createdAt: "2026-08-21T22:00:00+08:00" }),
+      // 課後講師上傳實際上課用的版本（含備忘稿裡的講稿）：最終版
+      artifact({ id: "a-pp-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 2, editedFromId: "a-pp-slides-1", createdAt: "2026-09-05T20:30:00+08:00" }),
     ],
     materials: [],
   },
@@ -928,10 +923,10 @@ export const SESSIONS: Session[] = [
       { startsAt: "2026-10-27T09:00:00+08:00", endsAt: "2026-10-27T16:00:00+08:00", venue: "E 公司新竹廠 2F 會議室", instructorId: "inst-chou" },
     ],
     links: [SLIDO_GAS_1020],
-    // 一次發布可以包含每一天的簡報；學員入口只顯示當天那份與整門課的學員手冊
+    // 一次發布可以包含每一天的簡報；學員入口只顯示當天那份簡報與學員手冊
     publication: {
       publishedAt: "2026-10-05T18:00:00+08:00",
-      artifactIds: ["a-gas-slides-d1-1", "a-gas-slides-d2-1", "a-gas-handbook-1"],
+      artifactIds: ["a-gas-slides-d1-1", "a-gas-slides-d2-1", "a-gas-handbook-d1-1", "a-gas-handbook-d2-1"],
       materialIds: [],
       links: [SLIDO_GAS_1020],
     },

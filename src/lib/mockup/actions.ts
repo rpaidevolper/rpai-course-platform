@@ -228,13 +228,8 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       if (generationGate(course, job).length > 0) return state;
       const busy = latestArtifact(course, action.kind, action.day);
       if (busy && (busy.status === "pending" || busy.status === "generating")) return state;
-      // 上游：簡報 → 該天最新可用的逐頁腳本；學員手冊 → 每一天最新可用的逐頁腳本（定稿閘已保證都存在）
-      const upstreamIds =
-        action.kind === "slides"
-          ? [latestReadyArtifact(course, "page_script", action.day)!.id]
-          : action.kind === "handbook"
-            ? course.blueprint.days.map((_, i) => latestReadyArtifact(course, "page_script", i + 1)!.id)
-            : [];
+      // 上游：學員手冊 → 那天最新可用的簡報（定稿閘已保證存在）；簡報只有藍圖當上游
+      const upstreamIds = action.kind === "handbook" ? [latestReadyArtifact(course, "slides", action.day)!.id] : [];
       return mapCourse(course.id, (c) => ({
         ...c,
         artifacts: [
@@ -269,7 +264,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       return mapCourse(action.courseId, (c) => ({
         ...c,
         artifacts: c.artifacts.map((a) =>
-          a.id === action.artifactId && a.kind === "page_script" && a.status === "ready" && a.finalizedAt === null ? { ...a, finalizedAt: now } : a,
+          a.id === action.artifactId && a.kind === "slides" && a.status === "ready" && a.finalizedAt === null ? { ...a, finalizedAt: now } : a,
         ),
       }));
 

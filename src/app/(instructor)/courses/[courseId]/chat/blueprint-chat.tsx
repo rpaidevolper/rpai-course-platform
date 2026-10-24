@@ -34,7 +34,7 @@ export function BlueprintChat({ courseId }: { courseId: string }) {
         title="跟 AI 談藍圖"
         description={
           <p>
-            談完按「更新藍圖」，藍圖會升到 v{version + 1}。課程大綱、逐頁腳本、簡報、學員手冊都讀藍圖，不讀這段對話。
+            談完按「更新藍圖」，藍圖會升到 v{version + 1}。課程大綱、簡報、學員手冊都讀藍圖，不讀這段對話。
           </p>
         }
       >
@@ -93,8 +93,8 @@ function Conversation({ course }: { course: Course }) {
     dispatch({ type: "blueprint/revise", courseId: course.id, blueprint, note });
     toast(
       hasArtifacts
-        ? `藍圖已升到 v${next}，原本的產物已標為過期，記得定稿後再產逐頁腳本`
-        : `藍圖已升到 v${next}，記得定稿後再產逐頁腳本`,
+        ? `藍圖已升到 v${next}，原本的產物已標為過期，記得定稿後再產簡報`
+        : `藍圖已升到 v${next}，記得定稿後再產簡報`,
     );
     setMessages((prev) => [
       ...prev,
@@ -102,8 +102,8 @@ function Conversation({ course }: { course: Course }) {
         role: "assistant",
         text: `已整理成藍圖 v${next}：${note}。\n${
           hasArtifacts
-            ? "原本的產物都出自舊版，已標為過期。回課程頁把新藍圖定稿，再重新產逐頁腳本。"
-            : "回課程頁把藍圖定稿，就能產逐頁腳本。"
+            ? "原本的產物都出自舊版，已標為過期。回課程頁把新藍圖定稿，再重新產簡報。"
+            : "回課程頁把藍圖定稿，就能產簡報。"
         }`,
       },
     ]);

@@ -34,11 +34,11 @@ describe("demo 時鐘", () => {
 });
 
 describe("產物鏈與定稿閘", () => {
-  it("新產物綁最新藍圖，版本號接續；排隊中 → 產出中 → 可用，狀態不符不動", () => {
-    const st = run([{ type: "artifact/request", id: "a-new", courseId: CI, kind: "handbook", day: null }]);
-    const a = latestArtifact(getCourse(st, CI)!, "handbook")!;
-    expect(a).toMatchObject({ id: "a-new", version: 2, blueprintVersion: 3, status: "pending", upstreamIds: ["a-ci-script-d1-2"] });
-    const status = (s: DemoState) => latestArtifact(getCourse(s, CI)!, "handbook")!.status;
+  it("新產物綁最新藍圖，版本號接續；排隊中 → 產出中 → 可用，狀態不符不動；簡報沒有上游", () => {
+    const st = run([{ type: "artifact/request", id: "a-new", courseId: CI, kind: "slides", day: 1 }]);
+    const a = latestArtifact(getCourse(st, CI)!, "slides", 1)!;
+    expect(a).toMatchObject({ id: "a-new", version: 4, blueprintVersion: 3, status: "pending", upstreamIds: [] });
+    const status = (s: DemoState) => latestArtifact(getCourse(s, CI)!, "slides", 1)!.status;
     expect(status(run([{ type: "artifact/advance", courseId: CI, artifactId: "a-new", from: "generating" }], st))).toBe("pending");
     expect(status(run(ready(CI, "a-new"), st))).toBe("ready");
   });
@@ -51,37 +51,63 @@ describe("產物鏈與定稿閘", () => {
     expect(getCourse(st, CI)!.artifacts.map((a) => a.id)).not.toContain("a-2");
   });
 
-  it("藍圖升版後要先定稿才能產逐頁腳本；被閘擋住的產檔不會發生", () => {
+  it("藍圖升版後要先定稿才能產簡報；被閘擋住的產檔不會發生", () => {
     const course = getCourse(initialState(), CI)!;
     const revised = run([{ type: "blueprint/revise", courseId: CI, blueprint: course.blueprint, note: "加一則故事" }]);
     const c = getCourse(revised, CI)!;
     expect(c.blueprintHistory.at(-1)).toMatchObject({ version: 4, finalizedAt: null });
     expect(isStale(c, latestArtifact(c, "slides", 1)!)).toBe(true);
-    expect(generationGate(c, { kind: "page_script", day: 1 })).toEqual([{ kind: "blueprint_not_finalized", version: 4 }]);
+    expect(generationGate(c, { kind: "slides", day: 1 })).toEqual([{ kind: "blueprint_not_finalized", version: 4 }]);
 
-    const blocked = run([{ type: "artifact/request", id: "s-x", courseId: CI, kind: "page_script", day: 1 }], revised);
+    const blocked = run([{ type: "artifact/request", id: "s-x", courseId: CI, kind: "slides", day: 1 }], revised);
     expect(getCourse(blocked, CI)!.artifacts.some((a) => a.id === "s-x")).toBe(false);
 
     const finalized = run([{ type: "blueprint/finalize", courseId: CI }], revised);
-    expect(generationGate(getCourse(finalized, CI)!, { kind: "page_script", day: 1 })).toEqual([]);
+    expect(generationGate(getCourse(finalized, CI)!, { kind: "slides", day: 1 })).toEqual([]);
   });
 
-  it("逐頁腳本定稿後才能產簡報，簡報的上游是那一版腳本", () => {
+  it("那天的簡報定稿後才能產那天的學員手冊，手冊的上游是那一版簡報", () => {
     let st = run([
       { type: "blueprint/revise", courseId: CI, blueprint: getCourse(initialState(), CI)!.blueprint, note: "x" },
       { type: "blueprint/finalize", courseId: CI },
-      { type: "artifact/request", id: "sc-3", courseId: CI, kind: "page_script", day: 1 },
-      ...ready(CI, "sc-3"),
-    ]);
-    expect(generationGate(getCourse(st, CI)!, { kind: "slides", day: 1 })).toEqual([{ kind: "script_not_finalized", day: 1, version: 3 }]);
-    st = run([
-      { type: "artifact/finalize", courseId: CI, artifactId: "sc-3" },
       { type: "artifact/request", id: "sl-4", courseId: CI, kind: "slides", day: 1 },
       ...ready(CI, "sl-4"),
+    ]);
+    expect(generationGate(getCourse(st, CI)!, { kind: "handbook", day: 1 })).toEqual([{ kind: "slides_not_finalized", day: 1, version: 4 }]);
+    const blocked = run([{ type: "artifact/request", id: "hb-x", courseId: CI, kind: "handbook", day: 1 }], st);
+    expect(getCourse(blocked, CI)!.artifacts.some((a) => a.id === "hb-x")).toBe(false);
+    st = run([
+      { type: "artifact/finalize", courseId: CI, artifactId: "sl-4" },
+      { type: "artifact/request", id: "hb-2", courseId: CI, kind: "handbook", day: 1 },
+      ...ready(CI, "hb-2"),
     ], st);
-    const slides = latestArtifact(getCourse(st, CI)!, "slides", 1)!;
-    expect(slides).toMatchObject({ id: "sl-4", version: 4, upstreamIds: ["sc-3"] });
-    expect(isStale(getCourse(st, CI)!, slides)).toBe(false);
+    const handbook = latestArtifact(getCourse(st, CI)!, "handbook", 1)!;
+    expect(handbook).toMatchObject({ id: "hb-2", version: 2, day: 1, upstreamIds: ["sl-4"] });
+    expect(isStale(getCourse(st, CI)!, handbook)).toBe(false);
+  });
+
+  it("定稿只適用於簡報；其他產物的 artifact/finalize 不動", () => {
+    const st = run([{ type: "artifact/finalize", courseId: CI, artifactId: "a-ci-outline-2" }]);
+    expect(getCourse(st, CI)!.artifacts.find((a) => a.id === "a-ci-outline-2")!.finalizedAt).toBeNull();
+  });
+
+  it("純講述的天要求產學員手冊會被擋下，狀態不變", () => {
+    const base = initialState();
+    const lecture = {
+      ...base,
+      courses: base.courses.map((c) =>
+        c.id === CI
+          ? {
+              ...c,
+              blueprint: {
+                ...c.blueprint,
+                days: c.blueprint.days.map((d) => ({ ...d, slots: d.slots.map((sl) => ({ ...sl, units: sl.units.map((u) => ({ ...u, activity: null })) })) })),
+              },
+            }
+          : c,
+      ),
+    };
+    expect(demoReducer(lecture, { type: "artifact/request", id: "hb-lec", courseId: CI, kind: "handbook", day: 1 })).toBe(lecture);
   });
 
   it("講師修改版排在最新版之後，沿用原本綁定", () => {
@@ -116,13 +142,13 @@ describe("發布與學員入口", () => {
 
   it("重新產出後學員仍看舊版，重新發布才更新", () => {
     const st1 = run([
-      { type: "artifact/request", id: "hb-2", courseId: CI, kind: "handbook", day: null },
-      ...ready(CI, "hb-2"),
+      { type: "artifact/request", id: "sl-new", courseId: CI, kind: "slides", day: 1 },
+      ...ready(CI, "sl-new"),
     ]);
     expect(portalView(st1, "a1015", st1.now)!.artifacts.map((a) => a.id)).toContain("a-ci-handbook-1");
     expect(readiness(st1, getSession(st1, "s-ci-1015")!).map((i) => i.kind)).toContain("publication_outdated");
     const st2 = run([{ type: "session/publish", sessionId: "s-ci-1015" }], st1);
-    expect(portalView(st2, "a1015", st2.now)!.artifacts.map((a) => a.id)).toContain("hb-2");
+    expect(portalView(st2, "a1015", st2.now)!.artifacts.map((a) => a.id)).toContain("sl-new");
   });
 
   it("提前關閉立即生效；重新打開、重新發布都會恢復", () => {
@@ -181,12 +207,10 @@ describe("從零開一門課到準備好", () => {
         ...ready("c-x", "x-outline"),
         { type: "artifact/request", id: "x-prep", courseId: "c-x", kind: "prep_sheet", day: null },
         ...ready("c-x", "x-prep"),
-        { type: "artifact/request", id: "x-script", courseId: "c-x", kind: "page_script", day: 1 },
-        ...ready("c-x", "x-script"),
-        { type: "artifact/finalize", courseId: "c-x", artifactId: "x-script" },
         { type: "artifact/request", id: "x-slides", courseId: "c-x", kind: "slides", day: 1 },
         ...ready("c-x", "x-slides"),
-        { type: "artifact/request", id: "x-hb", courseId: "c-x", kind: "handbook", day: null },
+        { type: "artifact/finalize", courseId: "c-x", artifactId: "x-slides" },
+        { type: "artifact/request", id: "x-hb", courseId: "c-x", kind: "handbook", day: 1 },
         ...ready("c-x", "x-hb"),
         { type: "material/add", id: "m-x", courseId: "c-x", name: "練習檔.xlsx", sizeKb: 20 },
         { type: "link/add", sessionId: "s-x", label: "Slido", url: "https://slido.com/y" },

@@ -1,6 +1,6 @@
 import { openItems } from "@/lib/blueprint/open-items";
 import { mapRequirements, type RequirementMapping } from "@/lib/blueprint/requirement-mapping";
-import { checkBlueprint, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
+import { checkBlueprint, isLectureOnly, missingElements, FIVE_ELEMENT_LABELS, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
 import { moduleLabel } from "@/lib/blueprint/modules";
 import type { DemoState } from "./state";
 import {
@@ -105,10 +105,10 @@ export const getIndustryPack = (st: DemoState, id: string) => st.industryPacks.f
 export const latestBlueprintVersion = (course: Course) =>
   Math.max(...course.blueprintHistory.map((v) => v.version));
 
-/** 產物的一個系列：同一種類（逐頁腳本與簡報再加上同一天）的所有版本是同一份產物。 */
+/** 產物的一個系列：同一種類（簡報與學員手冊再加上同一天）的所有版本是同一份產物。 */
 export interface ArtifactSeries {
   kind: ArtifactKind;
-  /** 逐頁腳本與簡報是第幾天；其他為 null */
+  /** 簡報與學員手冊是第幾天；其他為 null */
   day: number | null;
 }
 
@@ -116,21 +116,24 @@ export interface ArtifactSeries {
 export const seriesLabel = ({ kind, day }: ArtifactSeries) =>
   day === null ? ARTIFACT_LABELS[kind] : `第 ${day} 天${ARTIFACT_LABELS[kind]}`;
 
-/** 依藍圖的天數，列出這門課程應有的整條產物鏈，依鏈的順序排列。 */
+/** 那一天有沒有動手環節：至少一個單元的 activity 不是 null。學員手冊只給這樣的天（ADR 0005）。 */
+export const isHandsOnDay = (course: Course, day: number): boolean =>
+  course.blueprint.days[day - 1]?.slots.some((s) => s.units.some((u) => !isLectureOnly(u))) ?? false;
+
+/** 依藍圖的天數，列出這門課程應有的整條產物鏈，依鏈的順序排列；學員手冊只列含動手環節的天。 */
 export function artifactSeries(course: Course): ArtifactSeries[] {
   const days = course.blueprint.days.map((_, i) => i + 1);
   return [
     { kind: "outline", day: null },
     { kind: "prep_sheet", day: null },
     ...days.flatMap((day): ArtifactSeries[] => [
-      { kind: "page_script", day },
       { kind: "slides", day },
+      ...(isHandsOnDay(course, day) ? [{ kind: "handbook" as const, day }] : []),
     ]),
-    { kind: "handbook", day: null },
   ];
 }
 
-/** 某一份產物目前最新的一版；還沒產過則為 undefined。逐頁腳本與簡報要給第幾天。 */
+/** 某一份產物目前最新的一版；還沒產過則為 undefined。簡報與學員手冊要給第幾天。 */
 export function latestArtifact(course: Course, kind: ArtifactKind, day: number | null = null): Artifact | undefined {
   return course.artifacts
     .filter((a) => a.kind === kind && a.day === day)
@@ -206,34 +209,35 @@ export function staleReasonText(reason: StaleReason): string {
 
 // ── 定稿閘 ────────────────────────────────────────────
 
-/** 產檔工作被擋住的原因：缺哪一步定稿。 */
+/** 產檔工作被擋住的原因：缺哪一步定稿，或那天不該有學員手冊。 */
 export type GateBlock =
   | { kind: "blueprint_not_finalized"; version: number }
-  /** 那天沒有可用（ready）的逐頁腳本：還沒產，或還在產、產失敗 */
-  | { kind: "script_missing"; day: number }
-  | { kind: "script_not_finalized"; day: number; version: number }
-  | { kind: "script_stale"; day: number; version: number };
+  /** 那天沒有可用（ready）的簡報：還沒產，或還在產、產失敗 */
+  | { kind: "slides_missing"; day: number }
+  | { kind: "slides_not_finalized"; day: number; version: number }
+  | { kind: "slides_stale"; day: number; version: number }
+  /** 那天的單元都是純講述，沒有學員手冊可產 */
+  | { kind: "no_hands_on"; day: number };
 
-/** 某一天最新可用的逐頁腳本能不能當下游的上游：要定稿、而且沒過期。 */
-function scriptBlock(course: Course, day: number): GateBlock | null {
-  const script = latestReadyArtifact(course, "page_script", day);
-  if (!script) return { kind: "script_missing", day };
-  if (script.finalizedAt === null) return { kind: "script_not_finalized", day, version: script.version };
-  if (isStale(course, script)) return { kind: "script_stale", day, version: script.version };
+/** 某一天最新可用的簡報能不能當學員手冊的上游：要定稿、而且沒過期。 */
+function slidesBlock(course: Course, day: number): GateBlock | null {
+  const slides = latestReadyArtifact(course, "slides", day);
+  if (!slides) return { kind: "slides_missing", day };
+  if (slides.finalizedAt === null) return { kind: "slides_not_finalized", day, version: slides.version };
+  if (isStale(course, slides)) return { kind: "slides_stale", day, version: slides.version };
   return null;
 }
 
 /**
- * 定稿閘：某個產檔工作現在能不能排。空陣列代表可以排。
+ * 定稿閘（ADR 0005）：某個產檔工作現在能不能排。空陣列代表可以排。
  * 「最新」一律指最新的可用版本（ready）；還在產或產失敗的新版不算。
- * - 逐頁腳本：藍圖最新版已定稿。
- * - 某天簡報：該天最新可用的逐頁腳本已定稿、沒過期。
- * - 學員手冊：藍圖每一天最新可用的逐頁腳本都已定稿、沒過期；每一天的問題都列出。
+ * - 簡報：藍圖最新版已定稿（簡報只有藍圖當上游）。
+ * - 某天學員手冊：那天要有動手環節（否則被擋，不產手冊）；那天最新可用的簡報已定稿、沒過期。
  * - 課程大綱、講師準備單：不設閘。
  * 天數不在藍圖範圍內、或整門課一份的產物帶了天，是呼叫端的錯，直接丟例外。
  */
 export function generationGate(course: Course, job: ArtifactSeries): GateBlock[] {
-  const perDay = job.kind === "page_script" || job.kind === "slides";
+  const perDay = job.kind === "slides" || job.kind === "handbook";
   const validDay = perDay
     ? job.day !== null && Number.isInteger(job.day) && job.day >= 1 && job.day <= course.blueprint.days.length
     : job.day === null;
@@ -243,30 +247,28 @@ export function generationGate(course: Course, job: ArtifactSeries): GateBlock[]
     case "outline":
     case "prep_sheet":
       return [];
-    case "page_script": {
+    case "slides": {
       const latest = course.blueprintHistory.find((v) => v.version === latestBlueprintVersion(course))!;
       return latest.finalizedAt === null ? [{ kind: "blueprint_not_finalized", version: latest.version }] : [];
     }
-    case "slides": {
-      const block = scriptBlock(course, job.day!);
+    case "handbook": {
+      if (!isHandsOnDay(course, job.day!)) return [{ kind: "no_hands_on", day: job.day! }];
+      const block = slidesBlock(course, job.day!);
       return block ? [block] : [];
     }
-    case "handbook":
-      return course.blueprint.days
-        .map((_, i) => scriptBlock(course, i + 1))
-        .filter((b): b is GateBlock => b !== null);
   }
 }
 
 export function gateBlockText(block: GateBlock): string {
   if (block.kind === "blueprint_not_finalized") return `藍圖 v${block.version} 還沒定稿`;
-  const label = seriesLabel({ kind: "page_script", day: block.day });
+  if (block.kind === "no_hands_on") return `第 ${block.day} 天沒有動手環節，不產學員手冊`;
+  const label = seriesLabel({ kind: "slides", day: block.day });
   switch (block.kind) {
-    case "script_missing":
+    case "slides_missing":
       return `${label}還沒有可用的版本`;
-    case "script_not_finalized":
+    case "slides_not_finalized":
       return `${label} v${block.version} 還沒定稿`;
-    case "script_stale":
+    case "slides_stale":
       return `${label} v${block.version} 已過期，要先重產並定稿`;
   }
 }
@@ -332,8 +334,8 @@ export type ReadinessItem =
   | { kind: "requirement_gaps"; partial: string[]; notFound: string[] }
   /** 還沒有可用（ready）的版本：沒產過，或只有還在產、產失敗的版本 */
   | { kind: "artifact_missing"; artifact: ArtifactKind; day: number | null }
-  /** 某天最新可用的逐頁腳本還沒定稿 */
-  | { kind: "script_not_finalized"; day: number; version: number }
+  /** 某天最新可用的簡報還沒定稿 */
+  | { kind: "slides_not_finalized"; day: number; version: number }
   /** 最新可用的版本沿鏈過期（staleReasons） */
   | { kind: "artifact_stale"; artifact: ArtifactKind; day: number | null; version: number; reasons: StaleReason[] }
   | { kind: "day_count_mismatch"; sessionDays: number; blueprintDays: number }
@@ -386,8 +388,8 @@ export function readiness(st: DemoState, session: Session, course: Course | unde
       items.push({ kind: "artifact_missing", artifact: kind, day });
       continue;
     }
-    if (kind === "page_script" && a.finalizedAt === null) {
-      items.push({ kind: "script_not_finalized", day: day!, version: a.version });
+    if (kind === "slides" && a.finalizedAt === null) {
+      items.push({ kind: "slides_not_finalized", day: day!, version: a.version });
     }
     const reasons = staleReasons(course, a);
     if (reasons.length > 0) items.push({ kind: "artifact_stale", artifact: kind, day, version: a.version, reasons });
@@ -445,8 +447,8 @@ export function readinessText(item: ReadinessItem): string {
       ])}`;
     case "artifact_missing":
       return `還沒有可用的${seriesLabel({ kind: item.artifact, day: item.day })}`;
-    case "script_not_finalized":
-      return `${seriesLabel({ kind: "page_script", day: item.day })} v${item.version} 還沒定稿`;
+    case "slides_not_finalized":
+      return `${seriesLabel({ kind: "slides", day: item.day })} v${item.version} 還沒定稿`;
     case "artifact_stale":
       return `${seriesLabel({ kind: item.artifact, day: item.day })} v${item.version} 已過期：${item.reasons.map(staleReasonText).join("、")}`;
     case "day_count_mismatch":
@@ -483,7 +485,7 @@ const SOURCE_OF: Record<ReadinessItem["kind"], ReadinessSource> = {
   units_need_work: "blueprint",
   requirement_gaps: "requirements",
   artifact_missing: "artifacts",
-  script_not_finalized: "artifacts",
+  slides_not_finalized: "artifacts",
   artifact_stale: "artifacts",
   day_count_mismatch: "session",
   venue_unset: "session",
@@ -571,7 +573,7 @@ export function portalState(session: Session, now: IsoTime): PortalState {
 /**
  * 學員入口看得到的東西。型別上刻意不含專案與價格，學員入口頁只能用這個函式取資料。
  * 只回傳發布時鎖定的內容，講師之後的修改不會出現。
- * 產物只給「今天」（portalDay）那一天的（簡報），加上整門課一份的（學員手冊等）。
+ * 產物只給「今天」（portalDay）那一天的（簡報與學員手冊），加上整門課一份的（課程大綱等）。
  */
 export interface PortalView {
   state: PortalState;

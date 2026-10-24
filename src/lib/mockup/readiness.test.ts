@@ -137,27 +137,27 @@ describe("準備度：需求對照缺口", () => {
   });
 });
 
-describe("準備度：逐頁腳本沒有可用版本或還沒定稿", () => {
-  it("某天最新可用的逐頁腳本還沒定稿時列出是哪一天哪一版", () => {
-    const list = ofKind(items(session("s-gas-1020")), "script_not_finalized");
-    expect(list).toEqual([{ kind: "script_not_finalized", day: 1, version: 2 }]);
-    expect(readinessText(list[0])).toBe("第 1 天逐頁腳本 v2 還沒定稿");
+describe("準備度：簡報沒有可用版本或還沒定稿", () => {
+  it("某天最新可用的簡報還沒定稿時列出是哪一天哪一版", () => {
+    const list = ofKind(items(session("s-gas-1020")), "slides_not_finalized");
+    expect(list).toEqual([{ kind: "slides_not_finalized", day: 1, version: 2 }]);
+    expect(readinessText(list[0])).toBe("第 1 天簡報 v2 還沒定稿");
   });
 
-  it("逐頁腳本只有還在產的版本時，算沒有可用的版本", () => {
+  it("簡報只有還在產的版本時，算沒有可用的版本", () => {
     const base = course("c-pa-finance");
     const generating = {
       ...base,
-      artifacts: base.artifacts.map((a) => (a.kind === "page_script" ? { ...a, status: "generating" as const, finalizedAt: null } : a)),
+      artifacts: base.artifacts.map((a) => (a.kind === "slides" ? { ...a, status: "generating" as const, finalizedAt: null } : a)),
     };
     const list = items(session("s-pa-1029"), generating);
-    expect(ofKind(list, "artifact_missing")).toEqual([{ kind: "artifact_missing", artifact: "page_script", day: 1 }]);
-    expect(ofKind(list, "script_not_finalized")).toEqual([]);
-    expect(texts(ofKind(list, "artifact_missing"))).toEqual(["還沒有可用的第 1 天逐頁腳本"]);
+    expect(ofKind(list, "artifact_missing")).toEqual([{ kind: "artifact_missing", artifact: "slides", day: 1 }]);
+    expect(ofKind(list, "slides_not_finalized")).toEqual([]);
+    expect(texts(ofKind(list, "artifact_missing"))).toEqual(["還沒有可用的第 1 天簡報"]);
   });
 
-  it("每一天最新可用的逐頁腳本都已定稿時不列", () => {
-    expect(ofKind(items(session("s-ci-1022")), "script_not_finalized")).toEqual([]);
+  it("每一天最新可用的簡報都已定稿時不列", () => {
+    expect(ofKind(items(session("s-pa-1029")), "slides_not_finalized")).toEqual([]);
   });
 });
 
@@ -166,9 +166,24 @@ describe("準備度：還沒產出的產物", () => {
     expect(ofKind(items(session("s-ca-1105")), "artifact_missing")).toEqual([
       { kind: "artifact_missing", artifact: "outline", day: null },
       { kind: "artifact_missing", artifact: "prep_sheet", day: null },
-      { kind: "artifact_missing", artifact: "page_script", day: 1 },
       { kind: "artifact_missing", artifact: "slides", day: 1 },
-      { kind: "artifact_missing", artifact: "handbook", day: null },
+      { kind: "artifact_missing", artifact: "handbook", day: 1 },
+    ]);
+  });
+
+  it("純講述的天不會要求學員手冊，只列簡報", () => {
+    const base = course("c-gas-two-day");
+    const lecture: Course = {
+      ...base,
+      artifacts: base.artifacts.filter((a) => a.kind !== "handbook" && a.day !== 2),
+      blueprint: {
+        ...base.blueprint,
+        days: base.blueprint.days.map((d, i) => (i === 1 ? { ...d, slots: d.slots.map((sl) => ({ ...sl, units: sl.units.map((u) => ({ ...u, activity: null })) })) } : d)),
+      },
+    };
+    expect(ofKind(items(session("s-gas-1020"), lecture), "artifact_missing")).toEqual([
+      { kind: "artifact_missing", artifact: "handbook", day: 1 },
+      { kind: "artifact_missing", artifact: "slides", day: 2 },
     ]);
   });
 
@@ -178,16 +193,10 @@ describe("準備度：還沒產出的產物", () => {
 });
 
 describe("準備度：沿鏈過期的產物", () => {
-  it("只改第一天逐頁腳本：第一天簡報與學員手冊過期，並說明原因", () => {
+  it("只改第一天簡報：只有第一天學員手冊過期，並說明原因", () => {
     const list = ofKind(items(session("s-gas-1020")), "artifact_stale");
-    expect(list.map((i) => [i.artifact, i.day])).toEqual([
-      ["slides", 1],
-      ["handbook", null],
-    ]);
-    expect(texts(list)).toEqual([
-      "第 1 天簡報 v1 已過期：第 1 天逐頁腳本已到 v2",
-      "學員手冊 v1 已過期：第 1 天逐頁腳本已到 v2",
-    ]);
+    expect(list.map((i) => [i.artifact, i.day])).toEqual([["handbook", 1]]);
+    expect(texts(list)).toEqual(["第 1 天學員手冊 v1 已過期：第 1 天簡報已到 v2"]);
   });
 
   it("藍圖與上游都改過時兩個原因都列出", () => {
@@ -195,14 +204,14 @@ describe("準備度：沿鏈過期的產物", () => {
     expect(item).toEqual({
       kind: "artifact_stale",
       artifact: "handbook",
-      day: null,
+      day: 1,
       version: 1,
       reasons: [
         { kind: "blueprint", latestVersion: 3 },
-        { kind: "upstream", artifact: "page_script", day: 1, latestVersion: 2 },
+        { kind: "upstream", artifact: "slides", day: 1, latestVersion: 3 },
       ],
     });
-    expect(readinessText(item)).toBe("學員手冊 v1 已過期：藍圖已到 v3、第 1 天逐頁腳本已到 v2");
+    expect(readinessText(item)).toBe("第 1 天學員手冊 v1 已過期：藍圖已到 v3、第 1 天簡報已到 v3");
   });
 
   it("沒有過期的產物時不列", () => {

@@ -50,13 +50,13 @@ describe("結案產生草稿", () => {
 
   it("草稿記下依據的藍圖版本與各天最終版（講師最後上傳的版本）", () => {
     const st = closed();
-    for (const d of st.drafts) expect(d.basis).toEqual({ blueprintVersion: 2, finalArtifactIds: ["a-pp-script-d1-2", "a-pp-slides-2"] });
+    for (const d of st.drafts) expect(d.basis).toEqual({ blueprintVersion: 2, finalArtifactIds: ["a-pp-slides-2"] });
   });
 
-  it("最終版：每天每種取講師上傳的最新一版", () => {
+  it("最終版：每天的簡報取講師上傳的最新一版", () => {
     const course = initialState().courses.find((c) => c.id === "c-gas-two-day")!;
-    // 第一天逐頁腳本有講師上傳的 v2；其他都是 AI 產的，不算
-    expect(finalArtifacts(course).map((a) => a.id)).toEqual(["a-gas-script-d1-2"]);
+    // 第一天簡報有講師上傳的 v2；其他都是 AI 產的，不算
+    expect(finalArtifacts(course).map((a) => a.id)).toEqual(["a-gas-slides-d1-2"]);
   });
 
   it("新單元卡：藍圖裡要改、新做的單元各一張，內容與標籤取自單元與課程", () => {
