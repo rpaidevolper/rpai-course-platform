@@ -1,4 +1,4 @@
-import type { Blueprint } from "@/lib/blueprint/schema";
+import type { Blueprint, UnitLevel } from "@/lib/blueprint/schema";
 
 /**
  * 設計稿（#22）的領域形狀。名詞依 GLOSSARY.md。
@@ -92,6 +92,8 @@ export interface UnitCard extends Omit<TagSet, "industries"> {
   moduleId: ModuleId;
   title: string;
   minutes: number;
+  /** 應用層級：L1–L5、na（不適用，純方法）或 null（未評）；和藍圖單元的 level 同一組值 */
+  level: UnitLevel;
   objective: string;
   method: string;
   outcome: string;
@@ -357,7 +359,13 @@ export type DraftProposal =
   /** 新單元卡：id 在產生草稿時就定好，課程配方用它引用 */
   | { kind: "new_unit_card"; unitCard: UnitCard }
   /** 更新既有單元卡：這門課用了它，補上它還沒有的對象、工具與應用場景 */
-  | { kind: "update_unit_card"; unitCardId: string; addTags: Pick<TagSet, "audiences" | "tools" | "scenarios"> }
+  | {
+      kind: "update_unit_card";
+      unitCardId: string;
+      addTags: Pick<TagSet, "audiences" | "tools" | "scenarios">;
+      /** 單元卡還是未評、這門課的藍圖單元有評（含 na）時，提議補上的層級；沒有要補則為 null。接受時只補還是未評的卡，不覆蓋 */
+      fillLevel: UnitLevel;
+    }
   /** 新課程配方：id 同樣預先定好；unitCardIds 依序引用既有單元卡或待收進的新單元卡 */
   | { kind: "new_course_recipe"; recipe: Omit<CourseRecipe, "unitIds">; unitCardIds: string[] }
   | { kind: "module_card_version"; moduleId: ModuleId; changes: ModuleCardChange[] };

@@ -338,6 +338,8 @@ export type ReadinessItem =
   /** 時段裡單元分鐘數加總和時段長度對不上 */
   | { kind: "duration_mismatch"; slots: { day: number; slotLabel: string; planned: number; expected: number }[] }
   | { kind: "units_need_work"; modify: number; new: number }
+  /** 應用層級還沒評（null）的單元標題；純方法（na）不算 */
+  | { kind: "units_unrated"; units: string[] }
   /** 需求對照的缺口：⚠️（只部分涵蓋）與 ❌（字面上找不到）的需求條目原文，依需求對照的順序 */
   | { kind: "requirement_gaps"; partial: string[]; notFound: string[] }
   /** 還沒有可用（ready）的版本：沒產過，或只有還在產、產失敗的版本 */
@@ -381,6 +383,8 @@ export function readiness(st: DemoState, session: Session, course: Course | unde
   if (slots.length > 0) items.push({ kind: "duration_mismatch", slots });
   const work = unitWorkCounts(bp);
   if (work.modify + work.new > 0) items.push({ kind: "units_need_work", ...work });
+  const unrated = checkBlueprint(bp).flatMap((issue) => (issue.kind === "unit_unrated" ? [issue.unit] : []));
+  if (unrated.length > 0) items.push({ kind: "units_unrated", units: unrated });
 
   // 需求對照：和課程頁的 ✅／⚠️／❌ 用同一個判斷（mapping.status）
   const rows = requirementMappingOfCourse(st, course);
@@ -448,6 +452,8 @@ export function readinessText(item: ReadinessItem): string {
         [item.modify, "個單元要改"],
         [item.new, "個單元要新做"],
       ])}`;
+    case "units_unrated":
+      return `有 ${item.units.length} 個單元還沒評應用層級：${item.units.join("、")}`;
     case "requirement_gaps":
       return `需求對照有 ${countText([
         [item.notFound.length, "條在藍圖裡找不到"],
@@ -491,6 +497,7 @@ const SOURCE_OF: Record<ReadinessItem["kind"], ReadinessSource> = {
   missing_elements: "blueprint",
   duration_mismatch: "blueprint",
   units_need_work: "blueprint",
+  units_unrated: "blueprint",
   requirement_gaps: "requirements",
   artifact_missing: "artifacts",
   slides_not_finalized: "artifacts",

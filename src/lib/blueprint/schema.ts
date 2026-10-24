@@ -54,6 +54,21 @@ export const APPLICATION_LEVEL_LABELS: Record<ApplicationLevel, string> = {
   L5: "自動化",
 };
 
+/**
+ * 單元（藍圖單元與單元卡）的應用層級值：L1–L5、na（不適用，純方法：評過了、這個單元本來就沒有層級），
+ * 或 null（未評：還沒評）。兩者是不同狀態；結構化輸出不能用 optional／default，所以未評用 nullable。
+ */
+export const UNIT_LEVELS = [...APPLICATION_LEVELS, "na"] as const;
+export type UnitLevelValue = (typeof UNIT_LEVELS)[number];
+export type UnitLevel = UnitLevelValue | null;
+
+/** 單元層級的顯示文字：「L2 產出」、「不適用（純方法）」、「未評」。 */
+export function unitLevelText(level: UnitLevel): string {
+  if (level === null) return "未評";
+  if (level === "na") return "不適用（純方法）";
+  return `${level} ${APPLICATION_LEVEL_LABELS[level]}`;
+}
+
 /** 單元來源種類：知識庫的單元卡，或平台上另一門課程的單元。新做的單元沒有來源（null）。 */
 export const UNIT_SOURCE_KINDS = ["unit_card", "course"] as const;
 export type UnitSourceKind = (typeof UNIT_SOURCE_KINDS)[number];
@@ -82,9 +97,11 @@ export const UnitSchema = z.object({
     .enum(MODULE_IDS)
     .describe("這個單元屬於哪個模組（A1–A5 工具環境、B1–B4 方法）；單元出自單元卡時與該卡的模組一致"),
   level: z
-    .enum(APPLICATION_LEVELS)
+    .enum(UNIT_LEVELS)
     .nullable()
-    .describe("應用層級：學員在這個單元用 AI 做到的程度，L1 問答、L2 產出、L3 工作流、L4 助理、L5 自動化；純方法、沒有用 AI 做事的單元為 null"),
+    .describe(
+      "應用層級：學員在這個單元用 AI 做到的程度，L1 問答、L2 產出、L3 工作流、L4 助理、L5 自動化；評過了、但這個單元是純方法、沒有用 AI 做事則填 na（不適用）；還沒評填 null（未評），不要把純方法填成 null",
+    ),
   objective: NonEmpty.describe("學習目標：學員上完這段能做到什麼，動詞開頭"),
   method: NonEmpty.describe("教學方式，例如講述＋示範、分組實作、互評"),
   outcome: NonEmpty.describe("成果：學員上完這段手上會多出什麼"),
@@ -248,7 +265,9 @@ export type BlueprintIssue =
   | ({ kind: "lecture_only"; unit: string } & SlotLocation)
   | ({ kind: "open_question" } & OpenQuestion)
   | { kind: "unconfirmed_tool"; tool: string; plan: ToolPlan }
-  | ({ kind: "unit_needs_work"; unit: string; reuse: Exclude<ReuseLevel, "reuse"> } & SlotLocation);
+  | ({ kind: "unit_needs_work"; unit: string; reuse: Exclude<ReuseLevel, "reuse"> } & SlotLocation)
+  /** 單元的應用層級還沒評（level 為 null）；純方法（na）不算 */
+  | ({ kind: "unit_unrated"; unit: string } & SlotLocation);
 
 /**
  * 藍圖完整性檢查。回傳空陣列代表可以放心拿去生成教材；
@@ -275,6 +294,9 @@ export function checkBlueprint(bp: Blueprint): BlueprintIssue[] {
         if (unit.reuse !== "reuse") {
           issues.push({ kind: "unit_needs_work", ...at, unit: unit.title, reuse: unit.reuse });
         }
+      }
+      for (const unit of slot.units) {
+        if (unit.level === null) issues.push({ kind: "unit_unrated", ...at, unit: unit.title });
       }
     });
   });

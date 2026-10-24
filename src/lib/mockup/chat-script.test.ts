@@ -27,8 +27,8 @@ stretched.days[0].slots[0].minutes = 200;
 const overbooked: Blueprint = structuredClone(gas);
 overbooked.days[1].slots[0].units[0].minutes += 25;
 
-/** readiness 會列的藍圖問題；lecture_only 是設計提醒，不算 */
-const blocking = (bp: Blueprint) => checkBlueprint(bp).filter((i) => i.kind !== "lecture_only");
+/** 對話會問的藍圖缺口；lecture_only 是設計提醒、unit_unrated（未評的應用層級）由準備度提醒，對話裡都不問 */
+const blocking = (bp: Blueprint) => checkBlueprint(bp).filter((i) => i.kind !== "lecture_only" && i.kind !== "unit_unrated");
 
 describe("fixtures 前提", () => {
   it("各課程的缺項如測試所假設", () => {

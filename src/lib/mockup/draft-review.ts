@@ -109,6 +109,8 @@ export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoS
     if (!card) return st;
     const next: UnitCard = {
       ...card,
+      // 只補還沒評的卡，不覆蓋講師已經評過的層級
+      level: card.level === null ? p.fillLevel : card.level,
       audiences: uniqueTags([...card.audiences, ...p.addTags.audiences]),
       tools: uniqueTags([...card.tools, ...p.addTags.tools]),
       scenarios: uniqueTags([...card.scenarios, ...p.addTags.scenarios]),

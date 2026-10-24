@@ -1,6 +1,5 @@
 import { clientEmailText, openItems, unitPlace, type OpenItem } from "@/lib/blueprint/open-items";
 import {
-  APPLICATION_LEVEL_LABELS,
   checkBlueprint,
   FIVE_ELEMENT_LABELS,
   FIVE_ELEMENTS,
@@ -8,6 +7,7 @@ import {
   TOOL_PLAN_LABELS,
   REUSE_LABELS,
   totalMinutes,
+  unitLevelText,
   type Blueprint,
   type BlueprintIssue,
   type ReuseLevel,
@@ -164,7 +164,14 @@ export function BlueprintPanel({
                               <dt className="font-bold">模組</dt>
                               <dd>{moduleLabel(u.module)}</dd>
                               <dt className="font-bold">應用層級</dt>
-                              <dd>{u.level ? `${u.level} ${APPLICATION_LEVEL_LABELS[u.level]}` : "不適用（純方法）"}</dd>
+                              <dd>
+                                {/* 未評是待辦（警示色），不適用（純方法）是評過的結論，兩者要看得出差別 */}
+                                {u.level === null ? (
+                                  <span className="rounded-full bg-warning-tint px-2 py-0.5 font-bold text-warning">{unitLevelText(u.level)}</span>
+                                ) : (
+                                  unitLevelText(u.level)
+                                )}
+                              </dd>
                               <dt className="font-bold">來源</dt>
                               <dd className="min-w-0 break-words">{u.source ? sourceLabel(u.source) : "新做，沒有來源"}</dd>
                               {u.carriesFrom && (

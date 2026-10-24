@@ -10,8 +10,9 @@ import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId,
  *
  * 拆法（每個單元依序編號 n，從 1 起算）：
  * - 來源是單元卡、沿用程度「沿用」、而且那張單元卡還在知識庫 → 更新既有單元卡（補上這門課帶來的新標籤）。
- *   同一張單元卡在藍圖裡出現多次只算一份。
- * - 其餘（要改、新做、沒有來源、來源是別的課程、單元卡已不存在）→ 新單元卡，id 預先定為 `uc-<課程 id>-<n>`。
+ *   同一張單元卡在藍圖裡出現多次只算一份。單元卡還是未評、藍圖單元有評時，更新草稿另外提議補上應用層級（fillLevel）。
+ * - 其餘（要改、新做、沒有來源、來源是別的課程、單元卡已不存在）→ 新單元卡，id 預先定為 `uc-<課程 id>-<n>`，
+ *   應用層級照藍圖單元（未評、純方法也原樣保留）。
  * - 整門課程 → 一份新課程配方，id 為 `rc-<課程 id>`，單元依藍圖順序引用上面兩種單元卡。
  * - 單元來源是某模組卡（目前骨架）裡的單元卡、而且沿用程度是「要改」→ 那個模組卡的新版本，每個這樣的單元一條改動，
  *   記下被換掉的骨架單元（replacesUnitCardId）與換上的新單元卡；接受時新版本的骨架就是上一版把它換掉。
@@ -48,6 +49,8 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
             tools: courseTags.tools.filter((t) => !existing.tools.includes(t)),
             scenarios: courseTags.scenarios.filter((s) => !existing.scenarios.includes(s)),
           },
+          // 單元卡還沒評、藍圖單元評過了（含純方法 na）才提議補上
+          fillLevel: existing.level === null ? unit.level : null,
         });
       }
       continue;
@@ -57,6 +60,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
       moduleId: unit.module,
       title: unit.title,
       minutes: unit.minutes,
+      level: unit.level,
       objective: unit.objective,
       method: unit.method,
       outcome: unit.outcome,

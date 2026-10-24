@@ -32,7 +32,7 @@ export interface ChatMessage {
 /**
  * 藍圖裡還要跟講師談的事，依 checkBlueprint 的順序排列。
  * 開場、每一句回覆、更新藍圖都用同一份清單，第 i 句話才會對到第 i 題。
- * 純講述單元（lecture_only）是設計提醒、不是缺項，不問。
+ * 純講述單元（lecture_only）是設計提醒、不是缺項，不問；未評的應用層級（unit_unrated）由準備度提醒，也不在對話裡問。
  */
 type Gap =
   | { kind: "element"; element: FiveElement }
@@ -55,6 +55,7 @@ function gapsOf(bp: Blueprint): Gap[] {
       case "unconfirmed_tool":
         return [{ kind: "tool", tool: issue.tool, plan: issue.plan }];
       case "lecture_only":
+      case "unit_unrated":
         return [];
     }
   });

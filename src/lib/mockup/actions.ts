@@ -1,4 +1,4 @@
-import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
+import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint, type UnitLevel, type UnitSource } from "@/lib/blueprint/schema";
 import { closingDrafts } from "./closing-drafts";
 import { closingGate, isCourseClosed } from "./closing";
 import { acceptDraft, discardDraft, excludeUnit, rewriteDraft, type DraftRewrite } from "./draft-review";
@@ -475,10 +475,10 @@ export function starterBlueprint({
 }): Blueprint {
   // 各模組卡的骨架依序查出單元卡；查不到的 id 略過
   const cards = moduleCards.flatMap((mc) => moduleCardSkeleton(mc, pickedVersion(mc, moduleVersions)).map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined));
-  const entries: { title: string; module: ModuleId; source: UnitSource | null }[] =
+  const entries: { title: string; module: ModuleId; level: UnitLevel; source: UnitSource | null }[] =
     cards.length > 0
-      ? cards.map((u) => ({ title: u.title, module: u.moduleId, source: { kind: "unit_card", id: u.id, version: null, unit: u.title } }))
-      : [{ title: "開場與需求盤點", module: moduleCards[0]?.moduleId ?? "B1", source: null }];
+      ? cards.map((u) => ({ title: u.title, module: u.moduleId, level: u.level, source: { kind: "unit_card", id: u.id, version: null, unit: u.title } }))
+      : [{ title: "開場與需求盤點", module: moduleCards[0]?.moduleId ?? "B1", level: null, source: null }];
   const totalMinutes = Math.round(totalHours * 60);
   // 時段一律 DEFAULT_SLOT_MINUTES；不足一段的短講座只有一段、長度就是總長；最後不整除的餘數成為最後一段
   const slotMinutes: number[] =
@@ -491,7 +491,7 @@ export function starterBlueprint({
     groups = splitInto(entries, slotMinutes.length);
   } else {
     const last = entries[entries.length - 1];
-    groups = slotMinutes.map((_, i) => (i < entries.length ? [entries[i]] : [{ title: "待規劃", module: last.module, source: null }]));
+    groups = slotMinutes.map((_, i) => (i < entries.length ? [entries[i]] : [{ title: "待規劃", module: last.module, level: null, source: null }]));
   }
   // 一天最多兩個時段：上午、下午
   const dayGroups = Array.from({ length: Math.ceil(slotMinutes.length / 2) }, (_, d) => groups.map((g, i) => ({ group: g, minutes: slotMinutes[i] })).slice(d * 2, d * 2 + 2));
@@ -534,11 +534,11 @@ export function starterBlueprint({
         return {
           label: slotLabels[i] ?? `第 ${i + 1} 段`,
           minutes: slotMin,
-          units: group.map(({ title: t, module, source }, k) => ({
+          units: group.map(({ title: t, module, level, source }, k) => ({
             title: t,
             minutes: unitMinutes[k],
             module,
-            level: null,
+            level,
             objective: `完成「${t}」的練習`,
             method: "講述＋示範",
             outcome: "待跟 AI 談",

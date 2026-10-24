@@ -89,6 +89,42 @@ describe("結案產生草稿", () => {
     });
   });
 
+  it("新單元卡帶藍圖單元的應用層級，未評與純方法（na）都原樣保留", () => {
+    const st = closed();
+    const bpUnits = initialState().courses.find((c) => c.id === COURSE)!.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
+    for (const title of [NEW_UNIT_TITLE, MODIFIED_TITLE]) {
+      expect(unitDraftByTitle(st, title).proposal.unitCard.level).toBe(bpUnits.find((u) => u.title === title)!.level);
+    }
+    expect(unitDraftByTitle(st, NEW_UNIT_TITLE).proposal.unitCard.level).toBe("L5");
+    const course = (level: "na" | null) => {
+      const s = initialState();
+      const c = s.courses.find((x) => x.id === COURSE)!;
+      c.blueprint.days.flatMap((d) => d.slots.flatMap((sl) => sl.units)).find((u) => u.title === NEW_UNIT_TITLE)!.level = level;
+      return demoReducer(s, { type: "course/close", courseId: COURSE });
+    };
+    expect(unitDraftByTitle(course("na"), NEW_UNIT_TITLE).proposal.unitCard.level).toBe("na");
+    expect(unitDraftByTitle(course(null), NEW_UNIT_TITLE).proposal.unitCard.level).toBeNull();
+  });
+
+  it("更新草稿：單元卡未評、藍圖單元有評（含 na）時提議補上層級；單元卡已有層級或藍圖也未評則不動", () => {
+    const withCardLevel = (cardId: string, level: "L2" | "na" | null, bpLevel?: "L4" | "na" | null) => {
+      const s = initialState();
+      s.unitCards.find((u) => u.id === cardId)!.level = level;
+      if (bpLevel !== undefined) {
+        s.courses.find((c) => c.id === COURSE)!.blueprint.days.flatMap((d) => d.slots.flatMap((sl) => sl.units)).find((u) => u.source?.id === cardId)!.level = bpLevel;
+      }
+      return demoReducer(s, { type: "course/close", courseId: COURSE });
+    };
+    // 單元卡未評、藍圖單元是 L3（approval）→ 提議 L3
+    expect(updateDraftFor(withCardLevel("uc-a4-approval", null), "uc-a4-approval")!.proposal.fillLevel).toBe("L3");
+    // 藍圖單元是 na（golive）→ 提議 na
+    expect(updateDraftFor(withCardLevel("uc-b3-golive", null), "uc-b3-golive")!.proposal.fillLevel).toBe("na");
+    // 單元卡已有層級 → 不提議，也不覆蓋
+    expect(updateDraftFor(withCardLevel("uc-a4-approval", "L2"), "uc-a4-approval")!.proposal.fillLevel).toBeNull();
+    // 兩邊都未評 → 沒東西可補
+    expect(updateDraftFor(withCardLevel("uc-a4-approval", null, null), "uc-a4-approval")!.proposal.fillLevel).toBeNull();
+  });
+
   it("新課程配方：依藍圖順序引用單元卡，標籤與客戶取自課程與專案，狀態已交付、上課年月取最後一個場次", () => {
     const st = closed();
     const { recipe, unitCardIds } = only(st, "new_course_recipe").proposal;
@@ -126,6 +162,16 @@ describe("接受提案後，知識庫的變化", () => {
     expect(st.unitCards).toHaveLength(st0.unitCards.length + 1);
     expect(st.drafts.map((x) => x.id)).not.toContain(d.id);
     expect(recipesUsingUnit(st, d.proposal.unitCard.id)).toEqual([]);
+  });
+
+  it("更新既有單元卡：接受後補上提議的層級，已有層級的卡不被覆蓋", () => {
+    const s0 = initialState();
+    s0.unitCards.find((u) => u.id === "uc-a4-approval")!.level = null;
+    const st0 = demoReducer(s0, { type: "course/close", courseId: COURSE });
+    expect(getUnitCard(run([accept(updateDraftFor(st0, "uc-a4-approval")!.id)], st0), "uc-a4-approval")!.level).toBe("L3");
+    // 草稿產生後講師手動評成 L2，接受時不覆蓋
+    const rated = { ...st0, unitCards: st0.unitCards.map((u) => (u.id === "uc-a4-approval" ? { ...u, level: "L2" as const } : u)) };
+    expect(getUnitCard(run([accept(updateDraftFor(rated, "uc-a4-approval")!.id)], rated), "uc-a4-approval")!.level).toBe("L2");
   });
 
   it("更新既有單元卡：補上新標籤（不重複）；用過的配方數不在這裡變，要等課程配方收進", () => {

@@ -15,6 +15,7 @@ import {
   recipesUsingUnit,
   recipeUnitCards,
 } from "@/lib/mockup/logic";
+import { unitLevelText } from "@/lib/blueprint/schema";
 import { moduleCardUsage, unitCardUsage, type CourseUsage } from "@/lib/mockup/browse";
 import type { DemoState } from "@/lib/mockup/state";
 import { recipeSpec, unitTags } from "@/lib/mockup/tags";
@@ -192,6 +193,7 @@ function unitDetail(st: DemoState, unitId: string, onOpen: (card: OpenCard) => v
     ),
     body: (
       <>
+        <Section label="應用層級">{unitLevelText(u.level)}</Section>
         <Section label="目標">{u.objective}</Section>
         <Section label="教學方式">{u.method}</Section>
         <Section label="成果">{u.outcome}</Section>

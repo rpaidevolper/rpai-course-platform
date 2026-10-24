@@ -78,7 +78,7 @@ export async function extractBlueprint({
       ...systemBlocks(currentBlueprint),
       {
         type: "text",
-        text: `根據以上對話輸出更新後的完整藍圖。課程依「天 → 時段 → 單元」排：每一天寫出主軸；時段是一段連續上課、不另排休息的時間，講師沒說就用 ${DEFAULT_SLOT_MINUTES} 分鐘，一天通常上午、下午各一個；每個時段裡各單元的分鐘數加總要等於時段長度，不要自己加休息。總時長由時段推得，不另外填。每個單元的 source 記錄它出自哪門過去課程（kind=course，填課程 id 與藍圖版本）或哪張知識庫單元卡（kind=unit_card，填單元卡 id、version 填 null）的哪個單元；每個單元另填所屬模組 module（A1–B4）與應用層級 level（L1–L5，純方法的單元填 null）；reuse 是沿用程度：照搬為 reuse、要改為 modify、新做為 new。講師沒說來源的單元，source 填 null、reuse 填 new，不要自己編來源。學員要用的軟體列進 tools，寫出方案等級，講師沒說已跟客戶確認就把 confirmedWithClient 設為 false（未確認的工具會自動算成問客戶的事，不要再寫進 openQuestions）。講師沒提到、你也沒問到的事放進 openQuestions，不要自己編：要客戶回答的 audience 填 client，講師自己決定就好的填 self；只影響某個單元時，unit 填那個單元一模一樣的標題，否則填 null。`,
+        text: `根據以上對話輸出更新後的完整藍圖。課程依「天 → 時段 → 單元」排：每一天寫出主軸；時段是一段連續上課、不另排休息的時間，講師沒說就用 ${DEFAULT_SLOT_MINUTES} 分鐘，一天通常上午、下午各一個；每個時段裡各單元的分鐘數加總要等於時段長度，不要自己加休息。總時長由時段推得，不另外填。每個單元的 source 記錄它出自哪門過去課程（kind=course，填課程 id 與藍圖版本）或哪張知識庫單元卡（kind=unit_card，填單元卡 id、version 填 null）的哪個單元；每個單元另填所屬模組 module（A1–B4）與應用層級 level（L1–L5；評過了、但是純方法的單元填 "na"；還沒評才填 null，不要把純方法填成 null）；reuse 是沿用程度：照搬為 reuse、要改為 modify、新做為 new。講師沒說來源的單元，source 填 null、reuse 填 new，不要自己編來源。學員要用的軟體列進 tools，寫出方案等級，講師沒說已跟客戶確認就把 confirmedWithClient 設為 false（未確認的工具會自動算成問客戶的事，不要再寫進 openQuestions）。講師沒提到、你也沒問到的事放進 openQuestions，不要自己編：要客戶回答的 audience 填 client，講師自己決定就好的填 self；只影響某個單元時，unit 填那個單元一模一樣的標題，否則填 null。`,
       },
     ],
     messages: history,

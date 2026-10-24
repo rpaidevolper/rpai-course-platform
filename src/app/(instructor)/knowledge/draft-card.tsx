@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { unitLevelText } from "@/lib/blueprint/schema";
 import type { DraftRewrite } from "@/lib/mockup/draft-review";
 import { formatDate, getCourse, getModuleCard, getUnitCard, latestModuleCardVersion, moduleLabel, recipesUsingUnit, seriesLabel } from "@/lib/mockup/logic";
 import { canExcludeUnit, pendingUsageIncrease } from "@/lib/mockup/draft-review";
@@ -200,6 +201,10 @@ function UnitCardFacts({ card }: { card: UnitCard }) {
         <dd>{card.method}</dd>
       </div>
       <div>
+        <FieldLabel>應用層級</FieldLabel>
+        <dd>{unitLevelText(card.level)}</dd>
+      </div>
+      <div>
         <FieldLabel>學習目標</FieldLabel>
         <dd>{card.objective}</dd>
       </div>
@@ -237,6 +242,7 @@ function UpdateBody({ st, draft, accept, buttons }: BodyProps) {
         這門課沿用了它。{pendingUsageIncrease(st, draft) ? `用過的配方 ${used} → ${used + 1}（課程配方收進後計入）。` : `用過的配方 ${used}。`}
       </p>
       <p className="mt-1 text-sm">{added.length > 0 ? `補上新標籤：${added.join("、")}` : "沒有新標籤，只是多一次使用。"}</p>
+      {p.fillLevel !== null && card?.level === null && <p className="mt-1 text-sm">單元卡還沒評應用層級，補上：{unitLevelText(p.fillLevel)}</p>}
       {buttons(
         <Button onClick={() => accept(`已更新單元卡「${card?.title ?? ""}」`, `module-${card?.moduleId ?? ""}`)} disabled={!card} title={card ? undefined : "找不到原單元卡"}>
           更新單元卡
