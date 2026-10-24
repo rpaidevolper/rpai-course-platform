@@ -103,12 +103,14 @@ pnpm lint && pnpm typecheck && pnpm test
 
 session 開好就能跑 `pnpm lint && pnpm typecheck && pnpm test`，也能用 `/grill-with-docs` 等指令。hook 只在雲端（`CLAUDE_CODE_REMOTE=true`）執行，本機與 Dev Container 不受影響。
 
-本機 Supabase 需要 Docker，但雲端容器的 Docker daemon 預設沒有啟動，要用資料庫時先手動啟動（自動啟動見 [#49](https://github.com/rpaidevolper/rpai-course-platform/issues/49)）：
+雲端 session 不跑本機 Supabase，而是直接連正式環境的資料庫（PoC 階段的決定，見 [ADR 0006](docs/adr/0006-cloud-sessions-share-the-production-database.md)）。在 claude.ai 的雲端環境設定（session 標題列的環境選單 → Edit）把下列環境變數設成正式環境的值，新的 session 就讀得到。不要貼到對話裡，也不要寫進 repo。
 
-```bash
-dockerd > /tmp/dockerd.log 2>&1 &
-pnpm db:start
-```
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ANTHROPIC_API_KEY`（藍圖對話需要）
+
+環境變數優先於 `.env.local`，所以雲端 session 不需要 `.env.local`。這是正式資料：不要刪改既有資料，也不要手動套 migration。
 
 ## 3. 啟用 AI workflow
 
@@ -219,7 +221,7 @@ claude plugin install mattpocock-skills@mattpocock
 | 本機 | Dev Container（`pnpm dev`） | 每人各自的本機 Supabase（`pnpm db:start`） | 日常開發，隨時 `pnpm db:reset` |
 | Production | Vercel | 雲端 Supabase 專案 | 合併到 `main` 後自動部署 |
 
-**開發者不需要、也不會拿到 production 的任何金鑰。** 不要把 `.env.local` 指到雲端資料庫。
+**本機開發者不需要、也不會拿到 production 的任何金鑰。** 不要把 `.env.local` 指到雲端資料庫。例外是 Claude Code on the web 的雲端 session：PoC 階段直接共用 production 資料庫，金鑰只設在 claude.ai 的雲端環境設定裡（見 [ADR 0006](docs/adr/0006-cloud-sessions-share-the-production-database.md)）。
 
 合併到 `main` 之後會自動執行（`.github/workflows/deploy.yml`）：
 

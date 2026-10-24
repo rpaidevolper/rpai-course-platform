@@ -173,6 +173,8 @@ docs/                 架構與決策記錄
 
 名稱列在 `.env.example`；本機放 `.env.local`。永遠不要 commit、cat 或 echo 任何 `.env*`（`.env.example` 除外）。
 
+Claude Code on the web 的雲端 session 由雲端環境設定提供這些變數，連的是**正式環境的資料庫**（PoC 階段，見 [ADR 0006](docs/adr/0006-cloud-sessions-share-the-production-database.md)）。在雲端 session 裡不要刪除或修改不是自己這次建立的資料，不要手動套 migration（`supabase db push` 等），migration 一律合併後由 CI 套用；也不要 echo 這些變數的值。
+
 ## Agent skills
 
 ### Issue tracker
