@@ -1,5 +1,6 @@
 import { clientEmailText, openItems, unitPlace, type OpenItem } from "@/lib/blueprint/open-items";
 import {
+  APPLICATION_LEVEL_LABELS,
   checkBlueprint,
   FIVE_ELEMENT_LABELS,
   FIVE_ELEMENTS,
@@ -12,6 +13,7 @@ import {
   type ReuseLevel,
   type UnitSource,
 } from "@/lib/blueprint/schema";
+import { moduleLabel } from "@/lib/mockup/logic";
 import { CopyButton } from "./copy-button";
 import { Badge } from "./ui";
 
@@ -19,11 +21,11 @@ type DurationIssue = Extract<BlueprintIssue, { kind: "duration_mismatch" }>;
 
 const REUSE_TONE = { reuse: "outline", modify: "warning", new: "warning" } as const satisfies Record<ReuseLevel, string>;
 
-const defaultSourceLabel = (s: UnitSource) => `${s.id} v${s.version}「${s.unit}」`;
+const defaultSourceLabel = (s: UnitSource) => `${s.id}${s.version === null ? "" : ` v${s.version}`}「${s.unit}」`;
 
 /**
- * 藍圖面板：單元依天、時段分組，每個單元標出來源與沿用程度。
- * 藍圖只存來源的 id；要顯示課程或框架名稱，由呼叫端傳 `sourceLabel`。
+ * 藍圖面板：單元依天、時段分組，每個單元標出所屬模組、應用層級、來源與沿用程度。
+ * 藍圖只存來源的 id；要顯示單元卡或課程名稱，由呼叫端傳 `sourceLabel`。
  */
 export function BlueprintPanel({
   blueprint,
@@ -159,6 +161,10 @@ export function BlueprintPanel({
                               <dd>{u.method}</dd>
                               <dt className="font-bold">成果</dt>
                               <dd>{u.outcome}</dd>
+                              <dt className="font-bold">模組</dt>
+                              <dd>{moduleLabel(u.module)}</dd>
+                              <dt className="font-bold">應用層級</dt>
+                              <dd>{u.level ? `${u.level} ${APPLICATION_LEVEL_LABELS[u.level]}` : "不適用（純方法）"}</dd>
                               <dt className="font-bold">來源</dt>
                               <dd className="min-w-0 break-words">{u.source ? sourceLabel(u.source) : "新做，沒有來源"}</dd>
                               {u.carriesFrom && (

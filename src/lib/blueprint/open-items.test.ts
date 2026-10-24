@@ -5,6 +5,8 @@ import { BlueprintSchema, type Blueprint, type OpenQuestion, type Tool } from ".
 const unit = (title: string, minutes: number) => ({
   title,
   minutes,
+  module: "A1" as const,
+  level: null,
   objective: `完成「${title}」`,
   method: "示範後實作",
   outcome: `「${title}」成品`,

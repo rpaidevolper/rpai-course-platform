@@ -53,8 +53,6 @@ export const pendingDrafts = (st: DemoState) => st.drafts;
 
 // ── 知識庫：模組、模組卡、單元卡與課程配方 ─────────────
 
-const isModuleId = (id: string): id is ModuleId => MODULES.some((m) => m.id === id);
-
 /** 模組的定義：代號、類別（A 或 B）與名稱。 */
 export const getModule = (id: ModuleId) => MODULES.find((m) => m.id === id)!;
 
@@ -155,15 +153,14 @@ export function latestReadyArtifact(course: Course, kind: ArtifactKind, day: num
     .sort((a, b) => b.version - a.version)[0];
 }
 
-/** 單元來源的顯示文字：「Claude 入門」藍圖 v3・提示詞的四個零件，或模組卡「B2 提問與指令」v1・提示詞的四個零件 */
+/** 單元來源的顯示文字：課程「Claude 入門」藍圖 v3・提示詞的四個零件，或單元卡「提示詞的四個零件」・B2 提問與指令 */
 export function unitSourceText(st: DemoState, source: UnitSource): string {
   if (source.kind === "course") {
     const title = getCourse(st, source.id)?.title ?? source.id;
-    return `課程「${title}」藍圖 v${source.version}・${source.unit}`;
+    return `課程「${title}」藍圖${source.version === null ? "" : ` v${source.version}`}・${source.unit}`;
   }
-  // kind 為 framework 目前代表模組卡，等 #56 改成單元卡來源後這裡再跟著改
-  const card = isModuleId(source.id) ? moduleLabel(source.id) : source.id;
-  return `模組卡「${card}」v${source.version}・${source.unit}`;
+  const card = getUnitCard(st, source.id);
+  return card ? `單元卡「${card.title}」・${moduleLabel(card.moduleId)}` : `單元卡「${source.unit}」（已不在知識庫）`;
 }
 
 /** 要改與新做的單元各幾個，由藍圖完整性檢查推得。 */

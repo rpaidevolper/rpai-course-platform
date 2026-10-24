@@ -12,6 +12,8 @@ import {
 const unit = (title: string, minutes: number, carriesFrom: string | null = null) => ({
   title,
   minutes,
+  module: "A1" as Unit["module"],
+  level: "L2" as Unit["level"],
   objective: `完成「${title}」的練習`,
   method: "示範後分組實作",
   outcome: `一份「${title}」的成品`,
@@ -19,7 +21,7 @@ const unit = (title: string, minutes: number, carriesFrom: string | null = null)
   activity: "用自己的資料做一次" as string | null,
   elements: ["handsOn" as const],
   carriesFrom,
-  source: { kind: "framework" as const, id: "fw-weekly-report", version: 1, unit: title } as Unit["source"],
+  source: { kind: "unit_card" as const, id: "uc-weekly-report", version: null, unit: title } as Unit["source"],
   reuse: "reuse" as Unit["reuse"],
 });
 
@@ -92,6 +94,39 @@ describe("BlueprintSchema", () => {
       reuse: "modify",
     };
     expect(() => BlueprintSchema.parse(bp)).not.toThrow();
+  });
+
+  it("單元記錄所屬模組與應用層級；沒有層級（純方法的單元）可為 null", () => {
+    const bp = sampleBlueprint();
+    const u = bp.days[0].slots[0].units[0];
+    expect(u).toMatchObject({ module: "A1", level: "L2" });
+    const days = [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, module: "B3", level: null }] }] }];
+    const parsed = BlueprintSchema.parse({ ...bp, days });
+    expect(parsed.days[0].slots[0].units[0]).toMatchObject({ module: "B3", level: null });
+  });
+
+  it("拒絕不存在的模組與應用層級，也拒絕沒填模組", () => {
+    const bp = sampleBlueprint();
+    const u = bp.days[0].slots[0].units[0];
+    const withUnit = (unitPatch: Record<string, unknown>) => ({
+      ...bp,
+      days: [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, ...unitPatch }] }] }],
+    });
+    expect(() => BlueprintSchema.parse(withUnit({ module: "A6" }))).toThrow();
+    expect(() => BlueprintSchema.parse(withUnit({ level: "L6" }))).toThrow();
+    expect(() => BlueprintSchema.parse(withUnit({ module: undefined }))).toThrow();
+  });
+
+  it("來源種類只有單元卡與課程：框架來源不再通過", () => {
+    const bp = sampleBlueprint();
+    const u = bp.days[0].slots[0].units[0];
+    const withSource = (source: unknown) => ({
+      ...bp,
+      days: [{ ...bp.days[0], slots: [{ ...bp.days[0].slots[0], units: [{ ...u, source }] }] }],
+    });
+    expect(() => BlueprintSchema.parse(withSource({ kind: "unit_card", id: "uc-a1-project", version: null, unit: "x" }))).not.toThrow();
+    expect(() => BlueprintSchema.parse(withSource({ kind: "course", id: "c-1", version: 2, unit: "x" }))).not.toThrow();
+    expect(() => BlueprintSchema.parse(withSource({ kind: "framework", id: "A1", version: 2, unit: "x" }))).toThrow();
   });
 
   it("拒絕不認得的沿用程度與來源種類", () => {
