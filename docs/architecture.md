@@ -127,5 +127,5 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 
 - 部署只由 GitHub Actions 觸發，Vercel 的 Git 自動部署關閉（`vercel.json`）。順序固定：migration 先、程式碼後，任何一步失敗就中止。
 - 所以 migration 必須向下相容。
-- 沒有 staging、沒有 PR preview。Production 資料庫的金鑰只在 Vercel 與 GitHub secrets，開發者不持有。
+- 沒有 staging、沒有 PR preview。Production 資料庫的金鑰只在 Vercel 與 GitHub secrets，開發者不持有；PoC 階段的例外是 Claude Code on the web 的雲端環境設定，雲端 session 直接共用 production 資料庫（[ADR 0006](adr/0006-cloud-sessions-share-the-production-database.md)）。
 - `Dockerfile` 與 `output: "standalone"` 保留給日後搬離 Vercel，目前部署用不到。

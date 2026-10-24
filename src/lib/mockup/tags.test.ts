@@ -53,17 +53,17 @@ describe("specOfHours 規格由總時數推得", () => {
 describe("toggleTag 多選", () => {
   it("可以一個一個加，也可以取消", () => {
     let t: string[] = [];
-    t = toggleTag(t, "財務");
-    t = toggleTag(t, "品保");
-    expect(t).toEqual(["財務", "品保"]);
-    t = toggleTag(t, "財務");
-    expect(t).toEqual(["品保"]);
+    t = toggleTag(t, "全員");
+    t = toggleTag(t, "特定職能");
+    expect(t).toEqual(["全員", "特定職能"]);
+    t = toggleTag(t, "全員");
+    expect(t).toEqual(["特定職能"]);
   });
 
   it("不改動原本的陣列", () => {
-    const before = ["財務"];
-    toggleTag(before, "品保");
-    expect(before).toEqual(["財務"]);
+    const before = ["全員"];
+    toggleTag(before, "特定職能");
+    expect(before).toEqual(["全員"]);
   });
 });
 
@@ -82,11 +82,11 @@ describe("開課程時挑標籤", () => {
 
   it("對象、產業、應用場景三組都可以多選，存在課程上", () => {
     const c = create({
-      audiences: ["生管資材", "品保"],
+      audiences: ["主管經營層", "特定職能"],
       industries: ["製造", "金融"],
       scenarios: ["文書", "數據分析", "簡報"],
     });
-    expect(c.audiences).toEqual(["生管資材", "品保"]);
+    expect(c.audiences).toEqual(["主管經營層", "特定職能"]);
     expect(c.industries).toEqual(["製造", "金融"]);
     expect(c.scenarios).toEqual(["文書", "數據分析", "簡報"]);
   });
@@ -104,8 +104,8 @@ describe("開課程時挑標籤", () => {
   });
 
   it("重複的標籤只留一個", () => {
-    const c = create({ audiences: ["財務", "財務"], industries: [], scenarios: [] });
-    expect(c.audiences).toEqual(["財務"]);
+    const c = create({ audiences: ["特定職能", "特定職能"], industries: [], scenarios: [] });
+    expect(c.audiences).toEqual(["特定職能"]);
   });
 });
 
@@ -147,9 +147,9 @@ describe("課程頁編輯標籤", () => {
 
   it("對象、產業、應用場景可以改，重複的只留一個；其他欄位與別的課程不動", () => {
     const st0 = initialState();
-    const st = update(st0, "c-claude-intro", { audiences: ["財務", "財務"], industries: ["金融"], scenarios: ["簡報"] });
+    const st = update(st0, "c-claude-intro", { audiences: ["特定職能", "特定職能"], industries: ["金融"], scenarios: ["簡報"] });
     const c = find(st, "c-claude-intro");
-    expect(c).toMatchObject({ audiences: ["財務"], industries: ["金融"], scenarios: ["簡報"] });
+    expect(c).toMatchObject({ audiences: ["特定職能"], industries: ["金融"], scenarios: ["簡報"] });
     expect(c.blueprint).toEqual(find(st0, "c-claude-intro").blueprint);
     expect(c).not.toHaveProperty("tools");
     expect(find(st, "c-pa-finance")).toEqual(find(st0, "c-pa-finance"));
@@ -164,7 +164,7 @@ describe("課程頁編輯標籤", () => {
   it("結案後不能再改（結案草稿已經依當時的標籤產生）", () => {
     const closed = demoReducer(initialState(), { type: "course/close", courseId: "c-pa-pilot" });
     expect(find(closed, "c-pa-pilot").closedAt).not.toBeNull();
-    const st = update(closed, "c-pa-pilot", { audiences: ["品保"], industries: [], scenarios: [] });
+    const st = update(closed, "c-pa-pilot", { audiences: ["全員"], industries: [], scenarios: [] });
     expect(find(st, "c-pa-pilot").audiences).toEqual(find(closed, "c-pa-pilot").audiences);
   });
 });
@@ -202,6 +202,12 @@ describe("單元卡的標籤", () => {
     const st = initialState();
     const unused = st.unitCards.find((u) => !st.recipes.some((r) => r.unitIds.includes(u.id)));
     if (unused) expect(unitTags(st, unused).industries).toEqual([]);
+  });
+});
+
+describe("對象字彙", () => {
+  it("只有模組框架的 4 類", () => {
+    expect([...AUDIENCES]).toEqual(["主管經營層", "全員", "特定職能", "種子團隊"]);
   });
 });
 

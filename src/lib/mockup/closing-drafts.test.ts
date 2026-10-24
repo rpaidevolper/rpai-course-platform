@@ -70,7 +70,7 @@ describe("結案產生草稿", () => {
       minutes: 90,
       objective: "把 F 公司財務部逾期三天的請款單自動對帳並提醒",
       outcome: "F 公司財務部的逾期對帳流程",
-      audiences: ["財務", "行政"],
+      audiences: ["特定職能"],
       tools: ["Power Automate", "Microsoft Teams"],
       scenarios: ["文書", "客服與信件"],
     });
@@ -81,11 +81,11 @@ describe("結案產生草稿", () => {
     const st = closed();
     expect(draftsOf(st, "update_unit_card").map((d) => d.proposal.unitCardId)).toEqual(["uc-a4-approval", "uc-b3-golive"]);
     const approval = updateDraftFor(st, "uc-a4-approval")!.proposal;
-    // 單元卡原本是 財務、行政／Power Automate、Teams／文書；課程多了「客服與信件」
+    // 單元卡原本是 特定職能／Power Automate、Teams／文書；課程多了「客服與信件」
     expect(approval.addTags).toEqual({ audiences: [], tools: [], scenarios: ["客服與信件"] });
     // B 模組（不綁工具的方法）的單元不補工具標籤
     expect(updateDraftFor(st, "uc-b3-golive")!.proposal.addTags).toEqual({
-      audiences: ["行政"],
+      audiences: [],
       tools: [],
       scenarios: ["客服與信件"],
     });
@@ -137,7 +137,7 @@ describe("結案產生草稿", () => {
       title: "金融・A4 雲端自動化＋B3 AI 治理與風險・一日",
       status: "delivered",
       heldOn: "2026-09",
-      audiences: ["財務", "行政"],
+      audiences: ["特定職能"],
       tools: ["Power Automate", "Microsoft Teams"],
       industries: ["金融"],
       scenarios: ["文書", "客服與信件"],
@@ -185,7 +185,7 @@ describe("接受提案後，知識庫的變化", () => {
     const before = recipesUsingUnit(st0, "uc-b3-golive").length;
     const st = run([accept(d.id)], st0);
     const card = getUnitCard(st, "uc-b3-golive")!;
-    expect(card.audiences).toEqual(["財務", "人資", "部門主管", "行政"]);
+    expect(card.audiences).toEqual(["特定職能", "主管經營層"]);
     expect(card.tools).toEqual([]);
     expect(card.scenarios).toEqual(["文書", "客服與信件"]);
     expect(card.id).toBe("uc-b3-golive");
@@ -426,13 +426,13 @@ describe("結案草稿的標籤來源（#74）", () => {
     const st = initialState();
     const course = {
       ...pilot(st),
-      audiences: ["品保" as const],
+      audiences: ["全員" as const],
       industries: ["製造" as const],
       scenarios: ["簡報" as const],
       blueprint: { ...pilot(st).blueprint, tools: [{ name: "Excel", plan: "paid" as const, confirmedWithClient: true }] },
     };
     const recipe = closingDrafts(st, course).flatMap((d) => (d.proposal.kind === "new_course_recipe" ? [d.proposal.recipe] : []))[0];
-    expect(recipe).toMatchObject({ audiences: ["品保"], tools: ["Excel"], industries: ["製造"], scenarios: ["簡報"] });
+    expect(recipe).toMatchObject({ audiences: ["全員"], tools: ["Excel"], industries: ["製造"], scenarios: ["簡報"] });
   });
 
   it("新單元卡：對象與場景沿用課程；A 模組的單元有工具，B 模組的單元沒有", () => {

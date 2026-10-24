@@ -15,7 +15,7 @@
   —— 給講師裝在自己 Claude Code 裡的產檔 plugin；打包了五個 `rpai-*` 內容 skill 與串流程的 `rpai-platform-runner`。
   在這個 repo 裡開發時它**不會自動載入**，要測試用 `claude --plugin-dir ./plugin`。
 
-安裝方式（供日後重建環境參考）：
+安裝方式（供日後重建環境參考；Claude Code on the web 的雲端 session 由 `.claude/hooks/session-start.sh` 自動安裝）：
 
 ```bash
 claude plugin marketplace add mattpocock/skills
@@ -136,7 +136,8 @@ src/lib/supabase/     Supabase client
 supabase/migrations/  SQL migration，只新增不改舊檔
 plugin/               講師端 Claude Code plugin（.mcp.json、runner skill、打包的 rpai-* skill）
 .claude-plugin/       marketplace.json，讓 `claude plugin marketplace add rpaidevolper/rpai-course-platform` 找得到 plugin
-.devcontainer/        開發環境（Dev Container）；改了工具鏈版本要同步改 `Dockerfile` 與 `.github/workflows/ci.yml`
+.devcontainer/        開發環境（Dev Container）；改了工具鏈版本要同步改 `Dockerfile`、`.github/workflows/ci.yml` 與 `.claude/hooks/session-start.sh`
+.claude/              專案層 Claude Code 設定；`hooks/session-start.sh` 準備 Claude Code on the web 的雲端環境（Node 24、依賴、mattpocock plugin）
 Dockerfile            production image（Next.js standalone；目前部署在 Vercel，未使用）
 scripts/              維運腳本（`setup-production.sh` 建 production 環境、`smoke-test.sh` 部署後檢查）
 docs/                 架構與決策記錄
@@ -171,6 +172,8 @@ docs/                 架構與決策記錄
 ### 環境變數
 
 名稱列在 `.env.example`；本機放 `.env.local`。永遠不要 commit、cat 或 echo 任何 `.env*`（`.env.example` 除外）。
+
+Claude Code on the web 的雲端 session 由雲端環境設定提供這些變數，連的是**正式環境的資料庫**（PoC 階段，見 [ADR 0006](docs/adr/0006-cloud-sessions-share-the-production-database.md)）。在雲端 session 裡不要刪除或修改不是自己這次建立的資料，不要手動套 migration（`supabase db push` 等），migration 一律合併後由 CI 套用；也不要 echo 這些變數的值。
 
 ## Agent skills
 

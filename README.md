@@ -93,9 +93,28 @@ pnpm lint && pnpm typecheck && pnpm test
 
 也可以直接在主機開發：安裝 [Node.js](https://nodejs.org/) 24、[pnpm](https://pnpm.io/installation)、[GitHub CLI](https://cli.github.com/)、[Claude Code](https://claude.com/claude-code) 與 Docker（本機 Supabase 需要），然後執行 `pnpm install`、`pnpm db:start`、`pnpm dev`。
 
+### Claude Code on the web
+
+在 [Claude Code on the web](https://claude.ai/code) 開的雲端 session 不用 Dev Container。每個 session 開始時，`.claude/hooks/session-start.sh` 會：
+
+- 用容器內的 nvm 安裝 Node 24，並讓之後的指令都用它（容器預設是 Node 22）
+- `pnpm install`
+- 安裝 `mattpocock-skills` plugin（雲端 session 不會自動安裝 `.claude/settings.json` 宣告的 plugin）
+
+session 開好就能跑 `pnpm lint && pnpm typecheck && pnpm test`，也能用 `/grill-with-docs` 等指令。hook 只在雲端（`CLAUDE_CODE_REMOTE=true`）執行，本機與 Dev Container 不受影響。
+
+雲端 session 不跑本機 Supabase，而是直接連正式環境的資料庫（PoC 階段的決定，見 [ADR 0006](docs/adr/0006-cloud-sessions-share-the-production-database.md)）。在 claude.ai 的雲端環境設定（session 標題列的環境選單 → Edit）把下列環境變數設成正式環境的值，新的 session 就讀得到。不要貼到對話裡，也不要寫進 repo。
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ANTHROPIC_API_KEY`（藍圖對話需要）
+
+環境變數優先於 `.env.local`，所以雲端 session 不需要 `.env.local`。這是正式資料：不要刪改既有資料，也不要手動套 migration。
+
 ## 3. 啟用 AI workflow
 
-在容器的終端機執行 `claude`，第一次需要登入（登入狀態在重建容器後會保留）。接著會詢問是否信任這個專案並安裝 `mattpocock-skills` plugin，選同意。之後輸入 `/` 應該能看到 `/grill-with-docs`、`/to-spec`、`/to-tickets`、`/implement`、`/triage` 等指令。
+在容器的終端機執行 `claude`，第一次需要登入（登入狀態在重建容器後會保留）。接著會詢問是否信任這個專案並安裝 `mattpocock-skills` plugin，選同意。之後輸入 `/` 應該能看到 `/grill-with-docs`、`/to-spec`、`/to-tickets`、`/implement`、`/triage` 等指令。Claude Code on the web 不用做這一步，SessionStart hook 會自動安裝。
 
 沒有出現的話手動安裝：
 
@@ -202,7 +221,7 @@ claude plugin install mattpocock-skills@mattpocock
 | 本機 | Dev Container（`pnpm dev`） | 每人各自的本機 Supabase（`pnpm db:start`） | 日常開發，隨時 `pnpm db:reset` |
 | Production | Vercel | 雲端 Supabase 專案 | 合併到 `main` 後自動部署 |
 
-**開發者不需要、也不會拿到 production 的任何金鑰。** 不要把 `.env.local` 指到雲端資料庫。
+**本機開發者不需要、也不會拿到 production 的任何金鑰。** 不要把 `.env.local` 指到雲端資料庫。例外是 Claude Code on the web 的雲端 session：PoC 階段直接共用 production 資料庫，金鑰只設在 claude.ai 的雲端環境設定裡（見 [ADR 0006](docs/adr/0006-cloud-sessions-share-the-production-database.md)）。
 
 合併到 `main` 之後會自動執行（`.github/workflows/deploy.yml`）：
 
