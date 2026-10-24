@@ -31,8 +31,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <p className="text-body-muted">只有被加進工作區的講師能登入。還沒被加入的話，請把你的 Google 帳號 email 給管理者。</p>
 
       {devLogin && (
-        <details className="border-t-2 border-iced pt-4">
-          <summary className="cursor-pointer font-bold text-navy">本機開發用：email ＋ 密碼</summary>
+        <details className="border-t-2 border-layer pt-4">
+          <summary className="cursor-pointer font-bold text-ink">本機開發用：email ＋ 密碼</summary>
           <p className="mt-2 text-xs text-body-muted">
             只在連本機 Supabase 時出現。帳號用 <code>pnpm member:add --email … --name … --password …</code> 建立。
           </p>

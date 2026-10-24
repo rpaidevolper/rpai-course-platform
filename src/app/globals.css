@@ -1,19 +1,37 @@
 @import "tailwindcss";
 
+/* 深色模式由 <html data-theme="dark"> 決定（#118），不看 prefers-color-scheme；跟隨系統由 src/lib/theme.ts 的 inline script 處理 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /*
- * RPAI 品牌「介面產品」淺色模式 N5（見 rpai-brand-guidelines）。
- * 單色主義：互動色只有 Navy。Teal 只屬於深色模式，這裡不使用。
+ * RPAI 品牌「介面產品設計系統」（見 rpai-brand-guidelines）。
+ * token 以角色命名，元件只用角色 token：這裡是淺色模式 N5，深色模式 D1 在下方覆寫同一組名稱。
+ * 單色主義：每個模式只有一個互動色（accent）——淺色是 Navy，深色是 Teal。Teal 只出現在深色模式。
  * 語意色只做小面積徽章與文字，不做大色塊。
  */
 @theme {
-  --color-ice: #e9f3f5;
-  --color-iced: #dbeaee;
-  --color-navy: #011455;
-  --color-navy-press: #000d3a;
-  --color-navy-tint: #dce4f5;
+  /* Ice：頁面底 */
+  --color-canvas: #e9f3f5;
+  /* White：卡片、輸入框 */
+  --color-card: #ffffff;
+  /* IceD：分區、徽章底、分隔線 */
+  --color-layer: #dbeaee;
+  /* Navy：標題與重點文字 */
+  --color-ink: #011455;
   --color-body: #454650;
   /* 取代「Body 70% 透明」的 Label 色：透明度疊出來的對比只有 ~4.0，改用實色 */
   --color-body-muted: #5f606b;
+  /* Navy：唯一互動色——主按鈕、連結、強調線、焦點外框 */
+  --color-accent: #011455;
+  --color-accent-press: #000d3a;
+  /* NavyTint：次按鈕、選取態淡底 */
+  --color-accent-tint: #dce4f5;
+  /* 次按鈕 hover：淺色沿用 IceD */
+  --color-accent-tint-hover: #dbeaee;
+  /* 主按鈕上的字 */
+  --color-on-accent: #ffffff;
+  /* 對話框背後的遮罩 */
+  --color-scrim: rgb(1 20 85 / 0.4);
   /* 品牌語意色 #b26b00 在 warning-tint／iced 上不到 AA（3.4–3.7），為小字加深 */
   --color-warning: #8a5200;
   --color-warning-tint: #f7efe0;
@@ -24,16 +42,83 @@
 
   --font-sans: "Trebuchet MS", "Noto Sans TC", "Microsoft JhengHei", Calibri,
     Arial, sans-serif;
+
+  /* 中文 12px 太小，小字一律 13px（#121） */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
+}
+
+:root {
+  color-scheme: light;
+  /* 原生勾選框、radio 也用互動色 */
+  accent-color: var(--color-accent);
+  /* 講師後台頂部列的高度：手機不黏住所以是 0；頁內區塊導覽黏在它下面 */
+  --header-h: 0px;
+}
+
+@media (width >= 40rem) {
+  :root {
+    --header-h: calc(4rem + 3px);
+  }
+}
+
+/* 錨點跳轉時讓標題落在黏住的頂部列（與課程頁的區塊導覽）下方，不被蓋住 */
+html {
+  scroll-padding-top: calc(var(--header-h) + 1.5rem);
+}
+
+html:has([data-section-nav]) {
+  scroll-padding-top: calc(var(--header-h) + 4.5rem);
+}
+
+/*
+ * 深色模式 D1（深空反轉）：NavyD 底、Navy 卡片比底亮一階浮起、NavyL 微層次，Teal 互動。
+ * 次按鈕是 NavyL 底 + 白字（accent-tint + ink），不放 Teal 字。
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* NavyD */
+  --color-canvas: #000d3a;
+  /* Navy */
+  --color-card: #011455;
+  /* NavyL */
+  --color-layer: #1a2c6e;
+  /* White：主文字 */
+  --color-ink: #ffffff;
+  /* White 85%、60% 疊在 Navy 上的實色；用實色才能算對比 */
+  --color-body: #d9dce6;
+  --color-body-muted: #99a1bb;
+  /* Teal / TealD */
+  --color-accent: #7afff5;
+  --color-accent-press: #54d8cd;
+  /* NavyL */
+  --color-accent-tint: #1a2c6e;
+  /* 次按鈕 hover：NavyL 跟 layer 同色，hover 到 layer 看不出變化，提亮一階 */
+  --color-accent-tint-hover: #24387f;
+  /* Navy：Teal 主按鈕上的字 */
+  --color-on-accent: #011455;
+  --color-scrim: rgb(0 13 58 / 0.7);
+  /*
+   * 品牌語意色直接放在 Navy 上不到 AA（2.4–4.1），同色相提亮給深色模式用。
+   * 品牌規定深色模式不另建語意淡底，淡底一律用 NavyL。
+   */
+  --color-warning: #f0a63a;
+  --color-warning-tint: #1a2c6e;
+  --color-success: #5cc794;
+  --color-success-tint: #1a2c6e;
+  --color-danger: #f4867e;
+  --color-danger-tint: #1a2c6e;
 }
 
 body {
-  background: var(--color-ice);
+  background: var(--color-canvas);
   color: var(--color-body);
   font-family: var(--font-sans);
 }
 
-/* 鍵盤焦點：用 Navy 外框，不靠新色相 */
+/* 鍵盤焦點：用互動色外框，不靠新色相 */
 :focus-visible {
-  outline: 2px solid var(--color-navy);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }

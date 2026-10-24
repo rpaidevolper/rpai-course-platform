@@ -31,7 +31,7 @@ export default function SettingsPage() {
 
         <aside aria-labelledby="scope-title" className="space-y-4">
           <Card emphasis>
-            <h2 id="scope-title" className="text-[0.95rem] font-bold text-navy">
+            <h2 id="scope-title" className="text-[0.95rem] font-bold text-ink">
               會帶到哪裡
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
@@ -41,7 +41,7 @@ export default function SettingsPage() {
             <p className="mt-2 text-sm">改了之後，下一次對話與下一個產檔工作就會用新的版本。</p>
           </Card>
           <Card>
-            <h2 className="text-[0.95rem] font-bold text-navy">和 RPAI 品牌規範分開</h2>
+            <h2 className="text-[0.95rem] font-bold text-ink">和 RPAI 品牌規範分開</h2>
             <p className="mt-2 text-sm">
               品牌規範是 RPAI 全公司共用的色彩、字體與語氣，講師不能在這裡修改。講師偏好只屬於你一個人，
               不會寫進品牌規範，也不會影響其他講師。

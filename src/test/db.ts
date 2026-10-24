@@ -2,6 +2,7 @@
 // 每個測試檔各自建立工作區與帳號，email 帶亂數，結束時刪掉，不會留下資料或撞到別的檔。
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { isLocalSupabaseUrl } from "@/lib/supabase/local";
 
 const PASSWORD = "test-password-123";
 
@@ -11,15 +12,27 @@ function env(name: string): string {
   return value;
 }
 
+/**
+ * 測試會建立、刪除帳號與資料，只能接本機 Supabase。雲端 session 的環境變數指向正式環境（ADR 0006），
+ * 而且優先於 .env.local，所以這裡一定要擋。
+ */
+function localSupabaseUrl(): string {
+  const url = env("NEXT_PUBLIC_SUPABASE_URL");
+  if (!isLocalSupabaseUrl(url)) {
+    throw new Error("DB 整合測試只能接本機 Supabase（pnpm db:start）；目前的 NEXT_PUBLIC_SUPABASE_URL 不是本機，拒絕執行");
+  }
+  return url;
+}
+
 const CLIENT_OPTIONS = { auth: { persistSession: false, autoRefreshToken: false } };
 
 export function adminClient(): SupabaseClient {
-  return createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), CLIENT_OPTIONS);
+  return createClient(localSupabaseUrl(), env("SUPABASE_SERVICE_ROLE_KEY"), CLIENT_OPTIONS);
 }
 
 /** 沒登入的訪客（anon role）。 */
 export function anonClient(): SupabaseClient {
-  return createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), CLIENT_OPTIONS);
+  return createClient(localSupabaseUrl(), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), CLIENT_OPTIONS);
 }
 
 export interface TestUser {

@@ -14,7 +14,10 @@ import type { Course, DraftProposal, KnowledgeDraft, ModuleCardChange, ModuleId,
  *   同一張單元卡在藍圖裡出現多次只算一份。單元卡還是未評、藍圖單元有評時，更新草稿另外提議補上應用層級（fillLevel）。
  * - 其餘（要改、新做、沒有來源、來源是別的課程、單元卡已不存在）→ 新單元卡，id 預先定為 `uc-<課程 id>-<n>`，
  *   應用層級照藍圖單元（未評、純方法也原樣保留）。
- * - 整門課程 → 一份新課程配方，id 為 `rc-<課程 id>`，單元依藍圖順序引用上面兩種單元卡。
+ * - 整門課程 → 一份課程配方，id 為 `rc-<課程 id>`（一門課最多一份配方），單元依藍圖順序引用上面兩種單元卡。
+ *   這門課的配方已經收進知識庫（重新開啟後再結案）時，這份草稿是「更新這份配方」，接受時取代它的單元序列、上課年月與標籤。
+ * - 草稿與新單元卡的 id 每次結案都不同：第一次結案是 `uc-<課程 id>-<n>`、`d-<課程 id>-<i>`，
+ *   之後的結案在課程 id 後面加 `r<k>-`（k 是第幾次結案，取第一個不與知識庫或待審草稿撞號的），避免和已收進的單元卡撞號。
  * - 單元來源是某模組卡（目前骨架）裡的單元卡、而且沿用程度是「要改」→ 那個模組卡的新版本，每個這樣的單元一條改動，
  *   記下被換掉的骨架單元（replacesUnitCardId）與換上的新單元卡；接受時新版本的骨架就是上一版把它換掉。
  *   沒有骨架被改過的模組不提議升版。
@@ -47,6 +50,13 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
   // 單元卡的標籤：工具只給 A 模組的單元
   const unitTagsFor = (module: ModuleId) => ({ ...courseTags, tools: getModule(module).kind === "A" ? courseTags.tools : [] });
 
+  // 這次結案是第幾輪：新單元卡 id 不能和知識庫或待審草稿裡的撞號
+  const taken = new Set([...st.unitCards.map((u) => u.id), ...st.drafts.flatMap((d) => (d.proposal.kind === "new_unit_card" ? [d.proposal.unitCard.id] : []))]);
+  const roundPrefix = (k: number) => (k === 1 ? "" : `r${k}-`);
+  let round = 1;
+  while (units.some(({ n }) => taken.has(`uc-${course.id}-${roundPrefix(round)}${n}`))) round += 1;
+  const cardId = (n: number) => `uc-${course.id}-${roundPrefix(round)}${n}`;
+
   const newCards: UnitCard[] = [];
   const updates: Extract<DraftProposal, { kind: "update_unit_card" }>[] = [];
   const cardIds: string[] = [];
@@ -74,7 +84,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
       continue;
     }
     const card: UnitCard = {
-      id: `uc-${course.id}-${n}`,
+      id: cardId(n),
       moduleId: unit.module,
       title: unit.title,
       minutes: unit.minutes,
@@ -121,7 +131,7 @@ export function closingDrafts(st: DemoState, course: Course): KnowledgeDraft[] {
 
   const basis = { blueprintVersion: latestBlueprintVersion(course), finalArtifactIds: finalArtifacts(course).map((a) => a.id) };
   return proposals.map((proposal, i) => ({
-    id: `d-${course.id}-${i + 1}`,
+    id: `d-${course.id}-${roundPrefix(round)}${i + 1}`,
     fromCourseId: course.id,
     importedFileName: null,
     createdAt: st.now,

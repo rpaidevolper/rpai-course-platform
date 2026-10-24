@@ -46,7 +46,7 @@ export default async function SettingsPage() {
 
         <aside aria-labelledby="plugin-title" className="space-y-4">
           <Card emphasis>
-            <h2 id="plugin-title" className="text-[0.95rem] font-bold text-navy">
+            <h2 id="plugin-title" className="text-[0.95rem] font-bold text-ink">
               安裝 plugin 時要填
             </h2>
             <dl className="mt-2 space-y-2 text-sm">
@@ -63,7 +63,7 @@ export default async function SettingsPage() {
             </dl>
           </Card>
           <Card>
-            <h2 className="text-[0.95rem] font-bold text-navy">權杖等於你的身分</h2>
+            <h2 className="text-[0.95rem] font-bold text-ink">權杖等於你的身分</h2>
             <p className="mt-2 text-sm">
               拿到權杖的人可以用你的名義接工作區的產檔工作。不要貼進聊天或文件；電腦遺失或不再使用時立刻撤銷。
             </p>
@@ -76,11 +76,11 @@ export default async function SettingsPage() {
 
 function TokenList({ tokens }: { tokens: ApiTokenRow[] }) {
   return (
-    <ul className="divide-y-2 divide-iced">
+    <ul className="divide-y-2 divide-layer">
       {tokens.map((t) => (
         <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
           <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-2 font-bold text-navy">
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink">
               {t.label}
               {t.revoked_at && <Badge tone="danger">已撤銷</Badge>}
             </p>

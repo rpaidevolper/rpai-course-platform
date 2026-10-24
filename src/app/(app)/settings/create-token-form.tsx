@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { CopyButton } from "../../_components/copy-button";
-import { Button, Field, TextInput } from "../../_components/ui";
+import { Button, EMPHASIS, Field, TextInput } from "../../_components/ui";
 import { createTokenAction, type CreateTokenState } from "./actions";
 
 /** 產生權杖。明文只在產生後顯示這一次；離開或重新整理就看不到了，要再產生一組。 */
@@ -29,11 +29,11 @@ export function CreateTokenForm() {
       )}
 
       {state.token && (
-        <div role="status" className="space-y-3 rounded-md border-l-[3px] border-navy bg-ice p-4">
-          <p className="text-sm font-bold text-navy">
+        <div role="status" className={`space-y-3 rounded-md bg-canvas p-4 ${EMPHASIS}`}>
+          <p className="text-sm font-bold text-ink">
             「{state.label}」的權杖只會顯示這一次，請現在複製，貼到 plugin 的 api_token。
           </p>
-          <code className="block break-all rounded-md bg-white p-3 text-sm text-navy">{state.token}</code>
+          <code className="block break-all rounded-md bg-card p-3 text-sm text-ink">{state.token}</code>
           <CopyButton text={state.token} copiedText="已複製">
             複製權杖
           </CopyButton>

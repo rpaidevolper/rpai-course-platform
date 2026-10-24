@@ -82,7 +82,7 @@ function ProjectRow({ st, project: p, upcoming }: { st: DemoState; project: Proj
     <article className={`${CARD} grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-8`}>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-bold text-navy">
+          <h3 className="text-lg font-bold text-ink">
             <Link href={`/demo/projects/${p.id}`} className="hover:underline">
               {p.title}
             </Link>
@@ -97,15 +97,15 @@ function ProjectRow({ st, project: p, upcoming }: { st: DemoState; project: Proj
       <dl className="grid grid-cols-3 gap-x-6 text-sm sm:text-right">
         <div>
           <dt className="text-xs font-bold text-body-muted">課程</dt>
-          <dd className="mt-0.5 text-navy">{courses.length} 門</dd>
+          <dd className="mt-0.5 text-ink">{courses.length} 門</dd>
         </div>
         <div>
           <dt className="text-xs font-bold text-body-muted">下一場</dt>
-          <dd className="mt-0.5 text-navy">{next ? formatDate(sessionStartsAt(next)) : "沒有排定"}</dd>
+          <dd className="mt-0.5 text-ink">{next ? formatDate(sessionStartsAt(next)) : "沒有排定"}</dd>
         </div>
         <div>
           <dt className="text-xs font-bold text-body-muted">價格</dt>
-          <dd className="mt-0.5 text-navy">{formatTwd(p.priceTwd)}</dd>
+          <dd className="mt-0.5 text-ink">{formatTwd(p.priceTwd)}</dd>
         </div>
       </dl>
     </article>

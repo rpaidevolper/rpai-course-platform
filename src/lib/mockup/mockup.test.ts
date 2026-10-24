@@ -189,17 +189,17 @@ describe("設計稿 fixture 參照完整", () => {
     }
   });
 
-  it.each(COURSES)("課程 $id：講師修改的版本改自同一份產物的較早版本，並沿用它的綁定", (c) => {
+  it.each(COURSES)("課程 $id：講師修改的版本改自同一份產物的較早版本，沿用藍圖綁定、上游綁同一批系列（版本不早於原版）", (c) => {
     for (const a of c.artifacts) {
       if (a.editedFromId === null) continue;
       const original = c.artifacts.find((x) => x.id === a.editedFromId)!;
       expect(original, a.id).toBeDefined();
-      expect([original.kind, original.day, original.blueprintVersion, original.upstreamIds]).toEqual([
-        a.kind,
-        a.day,
-        a.blueprintVersion,
-        a.upstreamIds,
-      ]);
+      expect([original.kind, original.day, original.blueprintVersion]).toEqual([a.kind, a.day, a.blueprintVersion]);
+      // 講師上傳時上游改綁各系列當時最新的 ready 版本（#124）：系列不變，版本不早於原版綁的
+      const series = (ids: string[]) => ids.map((id) => c.artifacts.find((x) => x.id === id)!);
+      const [was, now] = [series(original.upstreamIds), series(a.upstreamIds)];
+      expect(now.map((u) => [u.kind, u.day]), a.id).toEqual(was.map((u) => [u.kind, u.day]));
+      now.forEach((u, i) => expect(u.version, a.id).toBeGreaterThanOrEqual(was[i].version));
       expect(original.version).toBeLessThan(a.version);
     }
   });

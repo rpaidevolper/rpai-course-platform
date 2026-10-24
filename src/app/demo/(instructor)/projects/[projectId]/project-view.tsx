@@ -30,6 +30,7 @@ import {
   Button,
   CARD,
   DemoMissing,
+  EMPHASIS,
   Empty,
   FieldLabel,
   PageHeader,
@@ -83,35 +84,35 @@ export function ProjectView({ projectId }: { projectId: string }) {
       </PageHeader>
 
       <section aria-labelledby="client-heading" className="mb-12">
-        <div className={`${CARD} border-l-[3px] border-navy p-6`}>
+        <div className={`${CARD} ${EMPHASIS} p-6`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 id="client-heading" className="text-lg font-bold text-navy">
+            <h2 id="client-heading" className="text-lg font-bold text-ink">
               客戶背景
             </h2>
             <Button variant="secondary" onClick={() => setDialog("edit")}>
               編輯客戶背景
             </Button>
           </div>
-          <p className="mt-1 max-w-2xl text-sm font-bold text-navy">
+          <p className="mt-1 max-w-2xl text-sm font-bold text-ink">
             在這個專案底下開新課程時，AI 會先把客戶背景帶進藍圖，不用再問一次。
           </p>
 
           <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
             <div>
               <FieldLabel>公司</FieldLabel>
-              <dd className="mt-0.5 text-sm text-navy">{ctx.company}</dd>
+              <dd className="mt-0.5 text-sm text-ink">{ctx.company}</dd>
             </div>
             <div>
               <FieldLabel>產業</FieldLabel>
-              <dd className="mt-0.5 text-sm text-navy">{ctx.industry}</dd>
+              <dd className="mt-0.5 text-sm text-ink">{ctx.industry}</dd>
             </div>
             <div className="sm:col-span-2">
               <FieldLabel>培訓目標</FieldLabel>
-              <dd className="mt-0.5 text-sm text-navy">{ctx.goal}</dd>
+              <dd className="mt-0.5 text-sm text-ink">{ctx.goal}</dd>
             </div>
             <div className="sm:col-span-2">
               <FieldLabel>IT 限制</FieldLabel>
-              <dd className="mt-0.5 text-sm text-navy">
+              <dd className="mt-0.5 text-sm text-ink">
                 {ctx.itConstraints.length === 0 ? (
                   <span className="text-body-muted">沒有記錄</span>
                 ) : (
@@ -125,12 +126,12 @@ export function ProjectView({ projectId }: { projectId: string }) {
             </div>
             <div className="sm:col-span-2">
               <FieldLabel>客戶品牌</FieldLabel>
-              <dd className="mt-0.5 text-sm text-navy">
+              <dd className="mt-0.5 text-sm text-ink">
                 {ctx.brand ? (
                   <span className="flex flex-wrap items-center gap-2">
                     <span
                       aria-hidden
-                      className="inline-block size-4 shrink-0 rounded-sm ring-1 ring-navy"
+                      className="inline-block size-4 shrink-0 rounded-sm ring-1 ring-ink"
                       style={{ backgroundColor: ctx.brand.primaryColor }}
                     />
                     <span className="font-bold">{ctx.brand.name}</span>
@@ -146,7 +147,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
               <FieldLabel>選定的產業素材包</FieldLabel>
               <dd className="mt-0.5 text-sm">
                 {industryPack ? (
-                  <Link href={`/demo/knowledge#${industryPack.id}`} className="font-bold text-navy underline underline-offset-2">
+                  <Link href={`/demo/knowledge#${industryPack.id}`} className="font-bold text-accent underline underline-offset-2">
                     {industryPack.title}
                   </Link>
                 ) : (
@@ -156,9 +157,9 @@ export function ProjectView({ projectId }: { projectId: string }) {
             </div>
           </dl>
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t-2 border-iced pt-4">
+          <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t-2 border-layer pt-4">
             <span className="text-xs font-bold text-body-muted">專案價格</span>
-            <span className="text-xl font-bold text-navy">{formatTwd(project.priceTwd)}</span>
+            <span className="text-xl font-bold text-ink">{formatTwd(project.priceTwd)}</span>
             <span className="text-xs text-body-muted">只有講師看得到</span>
           </div>
         </div>
@@ -177,20 +178,20 @@ export function ProjectView({ projectId }: { projectId: string }) {
         {project.clientDocuments.length === 0 ? (
           <Empty>還沒有客戶文件。</Empty>
         ) : (
-          <ul className="divide-y-2 divide-iced overflow-hidden rounded-lg bg-white shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
+          <ul className="divide-y-2 divide-layer overflow-hidden rounded-lg bg-card shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
             {project.clientDocuments.map((d) => {
               const responds = d.respondsToOutlineId ? findArtifact(d.respondsToOutlineId) : undefined;
               return (
                 <li key={d.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-navy">{d.title}</p>
+                    <p className="text-sm font-bold text-ink">{d.title}</p>
                     <p className="mt-0.5 break-all text-xs text-body-muted">
                       {d.fileName}，{formatDate(d.receivedAt)}收到
                     </p>
                     {responds && (
                       <p className="mt-1 text-xs">
                         回應{" "}
-                        <Link href={`/demo/courses/${responds.course.id}`} className="font-bold text-navy underline underline-offset-2">
+                        <Link href={`/demo/courses/${responds.course.id}`} className="font-bold text-accent underline underline-offset-2">
                           {responds.course.title}
                         </Link>{" "}
                         的{ARTIFACT_LABELS[responds.artifact.kind]} v{responds.artifact.version}
@@ -214,14 +215,14 @@ export function ProjectView({ projectId }: { projectId: string }) {
         {project.requirements.length === 0 ? (
           <Empty>還沒有需求條目。從客戶文件整理出要求後，指定由哪門課程負責。</Empty>
         ) : (
-          <ul className="divide-y-2 divide-iced overflow-hidden rounded-lg bg-white shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
+          <ul className="divide-y-2 divide-layer overflow-hidden rounded-lg bg-card shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
             {project.requirements.map((r) => {
               const owner = unassignedIds.has(r.id) ? undefined : courses.find((c) => c.id === r.courseId);
               const source = project.clientDocuments.find((d) => d.id === r.sourceDocumentId);
               return (
                 <li key={r.id} className="grid gap-2 p-4 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-6">
                   <div className="min-w-0">
-                    <p className="text-sm text-navy">{r.text}</p>
+                    <p className="text-sm text-ink">{r.text}</p>
                     <p className="mt-0.5 text-xs text-body-muted">
                       {source ? `出自〈${source.title}〉` : "講師記錄"}
                       {r.minutes !== null && `，客戶要求 ${r.minutes} 分鐘`}
@@ -231,7 +232,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
                     {owner ? (
                       <>
                         <span className="text-xs font-bold text-body-muted">負責課程 </span>
-                        <Link href={`/demo/courses/${owner.id}`} className="font-bold text-navy underline underline-offset-2">
+                        <Link href={`/demo/courses/${owner.id}`} className="font-bold text-accent underline underline-offset-2">
                           {owner.title}
                         </Link>
                       </>
@@ -254,7 +255,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
         {courses.length === 0 ? (
           <Empty>這個專案還沒有課程。開新課程時，AI 會先帶入上面的客戶背景。</Empty>
         ) : (
-          <ul className="divide-y-2 divide-iced overflow-hidden rounded-lg bg-white shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
+          <ul className="divide-y-2 divide-layer overflow-hidden rounded-lg bg-card shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
             {courses.map((c) => {
               const sessions = sessionsOfCourse(st, c.id);
               const missing = sessions.reduce((n, s) => n + readiness(st, s, c).length, 0);
@@ -262,7 +263,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
                 <li key={c.id} className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-base font-bold text-navy">
+                      <h3 className="text-base font-bold text-ink">
                         <Link href={`/demo/courses/${c.id}`} className="hover:underline">
                           {c.title}
                         </Link>
@@ -280,7 +281,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
                             {c.source.modules.map((m, i) => (
                               <span key={m.moduleId}>
                                 {i > 0 && "、"}
-                                <Link href={`/demo/knowledge#module-${m.moduleId}`} className="text-navy underline underline-offset-2">
+                                <Link href={`/demo/knowledge#module-${m.moduleId}`} className="text-accent underline underline-offset-2">
                                   {moduleLabel(m.moduleId)}
                                 </Link>{" "}
                                 v{m.version}
@@ -308,7 +309,7 @@ export function ProjectView({ projectId }: { projectId: string }) {
                     <ul className="mt-3 space-y-1 text-sm">
                       {sessions.map((s) => (
                         <li key={s.id}>
-                          <Link href={`/demo/sessions/${s.id}`} className="text-navy underline-offset-2 hover:underline">
+                          <Link href={`/demo/sessions/${s.id}`} className="text-accent underline-offset-2 hover:underline">
                             {sessionDateRange(s)}
                           </Link>
                         </li>

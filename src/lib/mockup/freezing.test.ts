@@ -37,7 +37,6 @@ const FROZEN: Record<(typeof FROZEN_AFTER_CLOSING)[number], (st: DemoState) => D
   "session/updateDays": () => ({ type: "session/updateDays", sessionId: SESSION, days: [day] }),
   "link/add": () => ({ type: "link/add", sessionId: SESSION, label: "回饋表單", url: "https://example.com/form" }),
   "link/remove": () => ({ type: "link/remove", sessionId: SESSION, url: LINK.url }),
-  "session/publish": () => ({ type: "session/publish", sessionId: SESSION }),
   "artifact/request": () => ({ type: "artifact/request", id: "a-new", courseId: COURSE, kind: "outline", day: null }),
   "artifact/uploadEdit": () => ({ type: "artifact/uploadEdit", courseId: COURSE, baseId: "a-pp-slides-2", id: "a-up" }),
   "artifact/finalize": () => ({ type: "artifact/finalize", courseId: COURSE, artifactId: "a-pp-slides-2" }),
@@ -46,7 +45,7 @@ const FROZEN: Record<(typeof FROZEN_AFTER_CLOSING)[number], (st: DemoState) => D
   "blueprint/finalize": () => ({ type: "blueprint/finalize", courseId: COURSE }),
   "material/add": () => ({ type: "material/add", id: "m-new", courseId: COURSE, name: "x.pdf", sizeKb: 1 }),
   "material/remove": () => ({ type: "material/remove", courseId: COURSE, materialId: "m-pp-1" }),
-  "course/updateTags": () => ({ type: "course/updateTags", courseId: COURSE, tags: { audiences: ["人資"], industries: [], scenarios: [] } }),
+  "course/updateTags": () => ({ type: "course/updateTags", courseId: COURSE, tags: { audiences: ["特定職能"], industries: [], scenarios: [] } }),
 };
 
 describe("結案後凍結的操作，reducer 一律拒絕", () => {

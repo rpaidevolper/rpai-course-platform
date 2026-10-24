@@ -86,7 +86,7 @@ export function NewCourseDialog({
         <legend className="text-xs font-bold text-body-muted">A 模組：學員課堂上打開的環境（可多選）</legend>
         <div className="mt-1 grid gap-1">
           {A_MODULES.map((m) => (
-            <label key={m.id} className="flex items-center gap-2 text-sm text-navy">
+            <label key={m.id} className="flex items-center gap-2 text-sm text-ink">
               <input type="checkbox" checked={aIds.includes(m.id)} onChange={() => toggleA(m.id)} />
               {moduleLabel(m.id)}
               <span className="text-xs text-body-muted">{versionOf(m.id)}</span>
@@ -98,13 +98,13 @@ export function NewCourseDialog({
         <legend className="text-xs font-bold text-body-muted">B 模組：不綁工具的方法（建議選 1 個當定錨）</legend>
         <div className="mt-1 grid gap-1">
           {B_MODULES.map((m) => (
-            <label key={m.id} className="flex items-center gap-2 text-sm text-navy">
+            <label key={m.id} className="flex items-center gap-2 text-sm text-ink">
               <input type="radio" name="b-module" checked={bId === m.id} onChange={() => setBId(m.id)} />
               {moduleLabel(m.id)}
               <span className="text-xs text-body-muted">{versionOf(m.id)}</span>
             </label>
           ))}
-          <label className="flex items-center gap-2 text-sm text-navy">
+          <label className="flex items-center gap-2 text-sm text-ink">
             <input type="radio" name="b-module" checked={bId === NO_B} onChange={() => setBId(NO_B)} />
             先不選 B 模組
           </label>
@@ -117,7 +117,7 @@ export function NewCourseDialog({
             {cards
               .filter((c) => c.versions.length > 1)
               .map((c) => (
-                <label key={c.moduleId} className="flex items-center gap-2 text-sm text-navy">
+                <label key={c.moduleId} className="flex items-center gap-2 text-sm text-ink">
                   <span className="min-w-0 flex-1">{moduleLabel(c.moduleId)}</span>
                   <Select
                     aria-label={`${moduleLabel(c.moduleId)} 的模組卡版本`}
@@ -148,7 +148,7 @@ export function NewCourseDialog({
         </Select>
       </Field>
       <div>
-        <p className="mb-1 text-xs font-bold text-navy">標籤</p>
+        <p className="mb-1 text-xs font-bold text-ink">標籤</p>
         <p className="mb-2 text-xs text-body-muted">預設帶入所選產業素材包的對象、產業、應用場景，之後在課程頁還能改。工具由藍圖談出來，規格由總時數推得，這裡都不用挑。</p>
         <TagPicker groups={COURSE_TAG_GROUPS} value={tags} onChange={setPickedTags} />
       </div>
@@ -160,7 +160,7 @@ export function NewCourseDialog({
           <li className="text-body-muted">這些只是提醒，仍然可以開課程。</li>
         </ul>
       )}
-      <p className="rounded-md bg-iced px-3 py-2 text-xs">
+      <p className="rounded-md bg-layer px-3 py-2 text-xs">
         {cards.length > 0 && pack
           ? `藍圖會依序從模組卡${moduleCardVersionsLabel(sources)}的核心單元骨架，加上產業素材包「${pack.title}」複製內容出生；之後模組卡升版，這門課的藍圖不會跟著變。`
           : "沒選任何模組：藍圖會從零開始，只帶入客戶背景與素材包的受眾；之後一樣可以跟 AI 談。"}

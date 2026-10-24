@@ -49,10 +49,10 @@ export function Dialog({
         // 點背景關閉
         if (e.target === ref.current) onClose();
       }}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg bg-white p-0 text-body shadow-[0_12px_48px_rgba(1,20,85,0.18)] backdrop:bg-navy/40"
+      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg bg-card p-0 text-body shadow-[0_12px_48px_rgba(1,20,85,0.18)] backdrop:bg-scrim"
     >
       <form onSubmit={handleSubmit} className="p-6">
-        <h2 className="text-lg font-bold text-navy">{title}</h2>
+        <h2 className="text-lg font-bold text-ink">{title}</h2>
         {description && <div className="mt-1.5 text-sm">{description}</div>}
         {children && <div className="mt-5 space-y-4">{children}</div>}
         <div className="mt-6 flex flex-wrap justify-end gap-2">

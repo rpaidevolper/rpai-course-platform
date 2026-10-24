@@ -12,8 +12,9 @@ const NAV = [
 export function AppNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="主要導覽">
-      <ul className="flex flex-wrap gap-1">
+    // 手機上自成一行、放不下就橫向捲動，不折行（同設計稿的 InstructorNav）
+    <nav aria-label="主要導覽" className="-mx-4 basis-full overflow-x-auto px-4 pb-2 sm:mx-0 sm:basis-auto sm:overflow-visible sm:p-0">
+      <ul className="flex gap-1 whitespace-nowrap">
         {NAV.map((item) => {
           const active = item.match(pathname);
           return (
@@ -22,7 +23,7 @@ export function AppNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`block rounded-md px-3 py-2 text-sm font-bold ${
-                  active ? "bg-navy-tint text-navy" : "text-body hover:bg-iced hover:text-navy"
+                  active ? "bg-accent-tint text-ink" : "text-body hover:bg-layer hover:text-accent"
                 }`}
               >
                 {item.label}

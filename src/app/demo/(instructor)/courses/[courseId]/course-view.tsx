@@ -45,9 +45,11 @@ import {
   Card,
   CARD,
   DemoMissing,
+  EMPHASIS,
   Empty,
   GatedAction,
   PageHeader,
+  SectionNav,
   SectionTitle,
   TextButton,
 } from "@/app/_components/ui";
@@ -57,6 +59,16 @@ import { NewSessionButton } from "./new-session-dialog";
 
 const STATUS_TEXT = { pending: "排隊中", generating: "產出中", ready: "可用", failed: "產出失敗" } as const;
 const STATUS_TONE = { pending: "neutral", generating: "neutral", ready: "success", failed: "danger" } as const;
+
+/** 課程頁的區塊，依頁面順序；id 是各區塊標題的 id */
+const COURSE_SECTIONS: [id: string, text: string][] = [
+  ["artifacts", "產物鏈"],
+  ["requirement-mapping", "需求對照"],
+  ["blueprint", "藍圖"],
+  ["materials", "素材"],
+  ["sessions", "場次"],
+  ["closing", "結案"],
+];
 
 const formatSize = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
 
@@ -80,7 +92,7 @@ function CourseTags({ course }: { course: Course }) {
         )}
       </p>
       {editing && !closed && (
-        <div className="mt-3 max-w-2xl rounded-lg bg-white p-4 shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
+        <div className="mt-3 max-w-2xl rounded-lg bg-card p-4 shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
           <TagPicker
             groups={COURSE_TAG_GROUPS}
             value={course}
@@ -125,7 +137,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
   return (
     <>
-      <Breadcrumb items={[{ label: project.title, href: `/demo/projects/${project.id}` }, { label: course.title }]} />
+      <Breadcrumb items={[{ label: "專案", href: "/demo/projects" }, { label: project.title, href: `/demo/projects/${project.id}` }, { label: course.title }]} />
       <PageHeader
         title={course.title}
         description={
@@ -133,7 +145,7 @@ export function CourseView({ courseId }: { courseId: string }) {
             <>
               <p>
                 以課程「
-                <Link href={`/demo/courses/${copiedFrom.id}`} className="font-bold text-navy underline underline-offset-2">
+                <Link href={`/demo/courses/${copiedFrom.id}`} className="font-bold text-accent underline underline-offset-2">
                   {copiedFrom.title}
                 </Link>
                 」藍圖 v{course.copiedFrom.blueprintVersion} 為底複製。
@@ -147,14 +159,14 @@ export function CourseView({ courseId }: { courseId: string }) {
                 {course.source.modules.map((m, i) => (
                   <span key={m.moduleId}>
                     {i > 0 && "、"}
-                    <Link href={`/demo/knowledge#module-${m.moduleId}`} className="font-bold text-navy underline underline-offset-2">
+                    <Link href={`/demo/knowledge#module-${m.moduleId}`} className="font-bold text-accent underline underline-offset-2">
                       {moduleLabel(m.moduleId)}
                     </Link>{" "}
                     v{m.version}
                   </span>
                 ))}
                 」與產業素材包「
-                <Link href={`/demo/knowledge#${industryPack.id}`} className="font-bold text-navy underline underline-offset-2">
+                <Link href={`/demo/knowledge#${industryPack.id}`} className="font-bold text-accent underline underline-offset-2">
                   {industryPack.title}
                 </Link>
                 」談出。
@@ -177,18 +189,20 @@ export function CourseView({ courseId }: { courseId: string }) {
       </PageHeader>
 
       {closed && (
-        <div role="note" className={`${CARD} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 border-l-[3px] border-navy p-4 text-sm`}>
+        <div role="note" className={`${CARD} ${EMPHASIS} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 p-4 text-sm`}>
           <p>
-            <span className="font-bold text-navy">{CLOSED_FROZEN_REASON}。</span>
+            <span className="font-bold text-ink">{CLOSED_FROZEN_REASON}。</span>
             場次、產物、藍圖和素材都已凍結，查看、下載與管理學員入口仍可以。
           </p>
           <ReopenCourseButton st={st} course={course} />
         </div>
       )}
 
-      <div className="-mt-4 mb-8">
+      <div className="-mt-4 mb-6">
         <CourseTags course={course} />
       </div>
+
+      <SectionNav label="課程頁區塊" items={COURSE_SECTIONS} />
 
       <section aria-labelledby="artifacts" className="mb-10">
         <SectionTitle aside="產檔在你自己的 Claude Code 裡跑，用 RPAI 課程 skill">
@@ -200,7 +214,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
         <div className="space-y-6">
           <div>
-            <h3 className="mb-2 text-sm font-bold text-navy">課綱討論</h3>
+            <h3 className="mb-2 text-sm font-bold text-ink">課綱討論</h3>
             <ul className="grid gap-3 md:grid-cols-2">
               <ArtifactCard course={course} project={project} series={{ kind: "outline", day: null }} />
               <ArtifactCard course={course} project={project} series={{ kind: "prep_sheet", day: null }} />
@@ -209,7 +223,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
           {course.blueprint.days.map((d, i) => (
             <div key={i}>
-              <h3 className="mb-2 text-sm font-bold text-navy">
+              <h3 className="mb-2 text-sm font-bold text-ink">
                 第 {i + 1} 天<span className="font-normal">・{d.theme}</span>
               </h3>
               <ul className="grid gap-3 md:grid-cols-2">
@@ -218,7 +232,7 @@ export function CourseView({ courseId }: { courseId: string }) {
                   <ArtifactCard course={course} project={project} series={{ kind: "handbook", day: i + 1 }} />
                 ) : (
                   <li className={`${CARD} min-w-0 p-5`}>
-                    <h4 className="text-base font-bold text-navy">第 {i + 1} 天學員手冊</h4>
+                    <h4 className="text-base font-bold text-ink">第 {i + 1} 天學員手冊</h4>
                     <p className="mt-1.5 text-sm text-body-muted">這一天的單元都是純講述，沒有動手環節，不產學員手冊。</p>
                   </li>
                 )}
@@ -243,12 +257,12 @@ export function CourseView({ courseId }: { courseId: string }) {
           <Card>
             <BlueprintPanel blueprint={course.blueprint} sourceLabel={(source) => unitSourceText(st, source)} />
           </Card>
-          <div className="rounded-lg bg-iced p-5">
-            <h3 className="text-sm font-bold text-navy">版本紀錄</h3>
+          <div className="rounded-lg bg-layer p-5">
+            <h3 className="text-sm font-bold text-ink">版本紀錄</h3>
             <ol className="mt-3 space-y-4">
               {history.map((v) => (
-                <li key={v.version} className={v.version === latestBp ? "border-l-[3px] border-navy pl-3" : "pl-[15px]"}>
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-navy">
+                <li key={v.version} className={`pl-3 ${v.version === latestBp ? EMPHASIS : ""}`}>
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
                     v{v.version}
                     {v.version === latestBp && <Badge tone="outline">目前</Badge>}
                     {v.finalizedAt && <Badge tone="success">已定稿</Badge>}
@@ -259,7 +273,7 @@ export function CourseView({ courseId }: { courseId: string }) {
               ))}
             </ol>
             {!latestBpFinalized && (
-              <div className="mt-4 border-t-2 border-white pt-3">
+              <div className="mt-4 border-t-2 border-card pt-3">
                 <p className="mb-2 text-xs">
                   {closed ? `v${latestBp} 沒有定稿。${CLOSED_FROZEN_REASON}。` : `v${latestBp} 還沒定稿；定稿後才能產簡報。課程大綱與講師準備單隨時可以產。`}
                 </p>
@@ -280,10 +294,10 @@ export function CourseView({ courseId }: { courseId: string }) {
           {course.materials.length === 0 ? (
             <Empty>還沒有素材。把講義範例、練習檔放進來，發布時就能一起給學員。</Empty>
           ) : (
-            <ul className={`${CARD} divide-y-2 divide-iced px-5`}>
+            <ul className={`${CARD} divide-y-2 divide-layer px-5`}>
               {course.materials.map((m) => (
                 <li key={m.id} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                  <span className="min-w-0 break-words text-navy">{m.name}</span>
+                  <span className="min-w-0 break-words text-ink">{m.name}</span>
                   <span className="flex shrink-0 items-baseline gap-3">
                     <span className="text-xs text-body-muted">{formatSize(m.sizeKb)}</span>
                     {!closed && (
@@ -322,7 +336,7 @@ export function CourseView({ courseId }: { courseId: string }) {
               {sessions.map((s) => (
                 <li key={s.id} className={`${CARD} p-4`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <Link href={`/demo/sessions/${s.id}`} className="font-bold text-navy underline-offset-2 hover:underline">
+                    <Link href={`/demo/sessions/${s.id}`} className="font-bold text-accent underline-offset-2 hover:underline">
                       {sessionDateRange(s)}
                     </Link>
                     {s.publication ? <Badge tone="success">已發布</Badge> : <Badge tone="warning">還沒發布</Badge>}
@@ -386,6 +400,7 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   const canFinalize = isSlides && latest?.status === "ready" && latest.finalizedAt === null && !stale;
   const busy = latest?.status === "pending" || latest?.status === "generating";
   const frozen = isCourseClosed(course);
+  const canMarkSent = isOutline && latest?.status === "ready" && !latest.sentToClientAt && !frozen;
 
   const request = () => {
     dispatch({ type: "artifact/request", id: makeId("a"), courseId: course.id, kind: series.kind, day: series.day });
@@ -401,8 +416,8 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   };
 
   return (
-    <li className={`${CARD} min-w-0 p-5 ${stale ? "border-l-[3px] border-navy" : ""}`}>
-      <h4 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-navy">
+    <li className={`${CARD} min-w-0 p-5 ${stale ? EMPHASIS : ""}`}>
+      <h4 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-ink">
         {label}
         {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
         {latest && <Badge tone={STATUS_TONE[latest.status]}>{STATUS_TEXT[latest.status]}</Badge>}
@@ -435,15 +450,15 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
               const feedback = isOutline ? outlineFeedback(project, a.id) : [];
               return (
                 <li key={a.id}>
-                  <span className="font-bold text-navy">v{a.version}</span>（藍圖 v{a.blueprintVersion}
+                  <span className="font-bold text-ink">v{a.version}</span>（藍圖 v{a.blueprintVersion}
                   {a.editedFromId ? "，講師修改" : ""}
                   {a.finalizedAt ? "，已定稿" : ""}
                   {a.status !== "ready" ? `，${STATUS_TEXT[a.status]}` : ""}）
-                  {a.sentToClientAt && <span className="font-bold text-navy">・{formatDate(a.sentToClientAt)}已寄給客戶</span>}
+                  {a.sentToClientAt && <span className="font-bold text-ink">・{formatDate(a.sentToClientAt)}已寄給客戶</span>}
                   {feedback.map((d) => (
                     <span key={d.id}>
                       ・客戶回饋：
-                      <Link href={`/demo/projects/${project.id}#docs-heading`} className="font-bold text-navy underline underline-offset-2">
+                      <Link href={`/demo/projects/${project.id}#docs-heading`} className="font-bold text-accent underline underline-offset-2">
                         {d.title}
                       </Link>
                     </span>
@@ -493,20 +508,21 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
             把 v{latest.version} 標成定稿
           </Button>
         )}
-        {latestReady && (
-          <>
-            <input ref={uploadInput} type="file" hidden onChange={uploadEdit} />
-            <Button variant="secondary" disabled={busy || frozen} title={frozen ? CLOSED_FROZEN_REASON : undefined} onClick={() => uploadInput.current?.click()}>
-              上傳講師修改版
-            </Button>
-          </>
-        )}
-        {isOutline && latest?.status === "ready" && !latest.sentToClientAt && !frozen && (
-          <Button variant="secondary" onClick={() => setConfirmSent(true)}>
-            標記已寄給客戶
-          </Button>
-        )}
       </div>
+      {/* 不常用的動作降成文字按鈕，按鈕列只留產出、下載、定稿，看得出主要動作 */}
+      {(latestReady || canMarkSent) && (
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+          {latestReady && (
+            <>
+              <input ref={uploadInput} type="file" hidden onChange={uploadEdit} />
+              <TextButton disabled={busy || frozen} title={frozen ? CLOSED_FROZEN_REASON : undefined} onClick={() => uploadInput.current?.click()}>
+                上傳講師修改版
+              </TextButton>
+            </>
+          )}
+          {canMarkSent && <TextButton onClick={() => setConfirmSent(true)}>標記已寄給客戶</TextButton>}
+        </div>
+      )}
       {frozen && <p className="mt-2 text-xs text-body-muted">{CLOSED_FROZEN_REASON}；可以查看與下載。</p>}
 
       {isOutline && latest && (

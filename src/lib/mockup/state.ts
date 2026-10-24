@@ -20,7 +20,7 @@ export interface DemoState {
 }
 
 /** 改了 DemoState 的形狀就加一，舊的 localStorage 會被丟掉、回到初始值 */
-export const DEMO_STATE_VERSION = 12;
+export const DEMO_STATE_VERSION = 14;
 
 export function initialState(): DemoState {
   return structuredClone({

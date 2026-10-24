@@ -64,7 +64,7 @@ export function ReadinessList({
             </h3>
             <Link
               href={sourceHref(group.source, session)}
-              className="shrink-0 text-xs font-bold text-navy underline-offset-2 hover:underline"
+              className="shrink-0 text-xs font-bold text-accent underline-offset-2 hover:underline"
             >
               去處理<span className="sr-only">{group.label}</span>
             </Link>
@@ -81,7 +81,7 @@ export function ReadinessList({
                       {" "}
                       <Link
                         href={`/demo/courses/${session.courseId}#materials`}
-                        className="text-xs font-bold text-navy underline underline-offset-2"
+                        className="text-xs font-bold text-accent underline underline-offset-2"
                       >
                         到課程頁上傳
                       </Link>

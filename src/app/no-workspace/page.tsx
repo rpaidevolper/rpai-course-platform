@@ -16,7 +16,7 @@ export default async function NoWorkspacePage() {
   return (
     <AuthShell title="尚未加入工作區">
       <p>
-        你已經用 <strong className="text-navy">{user.email ?? "這個帳號"}</strong>{" "}
+        你已經用 <strong className="text-ink">{user.email ?? "這個帳號"}</strong>{" "}
         登入，但還沒被加進講師工作區，所以看不到任何專案、課程或知識庫。
       </p>
       <p>請把這個 email 給管理者。加入之後重新整理這一頁就能進去。</p>

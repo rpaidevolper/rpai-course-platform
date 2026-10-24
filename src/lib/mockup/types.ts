@@ -13,8 +13,8 @@ import type { ModuleId } from "@/lib/blueprint/modules";
 export const INDUSTRIES = ["金融", "製造", "服務零售", "電商客服", "B2B貿易", "HR", "教育", "公益", "通用"] as const;
 export type Industry = (typeof INDUSTRIES)[number];
 
-/** 對象：學員的職務。藍圖裡 audience.who 是這門課自己的描述，這裡是可以篩選的類別。 */
-export const AUDIENCES = ["行政", "業務", "財務", "人資", "生管資材", "品保", "門市店長", "部門主管", "種子團隊"] as const;
+/** 對象：學員的類別，用模組框架的 4 類。藍圖裡 audience.who 是這門課自己的描述，這裡是可以篩選的類別。 */
+export const AUDIENCES = ["主管經營層", "全員", "特定職能", "種子團隊"] as const;
 export type Audience = (typeof AUDIENCES)[number];
 
 /** 工具：課堂上用到的工具。藍圖裡的 tools 有方案與確認狀態，這裡只是篩選用的名稱。 */
@@ -36,7 +36,7 @@ export const TOOL_TAGS = [
 export const SCENARIOS = ["文書", "簡報", "數據分析", "客服與信件", "會議與紀錄", "知識整理"] as const;
 export type Scenario = (typeof SCENARIOS)[number];
 
-/** 標籤：四組可多選的值（規格另由總時數推得）。單元卡以外的東西都帶全部四組。 */
+/** 標籤：四組可多選的值（規格另由總時數推得）。單元卡、課程配方與產業素材包都帶全部四組；課程只存對象、產業、應用場景，工具由藍圖推得（tags.ts 的 courseTools）。 */
 export interface TagSet {
   audiences: Audience[];
   /** 選項見 TOOL_TAGS；型別放寬成 string，因為真實工具名稱會一直長出來 */
@@ -283,7 +283,8 @@ export interface Course extends CourseTagSet {
   artifacts: Artifact[];
   materials: Material[];
   /**
-   * 結案時間；null 表示還沒結案。結案後不能再新增場次，要再開同樣的課就複製課程。
+   * 結案時間；null 表示還沒結案。結案後課程凍結（FROZEN_AFTER_CLOSING，不能新增場次、改藍圖、改標籤等；發布與學員入口的管理仍可以），
+   * 可以重新開啟；要再開同樣的課就複製課程。
    * 專案的結案不另存，由底下的課程全部結案推得（closing.ts 的 isProjectClosed）。
    */
   closedAt: IsoTime | null;

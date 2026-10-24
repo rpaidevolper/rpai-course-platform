@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { unitLevelText } from "@/lib/blueprint/schema";
 import { formatDate, getCourse, getModuleCard, getUnitCard, latestModuleCardVersion, moduleLabel, recipesUsingUnit, seriesLabel } from "@/lib/mockup/logic";
-import { canExcludeUnit, moduleChangeText, pendingUsageIncrease } from "@/lib/mockup/draft-review";
+import { canExcludeUnit, draftAcceptBlock, isRecipeUpdate, moduleChangeText, pendingUsageIncrease } from "@/lib/mockup/draft-review";
 import type { DemoState } from "@/lib/mockup/state";
 import { dispatch } from "@/lib/mockup/store";
 import type { KnowledgeDraft, UnitCard } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
 import { TagList } from "../../_components/tags";
-import { Badge, Button, CARD, Field, FieldLabel, TextArea, TextButton, TextInput } from "@/app/_components/ui";
+import { Badge, Button, CARD, EMPHASIS, Field, FieldLabel, TextArea, TextButton, TextInput } from "@/app/_components/ui";
 
 const TRIGGER_TEXT: Record<KnowledgeDraft["trigger"], string> = {
   closing: "課程結案後產生",
@@ -31,9 +31,16 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
   const [dialog, setDialog] = useState<"discard" | "rewrite" | null>(null);
   const course = draft.fromCourseId ? getCourse(st, draft.fromCourseId) : undefined;
   const p = draft.proposal;
+  const recipeUpdate = isRecipeUpdate(st, draft);
   const close = () => setDialog(null);
 
   const accept = (message: string, highlight: string) => {
+    // 接受被拒絕時顯示原因，不能顯示成成功
+    const blocked = draftAcceptBlock(st, draft.id);
+    if (blocked) {
+      toast(`沒有收進知識庫：${blocked}`);
+      return;
+    }
     dispatch({ type: "draft/accept", draftId: draft.id });
     toast(message);
     onDone(highlight);
@@ -64,18 +71,18 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
   );
 
   return (
-    <article className={`${CARD} border-l-[3px] border-navy p-5`}>
+    <article className={`${CARD} ${EMPHASIS} p-5`}>
       <p className="text-xs text-body-muted">
-        <Badge tone="outline">{KIND_LABEL[p.kind]}</Badge>{" "}
+        <Badge tone="outline">{recipeUpdate ? "更新課程配方" : KIND_LABEL[p.kind]}</Badge>{" "}
         {draft.fromCourseId === null && draft.importedFileName ? (
           <>
-            來自匯入的講義「<span className="font-bold text-navy">{draft.importedFileName}</span>」，{formatDate(draft.createdAt)}
+            來自匯入的講義「<span className="font-bold text-ink">{draft.importedFileName}</span>」，{formatDate(draft.createdAt)}
           </>
         ) : (
           <>
             來自{" "}
             {course ? (
-              <Link href={`/demo/courses/${course.id}`} className="font-bold text-navy underline underline-offset-2">
+              <Link href={`/demo/courses/${course.id}`} className="font-bold text-accent underline underline-offset-2">
                 {course.title}
               </Link>
             ) : (
@@ -93,7 +100,7 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
 
       {p.kind === "new_unit_card" && (
         <>
-          <h3 className="mt-2 text-base font-bold text-navy">建議新增單元卡「{p.unitCard.title}」</h3>
+          <h3 className="mt-2 text-base font-bold text-ink">建議新增單元卡「{p.unitCard.title}」</h3>
           <UnitCardFacts card={p.unitCard} />
           {buttons(<Button onClick={() => accept(`已收進知識庫：單元卡「${p.unitCard.title}」`, `module-${p.unitCard.moduleId}`)}>收進知識庫</Button>, {
             rewrite: true,
@@ -106,7 +113,10 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
 
       {p.kind === "new_course_recipe" && (
         <>
-          <h3 className="mt-2 text-base font-bold text-navy">建議新增課程配方「{p.recipe.title}」</h3>
+          <h3 className="mt-2 text-base font-bold text-ink">
+            {recipeUpdate ? `建議更新課程配方「${st.recipes.find((r) => r.id === p.recipe.id)?.title ?? p.recipe.title}」` : `建議新增課程配方「${p.recipe.title}」`}
+          </h3>
+          {recipeUpdate && <p className="mt-2 text-sm">這門課的配方已經收進知識庫；收進後會取代它的單元序列、上課年月與標籤，名稱不變。</p>}
           <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FieldLabel>標籤</FieldLabel>
@@ -125,7 +135,7 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
                     const used = recipesUsingUnit(st, id).length;
                     return (
                       <li key={id} className="flex flex-wrap items-center gap-2.5">
-                        <span className="w-4 shrink-0 text-right font-bold text-navy">{i + 1}</span>
+                        <span className="w-4 shrink-0 text-right font-bold text-ink">{i + 1}</span>
                         <span>
                           {card ? `${card.title}（${moduleLabel(card.moduleId)}・${card.minutes} 分）` : id}
                         </span>
@@ -154,9 +164,9 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
             <Button
               disabled={p.unitCardIds.length === 0}
               title={p.unitCardIds.length === 0 ? "單元都被排除了，沒有東西可以收" : undefined}
-              onClick={() => accept(`已收進知識庫：課程配方「${p.recipe.title}」與 ${p.unitCardIds.length} 個單元`, p.recipe.id)}
+              onClick={() => accept(`${recipeUpdate ? "已更新知識庫的" : "已收進知識庫："}課程配方「${p.recipe.title}」與 ${p.unitCardIds.length} 個單元`, p.recipe.id)}
             >
-              收進知識庫
+              {recipeUpdate ? "更新配方" : "收進知識庫"}
             </Button>,
             { rewrite: true },
           )}
@@ -232,7 +242,7 @@ function UpdateBody({ st, draft, accept, buttons }: BodyProps) {
   const added = [...p.addTags.audiences, ...p.addTags.tools, ...p.addTags.scenarios];
   return (
     <>
-      <h3 className="mt-2 text-base font-bold text-navy">建議更新單元卡「{card?.title ?? p.unitCardId}」</h3>
+      <h3 className="mt-2 text-base font-bold text-ink">建議更新單元卡「{card?.title ?? p.unitCardId}」</h3>
       <p className="mt-2 text-sm">
         這門課沿用了它。{pendingUsageIncrease(st, draft) ? `用過的配方 ${used} → ${used + 1}（課程配方收進後計入）。` : `用過的配方 ${used}。`}
       </p>
@@ -254,7 +264,7 @@ function ModuleBody({ st, draft, accept, buttons }: BodyProps) {
   const next = card ? latestModuleCardVersion(card) + 1 : undefined;
   return (
     <>
-      <h3 className="mt-2 text-base font-bold text-navy">
+      <h3 className="mt-2 text-base font-bold text-ink">
         建議把模組卡「{moduleLabel(p.moduleId)}」升到 v{next ?? "?"}
       </h3>
       <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">

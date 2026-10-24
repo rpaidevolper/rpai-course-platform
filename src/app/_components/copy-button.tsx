@@ -31,7 +31,7 @@ export function CopyButton({
       <button
         type="button"
         onClick={copy}
-        className="inline-flex items-center rounded-md bg-navy px-4 py-2 text-sm font-bold text-white hover:bg-navy-press"
+        className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-bold text-on-accent hover:bg-accent-press"
       >
         {children}
       </button>
