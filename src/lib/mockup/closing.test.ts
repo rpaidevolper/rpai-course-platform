@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoReducer, newSessionDay, type DemoAction } from "./actions";
-import { closingGate, closingGateText, isCourseClosed, isProjectClosed } from "./closing";
+import { closingGate, closingGateReasons, isCourseClosed, isProjectClosed, projectGroups } from "./closing";
 import { getCourse, getProject } from "./logic";
 import { initialState, type DemoState } from "./state";
 import type { Artifact, Course, Session } from "./types";
@@ -100,7 +100,18 @@ describe("結案閘：缺哪一天的哪一種最終版", () => {
 
   it("缺漏的文字寫出天與產物種類", () => {
     const g = gate(world([...uploaded("page_script", 1), ...uploaded("slides", 1), ...uploaded("page_script", 2)]));
-    expect(closingGateText(g)).toContain("第 2 天簡報");
+    expect(closingGateReasons(g).join("；")).toContain("第 2 天簡報");
+  });
+});
+
+describe("結案閘：阻擋原因", () => {
+  it("全部齊了沒有原因；缺最終版、沒場次、場次沒結束各一條", () => {
+    expect(closingGateReasons(gate(world(FULL, [session("s1", PAST)])))).toEqual([]);
+    const reasons = closingGateReasons(gate(world([], [])));
+    expect(reasons).toHaveLength(2);
+    expect(reasons[0]).toContain("還缺最終版");
+    expect(reasons[1]).toBe("還沒有任何場次");
+    expect(closingGateReasons(gate(world(FULL, [session("s2", "2026-11-20T16:00:00+08:00")])))).toEqual(["還有 1 個場次沒結束"]);
   });
 });
 
@@ -158,15 +169,16 @@ describe("結案", () => {
   });
 });
 
+const PROJECT = "p-e-2026";
+const withCourses = (st: DemoState, closed: boolean[]): DemoState => ({
+  ...st,
+  courses: [
+    ...st.courses.filter((c) => c.projectId !== PROJECT),
+    ...closed.map((isClosed, i): Course => ({ ...getCourse(st, COURSE)!, id: `x-${i}`, projectId: PROJECT, closedAt: isClosed ? NOW : null })),
+  ],
+});
+
 describe("專案結案由底下課程推得", () => {
-  const PROJECT = "p-e-2026";
-  const withCourses = (st: DemoState, closed: boolean[]): DemoState => ({
-    ...st,
-    courses: [
-      ...st.courses.filter((c) => c.projectId !== PROJECT),
-      ...closed.map((isClosed, i): Course => ({ ...getCourse(st, COURSE)!, id: `x-${i}`, projectId: PROJECT, closedAt: isClosed ? NOW : null })),
-    ],
-  });
   const st0 = initialState();
 
   it("底下的課程全部結案，專案就結案", () => {
@@ -187,6 +199,33 @@ describe("專案結案由底下課程推得", () => {
   });
   it("沒有專案時回傳 false", () => {
     expect(isProjectClosed(st0, "nope")).toBe(false);
+  });
+});
+
+describe("專案列表分組：結案不混在進行中底下", () => {
+  const st0 = initialState();
+  const keys = (st: DemoState) => projectGroups(st, st.projects).map((g) => [g.key, g.projects.map((p) => p.id)]);
+
+  it("順序固定為洽談中、進行中、已結案、封存，沒有專案的組也保留", () => {
+    expect(projectGroups(st0, []).map((g) => g.key)).toEqual(["negotiating", "active", "closed", "archived"]);
+  });
+  it("進行中而且課程全部結案的專案歸已結案，不再列在進行中", () => {
+    const st = withCourses(st0, [true, true]);
+    const g = Object.fromEntries(keys(st));
+    expect(g.closed).toContain(PROJECT);
+    expect(g.active).not.toContain(PROJECT);
+  });
+  it("還沒全部結案的專案留在進行中", () => {
+    const g = Object.fromEntries(keys(withCourses(st0, [true, false])));
+    expect(g.active).toContain(PROJECT);
+    expect(g.closed).not.toContain(PROJECT);
+  });
+  it("封存只代表沒成交：封存的專案就算課程都結案也留在封存", () => {
+    const st = withCourses(st0, [true]);
+    const archived = { ...st, projects: st.projects.map((p) => (p.id === PROJECT ? { ...p, status: "archived" as const } : p)) };
+    const g = Object.fromEntries(keys(archived));
+    expect(g.archived).toContain(PROJECT);
+    expect(g.closed).not.toContain(PROJECT);
   });
 });
 

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { closingGate, isCourseClosed } from "@/lib/mockup/closing";
-import { formatDateTime, seriesLabel } from "@/lib/mockup/logic";
+import { closingGate, closingGateReasons, isCourseClosed } from "@/lib/mockup/closing";
+import { formatDateTime } from "@/lib/mockup/logic";
 import { dispatch } from "@/lib/mockup/store";
 import type { DemoState } from "@/lib/mockup/state";
 import type { Course } from "@/lib/mockup/types";
@@ -17,6 +17,7 @@ import { Badge, Button, CARD, SectionTitle } from "../../../_components/ui";
 export function ClosingSection({ st, course }: { st: DemoState; course: Course }) {
   const closed = isCourseClosed(course);
   const gate = closingGate(st, course, st.now);
+  const reasons = closingGateReasons(gate);
 
   const close = () => {
     dispatch({ type: "course/close", courseId: course.id });
@@ -47,21 +48,14 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
           <>
             <p className="text-body-muted">最終版是課後由你上傳、代表實際上課內容的逐頁腳本與簡報。AI 產的版本即使沒改，也要重新上傳一次才算。</p>
             <ul className="mt-3 space-y-1">
-              {gate.missingFinals.length === 0 ? (
-                <li>每一天的最終版都齊了。</li>
+              {reasons.length === 0 ? (
+                <li>每一天的最終版都齊了，所有場次都已結束，可以結案。</li>
               ) : (
-                gate.missingFinals.map((m) => (
-                  <li key={`${m.kind}-${m.day}`} className="text-danger">
-                    缺最終版：{seriesLabel({ kind: m.kind, day: m.day })}
+                reasons.map((r) => (
+                  <li key={r} className="text-danger">
+                    {r}
                   </li>
                 ))
-              )}
-              {!gate.hasSessions ? (
-                <li className="text-danger">還沒有任何場次。</li>
-              ) : gate.unfinishedSessionIds.length > 0 ? (
-                <li className="text-danger">還有 {gate.unfinishedSessionIds.length} 個場次沒結束。</li>
-              ) : (
-                <li>所有場次都已結束。</li>
               )}
             </ul>
             <div className="mt-3">

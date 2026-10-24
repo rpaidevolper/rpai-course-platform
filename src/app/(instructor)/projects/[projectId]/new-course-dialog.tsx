@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { compositionWarnings, compositionWarningText } from "@/lib/mockup/composition";
 import { chosenModuleCards } from "@/lib/mockup/actions";
-import { getIndustryPack, latestModuleCardVersion, moduleLabel } from "@/lib/mockup/logic";
+import { getIndustryPack, latestModuleCardVersion, moduleCardVersionsLabel, moduleLabel } from "@/lib/mockup/logic";
 import { useDemoState } from "@/lib/mockup/store";
 import { defaultCourseTags, specOfHours } from "@/lib/mockup/tags";
 import { MODULES, type ModuleId, type Project, type TagSet } from "@/lib/mockup/types";
@@ -130,7 +130,7 @@ export function NewCourseDialog({
       )}
       <p className="rounded-md bg-iced px-3 py-2 text-xs">
         {cards.length > 0 && pack
-          ? `藍圖會依序從模組卡${cards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、")}的核心單元骨架，加上產業素材包「${pack.title}」複製內容出生；之後模組卡升版，這門課的藍圖不會跟著變。`
+          ? `藍圖會依序從模組卡${moduleCardVersionsLabel(cards)}的核心單元骨架，加上產業素材包「${pack.title}」複製內容出生；之後模組卡升版，這門課的藍圖不會跟著變。`
           : "沒選任何模組：藍圖會從零開始，只帶入客戶背景與素材包的受眾；之後一樣可以跟 AI 談。"}
         {itNote}
       </p>

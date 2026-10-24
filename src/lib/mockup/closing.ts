@@ -1,6 +1,6 @@
 import { coursesOfProject, seriesLabel, sessionEndsAt, sessionsOfCourse } from "./logic";
 import type { DemoState } from "./state";
-import type { Artifact, Course, IsoTime } from "./types";
+import type { Artifact, Course, IsoTime, Project, ProjectStatus } from "./types";
 
 /**
  * 結案閘與結案狀態（#59）。純函式，不碰 UI；結案動作在 actions.ts 的 course/close。
@@ -29,22 +29,19 @@ export interface ClosingGate {
 }
 
 /**
- * 該天該種類有沒有最終版：同一份產物裡任何一版是講師上傳的（editedFromId 不為 null）。
- * AI 產的版本就算沒改過，也要講師重新上傳一次才算數。
+ * 該天該種類的最終版：同一份產物裡講師上傳（editedFromId 不為 null）的最新一版；沒有則為 undefined。
+ * AI 產的版本就算沒改過，也要講師重新上傳一次才算數。最終版的判斷只有這一處。
  */
-function hasFinal(course: Course, kind: FinalKind, day: number): boolean {
-  return course.artifacts.some((a) => a.kind === kind && a.day === day && a.editedFromId !== null);
+function latestFinal(course: Course, kind: FinalKind, day: number): Artifact | undefined {
+  const uploads = course.artifacts.filter((a) => a.kind === kind && a.day === day && a.editedFromId !== null);
+  return uploads.reduce<Artifact | undefined>((best, a) => (best === undefined || a.version > best.version ? a : best), undefined);
 }
 
-/**
- * 各天各種類的最終版：同一份產物裡講師上傳（editedFromId 不為 null）的最新一版。
- * 依天數排列、逐頁腳本在前簡報在後；沒有講師上傳版本的那一份不出現。
- */
+/** 各天各種類的最終版，依天數排列、逐頁腳本在前簡報在後；沒有最終版的那一份不出現。 */
 export function finalArtifacts(course: Course): Artifact[] {
   return course.blueprint.days.flatMap((_, i) =>
     FINAL_KINDS.flatMap((kind) => {
-      const uploads = course.artifacts.filter((a) => a.kind === kind && a.day === i + 1 && a.editedFromId !== null);
-      const latest = uploads.reduce<Artifact | undefined>((best, a) => (best === undefined || a.version > best.version ? a : best), undefined);
+      const latest = latestFinal(course, kind, i + 1);
       return latest ? [latest] : [];
     }),
   );
@@ -52,7 +49,7 @@ export function finalArtifacts(course: Course): Artifact[] {
 
 export function closingGate(st: DemoState, course: Course, now: IsoTime): ClosingGate {
   const missingFinals = course.blueprint.days.flatMap((_, i): MissingFinal[] =>
-    FINAL_KINDS.filter((kind) => !hasFinal(course, kind, i + 1)).map((kind) => ({ kind, day: i + 1 })),
+    FINAL_KINDS.filter((kind) => latestFinal(course, kind, i + 1) === undefined).map((kind) => ({ kind, day: i + 1 })),
   );
   const sessions = sessionsOfCourse(st, course.id);
   const unfinishedSessionIds = sessions.filter((s) => Date.parse(sessionEndsAt(s)) > Date.parse(now)).map((s) => s.id);
@@ -76,8 +73,6 @@ export function closingGateReasons(gate: ClosingGate): string[] {
   ];
 }
 
-export const closingGateText = (gate: ClosingGate): string => closingGateReasons(gate).join("；");
-
 export const isCourseClosed = (course: Pick<Course, "closedAt">): boolean => course.closedAt !== null;
 
 /**
@@ -87,4 +82,21 @@ export const isCourseClosed = (course: Pick<Course, "closedAt">): boolean => cou
 export function isProjectClosed(st: DemoState, projectId: string): boolean {
   const courses = coursesOfProject(st, projectId);
   return courses.length > 0 && courses.every(isCourseClosed);
+}
+
+/** 專案列表的分組：狀態三組之外，推得的結案獨立一組，不混在進行中底下。 */
+export type ProjectGroupKey = ProjectStatus | "closed";
+
+/**
+ * 專案列表分組，順序固定為洽談中、進行中、已結案、封存；沒有專案的組也保留。
+ * 已結案是推得的（isProjectClosed）：進行中而且課程全部結案的專案歸這一組；封存只代表沒成交，不受結案影響。
+ */
+export function projectGroups(st: DemoState, projects: Project[]): { key: ProjectGroupKey; projects: Project[] }[] {
+  const closed = (p: Project) => p.status === "active" && isProjectClosed(st, p.id);
+  return [
+    { key: "negotiating", projects: projects.filter((p) => p.status === "negotiating") },
+    { key: "active", projects: projects.filter((p) => p.status === "active" && !closed(p)) },
+    { key: "closed", projects: projects.filter(closed) },
+    { key: "archived", projects: projects.filter((p) => p.status === "archived") },
+  ];
 }

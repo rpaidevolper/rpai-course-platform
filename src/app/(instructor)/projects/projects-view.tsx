@@ -4,28 +4,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
-import { coursesOfProject, formatDate, formatTwd, projectsByStatus, sessionStartsAt, upcomingSessions } from "@/lib/mockup/logic";
-import { isProjectClosed } from "@/lib/mockup/closing";
+import { coursesOfProject, formatDate, formatTwd, sessionStartsAt, upcomingSessions } from "@/lib/mockup/logic";
+import { isProjectClosed, projectGroups, type ProjectGroupKey } from "@/lib/mockup/closing";
 import { dispatch, useDemoState } from "@/lib/mockup/store";
-import { PROJECT_STATUS_LABELS, type Project, type ProjectStatus, type Session } from "@/lib/mockup/types";
+import { PROJECT_STATUS_LABELS, type Project, type Session } from "@/lib/mockup/types";
 import type { DemoState } from "@/lib/mockup/state";
 import { toast } from "../../_components/demo-runtime";
 import { Badge, Button, CARD, Empty, PageHeader, ProjectStatusBadge, SectionTitle } from "../../_components/ui";
 import { ProjectDialog } from "./project-dialog";
 
-const STATUS_HINTS: Record<ProjectStatus, string> = {
+const GROUP_LABELS: Record<ProjectGroupKey, string> = { ...PROJECT_STATUS_LABELS, closed: "已結案" };
+
+const GROUP_HINTS: Record<ProjectGroupKey, string> = {
   negotiating: "客戶還在洽談；課綱討論談出的藍圖，成交後直接沿用。",
   active: "已成交、正在準備或交付的專案。",
-  archived: "沒成交或已結案的專案，留著查歷史。",
+  closed: "底下的課程都結案了；結案由課程推得，不是專案狀態。",
+  archived: "沒成交的專案，留著查歷史。",
 };
 
-/** 專案列表：依狀態分組（洽談中、進行中、封存），封存的與進行中分開。 */
+/** 專案列表：依狀態分組（洽談中、進行中、已結案、封存）；已結案不混在進行中底下，封存只代表沒成交。 */
 export function ProjectsView() {
   const st = useDemoState();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const upcoming = upcomingSessions(st, st.now);
-  const groups = projectsByStatus(st.projects);
+  const groups = projectGroups(st, st.projects);
 
   return (
     <>
@@ -34,14 +37,14 @@ export function ProjectsView() {
       </PageHeader>
 
       <div className="space-y-10">
-        {groups.map(({ status, projects }) => (
-          <section key={status} aria-labelledby={`status-${status}`}>
+        {groups.map(({ key, projects }) => (
+          <section key={key} aria-labelledby={`status-${key}`}>
             <SectionTitle aside={`${projects.length} 個專案`}>
-              <span id={`status-${status}`}>{PROJECT_STATUS_LABELS[status]}</span>
+              <span id={`status-${key}`}>{GROUP_LABELS[key]}</span>
             </SectionTitle>
-            <p className="-mt-1 mb-3 text-xs text-body-muted">{STATUS_HINTS[status]}</p>
+            <p className="-mt-1 mb-3 text-xs text-body-muted">{GROUP_HINTS[key]}</p>
             {projects.length === 0 ? (
-              <Empty>沒有{PROJECT_STATUS_LABELS[status]}的專案。</Empty>
+              <Empty>沒有{GROUP_LABELS[key]}的專案。</Empty>
             ) : (
               <ul className="space-y-4">
                 {projects.map((p) => (

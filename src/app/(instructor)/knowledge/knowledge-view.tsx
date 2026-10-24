@@ -129,7 +129,7 @@ export function KnowledgeView() {
       </section>
 
       <section aria-labelledby="modules-title" className="mb-12">
-        <SectionTitle aside="直接整理模組卡會升一版">
+        <SectionTitle aside="模組卡只在審核課程結案草稿時升版">
           <span id="modules-title">模組卡</span>
         </SectionTitle>
         <p className="mb-5 max-w-2xl text-sm">
@@ -173,7 +173,7 @@ export function KnowledgeView() {
                   <div className="mt-2">
                     <TagList tags={r} spec={recipeSpec(st, r)} />
                   </div>
-                  <p className="mt-1 text-sm text-body-muted">{recipeModules(st, r).join("、")}</p>
+                  <p className="mt-1 text-sm text-body-muted">{recipeModules(st, r).map(moduleLabel).join("、")}</p>
                   <div className="mt-4">
                     <Button variant="secondary" onClick={() => setOpenCard({ kind: "recipe", id: r.id })}>
                       打開課程配方

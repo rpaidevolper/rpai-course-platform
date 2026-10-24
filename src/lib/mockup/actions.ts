@@ -11,8 +11,8 @@ import {
   isPublishable,
   latestArtifact,
   latestBlueprintVersion,
-  latestModuleCardVersion,
   latestReadyArtifact,
+  moduleCardVersionsLabel,
   moduleLabel,
   portalExpiresAt,
 } from "./logic";
@@ -189,7 +189,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             createdAt: now,
             note:
               moduleCards.length > 0
-                ? `從模組卡${moduleCards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、")} 複製出生`
+                ? `從模組卡${moduleCardVersionsLabel(moduleCards)} 複製出生`
                 : "從零開始的藍圖草稿",
             finalizedAt: null,
           },
