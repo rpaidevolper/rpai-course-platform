@@ -59,7 +59,7 @@ const PORTAL_BADGE: Record<PortalState, { tone: "neutral" | "success" | "warning
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NEW_TAB_LINK = "inline-flex items-center rounded-md bg-navy px-4 py-2 text-sm font-bold text-white hover:bg-navy-press";
+const NEW_TAB_LINK = "inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-bold text-on-accent hover:bg-accent-press";
 
 type DialogKind = "publish" | "close" | "extend" | "link" | "info";
 
@@ -108,9 +108,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       <div className="space-y-8">
         {/* 發布：本頁重點 */}
-        <section id="publish" aria-labelledby="publish-title" className={`${CARD} scroll-mt-6 border-l-[3px] border-navy p-5 sm:p-6`}>
+        <section id="publish" aria-labelledby="publish-title" className={`${CARD} scroll-mt-6 border-l-[3px] border-accent p-5 sm:p-6`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 id="publish-title" className="text-xl font-bold text-navy">
+            <h2 id="publish-title" className="text-xl font-bold text-ink">
               發布
             </h2>
             {pub ? <Badge tone="success">已發布</Badge> : <Badge tone="warning">還沒發布</Badge>}
@@ -132,7 +132,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           ) : (
             <>
               <p className="mt-3 text-sm">
-                上次發布：<span className="font-bold text-navy">{formatDateTime(pub.publishedAt)}</span>
+                上次發布：<span className="font-bold text-ink">{formatDateTime(pub.publishedAt)}</span>
               </p>
 
               <div className="mt-5 grid gap-6 sm:grid-cols-2">
@@ -148,7 +148,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       return (
                         <li key={`${series.kind}-${series.day}`}>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-bold text-navy">{seriesLabel(series)}</span>
+                            <span className="font-bold text-ink">{seriesLabel(series)}</span>
                             {locked ? (
                               <Badge tone="outline">v{locked.version}</Badge>
                             ) : (
@@ -175,7 +175,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     ) : (
                       <ul className="space-y-1 text-sm">
                         {lockedMaterials.map((m) => (
-                          <li key={m.id} className="break-words text-navy">
+                          <li key={m.id} className="break-words text-ink">
                             {m.name}
                           </li>
                         ))}
@@ -189,7 +189,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     ) : (
                       <ul className="space-y-1 text-sm">
                         {pub.links.map((l) => (
-                          <li key={l.url} className="break-words text-navy">
+                          <li key={l.url} className="break-words text-ink">
                             {l.label}
                           </li>
                         ))}
@@ -306,7 +306,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 {session.links.map((l) => (
                   <li key={l.url} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <a href={l.url} target="_blank" rel="noreferrer" className="min-w-0 hover:underline">
-                      <span className="font-bold text-navy">{l.label}</span>
+                      <span className="font-bold text-ink">{l.label}</span>
                       <span className="ml-3 break-all text-body-muted">{l.url}</span>
                     </a>
                     {!frozen && (
@@ -343,7 +343,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           title="提前關閉學員入口？"
           description={
             <>
-              關閉後，學員打開 <span className="font-bold text-navy">{portalPath}</span> 只會看到「講師已關閉這個頁面」。之後可以再重新開放。
+              關閉後，學員打開 <span className="font-bold text-ink">{portalPath}</span> 只會看到「講師已關閉這個頁面」。之後可以再重新開放。
             </>
           }
           submitLabel="關閉學員入口"
@@ -417,7 +417,7 @@ function PublishDialog({ st, session, course, onClose }: { st: DemoState; sessio
         <ul className="space-y-1.5 text-sm">
           {rows.map(({ series, ready }) => (
             <li key={`${series.kind}-${series.day}`} className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-navy">{seriesLabel(series)}</span>
+              <span className="font-bold text-ink">{seriesLabel(series)}</span>
               {ready ? (
                 <>
                   <Badge tone="outline">v{ready.version}</Badge>
@@ -438,7 +438,7 @@ function PublishDialog({ st, session, course, onClose }: { st: DemoState; sessio
         ) : (
           <ul className="space-y-1 text-sm">
             {course.materials.map((m) => (
-              <li key={m.id} className="break-words text-navy">
+              <li key={m.id} className="break-words text-ink">
                 {m.name}
               </li>
             ))}
@@ -452,7 +452,7 @@ function PublishDialog({ st, session, course, onClose }: { st: DemoState; sessio
         ) : (
           <ul className="space-y-1 text-sm">
             {session.links.map((l) => (
-              <li key={l.url} className="break-words text-navy">
+              <li key={l.url} className="break-words text-ink">
                 {l.label}
               </li>
             ))}
@@ -481,7 +481,7 @@ function ExtendDialog({ st, session, onClose }: { st: DemoState; session: Sessio
       title="延長學員入口期限"
       description={
         <>
-          目前到 <span className="font-bold text-navy">{formatDateTime(current)}</span>。
+          目前到 <span className="font-bold text-ink">{formatDateTime(current)}</span>。
         </>
       }
       submitLabel="延長"
@@ -501,7 +501,7 @@ function ExtendDialog({ st, session, onClose }: { st: DemoState; session: Sessio
         </Select>
       </Field>
       <p className="text-sm">
-        延長後到 <span className="font-bold text-navy">{formatDateTime(next)}</span>
+        延長後到 <span className="font-bold text-ink">{formatDateTime(next)}</span>
       </p>
       {stillExpired && <p className="text-sm font-bold text-warning">延長後仍然已過期，可以再多延長一些。</p>}
     </Dialog>
@@ -634,9 +634,9 @@ function EditDaysDialog({ session, onClose }: { session: Session; onClose: () =>
       }}
     >
       {days.map((d, i) => (
-        <fieldset key={i} className={multi ? "space-y-3 border-t-2 border-iced pt-3 first:border-t-0 first:pt-0" : "space-y-3"}>
+        <fieldset key={i} className={multi ? "space-y-3 border-t-2 border-layer pt-3 first:border-t-0 first:pt-0" : "space-y-3"}>
           {multi && (
-            <legend className="float-left mb-1 w-full text-sm font-bold text-navy">
+            <legend className="float-left mb-1 w-full text-sm font-bold text-ink">
               第 {i + 1} 天
               <span className="ml-2 text-xs font-normal text-body-muted">授課 {getInstructor(d.instructorId)?.name ?? d.instructorId}</span>
             </legend>

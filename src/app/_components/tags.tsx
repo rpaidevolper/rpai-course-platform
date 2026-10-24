@@ -65,7 +65,7 @@ export function TagPicker<K extends keyof TagSet = keyof TagSet>({
           <legend className="text-xs font-bold text-body-muted">{g.label}（可多選）</legend>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {OPTIONS[g.key].map((option) => (
-              <label key={option} className="flex items-center gap-1.5 text-sm text-navy">
+              <label key={option} className="flex items-center gap-1.5 text-sm text-ink">
                 <input
                   type="checkbox"
                   checked={(value[g.key] as string[]).includes(option)}

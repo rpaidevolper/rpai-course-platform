@@ -80,7 +80,7 @@ function CourseTags({ course }: { course: Course }) {
         )}
       </p>
       {editing && !closed && (
-        <div className="mt-3 max-w-2xl rounded-lg bg-white p-4 shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
+        <div className="mt-3 max-w-2xl rounded-lg bg-card p-4 shadow-[0_3px_16px_rgba(1,20,85,0.06)]">
           <TagPicker
             groups={COURSE_TAG_GROUPS}
             value={course}
@@ -133,7 +133,7 @@ export function CourseView({ courseId }: { courseId: string }) {
             <>
               <p>
                 以課程「
-                <Link href={`/courses/${copiedFrom.id}`} className="font-bold text-navy underline underline-offset-2">
+                <Link href={`/courses/${copiedFrom.id}`} className="font-bold text-accent underline underline-offset-2">
                   {copiedFrom.title}
                 </Link>
                 」藍圖 v{course.copiedFrom.blueprintVersion} 為底複製。
@@ -147,14 +147,14 @@ export function CourseView({ courseId }: { courseId: string }) {
                 {course.source.modules.map((m, i) => (
                   <span key={m.moduleId}>
                     {i > 0 && "、"}
-                    <Link href={`/knowledge#module-${m.moduleId}`} className="font-bold text-navy underline underline-offset-2">
+                    <Link href={`/knowledge#module-${m.moduleId}`} className="font-bold text-accent underline underline-offset-2">
                       {moduleLabel(m.moduleId)}
                     </Link>{" "}
                     v{m.version}
                   </span>
                 ))}
                 」與產業素材包「
-                <Link href={`/knowledge#${industryPack.id}`} className="font-bold text-navy underline underline-offset-2">
+                <Link href={`/knowledge#${industryPack.id}`} className="font-bold text-accent underline underline-offset-2">
                   {industryPack.title}
                 </Link>
                 」談出。
@@ -177,9 +177,9 @@ export function CourseView({ courseId }: { courseId: string }) {
       </PageHeader>
 
       {closed && (
-        <div role="note" className={`${CARD} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 border-l-[3px] border-navy p-4 text-sm`}>
+        <div role="note" className={`${CARD} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 border-l-[3px] border-accent p-4 text-sm`}>
           <p>
-            <span className="font-bold text-navy">{CLOSED_FROZEN_REASON}。</span>
+            <span className="font-bold text-ink">{CLOSED_FROZEN_REASON}。</span>
             場次、產物、藍圖和素材都已凍結，查看、下載與管理學員入口仍可以。
           </p>
           <ReopenCourseButton st={st} course={course} />
@@ -200,7 +200,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
         <div className="space-y-6">
           <div>
-            <h3 className="mb-2 text-sm font-bold text-navy">課綱討論</h3>
+            <h3 className="mb-2 text-sm font-bold text-ink">課綱討論</h3>
             <ul className="grid gap-3 md:grid-cols-2">
               <ArtifactCard course={course} project={project} series={{ kind: "outline", day: null }} />
               <ArtifactCard course={course} project={project} series={{ kind: "prep_sheet", day: null }} />
@@ -209,7 +209,7 @@ export function CourseView({ courseId }: { courseId: string }) {
 
           {course.blueprint.days.map((d, i) => (
             <div key={i}>
-              <h3 className="mb-2 text-sm font-bold text-navy">
+              <h3 className="mb-2 text-sm font-bold text-ink">
                 第 {i + 1} 天<span className="font-normal">・{d.theme}</span>
               </h3>
               <ul className="grid gap-3 md:grid-cols-2">
@@ -218,7 +218,7 @@ export function CourseView({ courseId }: { courseId: string }) {
                   <ArtifactCard course={course} project={project} series={{ kind: "handbook", day: i + 1 }} />
                 ) : (
                   <li className={`${CARD} min-w-0 p-5`}>
-                    <h4 className="text-base font-bold text-navy">第 {i + 1} 天學員手冊</h4>
+                    <h4 className="text-base font-bold text-ink">第 {i + 1} 天學員手冊</h4>
                     <p className="mt-1.5 text-sm text-body-muted">這一天的單元都是純講述，沒有動手環節，不產學員手冊。</p>
                   </li>
                 )}
@@ -243,12 +243,12 @@ export function CourseView({ courseId }: { courseId: string }) {
           <Card>
             <BlueprintPanel blueprint={course.blueprint} sourceLabel={(source) => unitSourceText(st, source)} />
           </Card>
-          <div className="rounded-lg bg-iced p-5">
-            <h3 className="text-sm font-bold text-navy">版本紀錄</h3>
+          <div className="rounded-lg bg-layer p-5">
+            <h3 className="text-sm font-bold text-ink">版本紀錄</h3>
             <ol className="mt-3 space-y-4">
               {history.map((v) => (
-                <li key={v.version} className={v.version === latestBp ? "border-l-[3px] border-navy pl-3" : "pl-[15px]"}>
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-navy">
+                <li key={v.version} className={v.version === latestBp ? "border-l-[3px] border-accent pl-3" : "pl-[15px]"}>
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-ink">
                     v{v.version}
                     {v.version === latestBp && <Badge tone="outline">目前</Badge>}
                     {v.finalizedAt && <Badge tone="success">已定稿</Badge>}
@@ -259,7 +259,7 @@ export function CourseView({ courseId }: { courseId: string }) {
               ))}
             </ol>
             {!latestBpFinalized && (
-              <div className="mt-4 border-t-2 border-white pt-3">
+              <div className="mt-4 border-t-2 border-card pt-3">
                 <p className="mb-2 text-xs">
                   {closed ? `v${latestBp} 沒有定稿。${CLOSED_FROZEN_REASON}。` : `v${latestBp} 還沒定稿；定稿後才能產簡報。課程大綱與講師準備單隨時可以產。`}
                 </p>
@@ -280,10 +280,10 @@ export function CourseView({ courseId }: { courseId: string }) {
           {course.materials.length === 0 ? (
             <Empty>還沒有素材。把講義範例、練習檔放進來，發布時就能一起給學員。</Empty>
           ) : (
-            <ul className={`${CARD} divide-y-2 divide-iced px-5`}>
+            <ul className={`${CARD} divide-y-2 divide-layer px-5`}>
               {course.materials.map((m) => (
                 <li key={m.id} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                  <span className="min-w-0 break-words text-navy">{m.name}</span>
+                  <span className="min-w-0 break-words text-ink">{m.name}</span>
                   <span className="flex shrink-0 items-baseline gap-3">
                     <span className="text-xs text-body-muted">{formatSize(m.sizeKb)}</span>
                     {!closed && (
@@ -322,7 +322,7 @@ export function CourseView({ courseId }: { courseId: string }) {
               {sessions.map((s) => (
                 <li key={s.id} className={`${CARD} p-4`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <Link href={`/sessions/${s.id}`} className="font-bold text-navy underline-offset-2 hover:underline">
+                    <Link href={`/sessions/${s.id}`} className="font-bold text-accent underline-offset-2 hover:underline">
                       {sessionDateRange(s)}
                     </Link>
                     {s.publication ? <Badge tone="success">已發布</Badge> : <Badge tone="warning">還沒發布</Badge>}
@@ -401,8 +401,8 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   };
 
   return (
-    <li className={`${CARD} min-w-0 p-5 ${stale ? "border-l-[3px] border-navy" : ""}`}>
-      <h4 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-navy">
+    <li className={`${CARD} min-w-0 p-5 ${stale ? "border-l-[3px] border-accent" : ""}`}>
+      <h4 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold text-ink">
         {label}
         {latest && <span className="text-2xl leading-none">v{latest.version}</span>}
         {latest && <Badge tone={STATUS_TONE[latest.status]}>{STATUS_TEXT[latest.status]}</Badge>}
@@ -435,15 +435,15 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
               const feedback = isOutline ? outlineFeedback(project, a.id) : [];
               return (
                 <li key={a.id}>
-                  <span className="font-bold text-navy">v{a.version}</span>（藍圖 v{a.blueprintVersion}
+                  <span className="font-bold text-ink">v{a.version}</span>（藍圖 v{a.blueprintVersion}
                   {a.editedFromId ? "，講師修改" : ""}
                   {a.finalizedAt ? "，已定稿" : ""}
                   {a.status !== "ready" ? `，${STATUS_TEXT[a.status]}` : ""}）
-                  {a.sentToClientAt && <span className="font-bold text-navy">・{formatDate(a.sentToClientAt)}已寄給客戶</span>}
+                  {a.sentToClientAt && <span className="font-bold text-ink">・{formatDate(a.sentToClientAt)}已寄給客戶</span>}
                   {feedback.map((d) => (
                     <span key={d.id}>
                       ・客戶回饋：
-                      <Link href={`/projects/${project.id}#docs-heading`} className="font-bold text-navy underline underline-offset-2">
+                      <Link href={`/projects/${project.id}#docs-heading`} className="font-bold text-accent underline underline-offset-2">
                         {d.title}
                       </Link>
                     </span>

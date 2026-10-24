@@ -35,7 +35,7 @@ export function ClientDocumentDialog({ onClose, onSubmit }: { onClose: () => voi
             // 標題還沒填時，先用去掉副檔名的檔名
             if (name && title.trim() === "") setTitle(name.replace(/\.[^.]+$/, ""));
           }}
-          className="mt-1 block w-full text-sm text-navy file:mr-3 file:rounded-md file:border-0 file:bg-navy-tint file:px-4 file:py-2 file:text-sm file:font-bold file:text-navy hover:file:bg-iced"
+          className="mt-1 block w-full text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-accent-tint file:px-4 file:py-2 file:text-sm file:font-bold file:text-ink hover:file:bg-layer"
         />
       </Field>
       <Field label="種類">

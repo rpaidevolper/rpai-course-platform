@@ -56,7 +56,7 @@ export function ReopenCourseButton({ st, course }: { st: DemoState; course: Cour
         >
           {withdrawn.length > 0 ? (
             <div className="text-sm">
-              <p className="font-bold text-navy">會撤回 {withdrawn.length} 份還在待審的知識庫草稿：</p>
+              <p className="font-bold text-ink">會撤回 {withdrawn.length} 份還在待審的知識庫草稿：</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {withdrawn.map((d) => (
                   <li key={d.id} className="break-words">

@@ -92,8 +92,8 @@ export function NewSessionButton({ course, now }: { course: Course; now: IsoTime
         submitDisabled={problem !== null}
       >
         {rows.map((r, i) => (
-          <fieldset key={i} className="space-y-3 border-t-2 border-iced pt-3 first:border-t-0 first:pt-0">
-            <legend className="text-sm font-bold text-navy">
+          <fieldset key={i} className="space-y-3 border-t-2 border-layer pt-3 first:border-t-0 first:pt-0">
+            <legend className="text-sm font-bold text-ink">
               第 {i + 1} 天<span className="font-normal">・{course.blueprint.days[i]?.theme}</span>
             </legend>
             <Field label="日期">

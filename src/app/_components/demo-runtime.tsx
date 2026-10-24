@@ -37,7 +37,7 @@ export function DemoRuntime() {
   return (
     <div aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col items-end gap-2">
       {items.map((t) => (
-        <p key={t.id} className="rounded-md bg-navy px-4 py-2.5 text-sm font-bold text-white shadow-lg">
+        <p key={t.id} className="rounded-md bg-accent px-4 py-2.5 text-sm font-bold text-on-accent shadow-lg">
           {t.message}
         </p>
       ))}
@@ -63,7 +63,7 @@ export function ResetDemoButton({ className = "" }: { className?: string }) {
         setArmed(false);
         toast("已重置 demo，回到初始假資料");
       }}
-      className={`text-xs font-bold underline underline-offset-2 ${armed ? "text-danger" : "text-body-muted hover:text-navy"} ${className}`}
+      className={`text-xs font-bold underline underline-offset-2 ${armed ? "text-danger" : "text-body-muted hover:text-accent"} ${className}`}
     >
       {armed ? "再按一次確認重置" : "重置 demo"}
     </button>

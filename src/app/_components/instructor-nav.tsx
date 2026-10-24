@@ -23,7 +23,7 @@ export function InstructorNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`block rounded-md px-3 py-2 text-sm font-bold ${
-                  active ? "bg-navy-tint text-navy" : "text-body hover:bg-iced hover:text-navy"
+                  active ? "bg-accent-tint text-ink" : "text-body hover:bg-layer hover:text-ink"
                 }`}
               >
                 {item.label}

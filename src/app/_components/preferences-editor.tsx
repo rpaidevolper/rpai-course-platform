@@ -9,11 +9,11 @@ import {
 } from "@/lib/mockup/instructor";
 
 const INPUT =
-  "min-w-0 flex-1 rounded-md bg-white px-3 py-2 text-sm text-navy ring-[1.5px] ring-inset ring-body-muted placeholder:text-body-muted focus:ring-navy";
+  "min-w-0 flex-1 rounded-md bg-card px-3 py-2 text-sm text-ink ring-[1.5px] ring-inset ring-body-muted placeholder:text-body-muted focus:ring-accent";
 const BTN = "inline-flex shrink-0 items-center justify-center rounded-md px-3 py-2 text-sm font-bold";
-const PRIMARY = `${BTN} bg-navy text-white hover:bg-navy-press disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-navy`;
-const SECONDARY = `${BTN} bg-navy-tint text-navy hover:bg-iced`;
-const DANGER = `${BTN} bg-white text-danger ring-[1.5px] ring-inset ring-danger-tint hover:bg-danger-tint`;
+const PRIMARY = `${BTN} bg-accent text-on-accent hover:bg-accent-press disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent`;
+const SECONDARY = `${BTN} bg-accent-tint text-ink hover:bg-layer`;
+const DANGER = `${BTN} bg-card text-danger ring-[1.5px] ring-inset ring-danger-tint hover:bg-danger-tint`;
 
 /** 講師偏好清單：檢視、新增、編輯、刪除。設計稿只存在記憶體，重新整理就還原。 */
 export function PreferencesEditor({ initial }: { initial: InstructorPreference[] }) {
@@ -37,11 +37,11 @@ export function PreferencesEditor({ initial }: { initial: InstructorPreference[]
   return (
     <div>
       {list.length === 0 ? (
-        <p className="rounded-md bg-iced px-4 py-3 text-sm">還沒有講師偏好。在下面寫下你每門課都會交代的習慣。</p>
+        <p className="rounded-md bg-layer px-4 py-3 text-sm">還沒有講師偏好。在下面寫下你每門課都會交代的習慣。</p>
       ) : (
         <ol className="space-y-2">
           {list.map((p, i) => (
-            <li key={p.id} className="rounded-md bg-white px-4 py-3 ring-[1.5px] ring-inset ring-iced">
+            <li key={p.id} className="rounded-md bg-card px-4 py-3 ring-[1.5px] ring-inset ring-layer">
               {editing?.id === p.id ? (
                 <form onSubmit={submitEdit} className="flex flex-wrap items-center gap-2">
                   <label htmlFor={`edit-${p.id}`} className="sr-only">
@@ -63,8 +63,8 @@ export function PreferencesEditor({ initial }: { initial: InstructorPreference[]
                 </form>
               ) : (
                 <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-                  <span className="w-5 shrink-0 pt-2 text-right text-sm font-bold text-navy">{i + 1}</span>
-                  <p className="min-w-0 flex-1 basis-40 break-words pt-2 text-sm text-navy">{p.text}</p>
+                  <span className="w-5 shrink-0 pt-2 text-right text-sm font-bold text-ink">{i + 1}</span>
+                  <p className="min-w-0 flex-1 basis-40 break-words pt-2 text-sm text-ink">{p.text}</p>
                   <div className="flex shrink-0 gap-2">
                     <button
                       type="button"

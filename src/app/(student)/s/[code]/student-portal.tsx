@@ -20,7 +20,7 @@ export function StudentPortal({ code }: { code: string }) {
     if (!hydrated) return <p className="text-sm text-body-muted">載入中…</p>;
     return (
       <div className={`${CARD} p-6`}>
-        <h1 className="text-lg font-bold text-navy">找不到這個頁面</h1>
+        <h1 className="text-lg font-bold text-ink">找不到這個頁面</h1>
         <p className="mt-2 text-sm">連結可能打錯了，或這一場已經不存在，請跟講師確認。</p>
       </div>
     );
@@ -38,7 +38,7 @@ export function StudentPortal({ code }: { code: string }) {
     <>
       <header className="mb-8">
         <p className="text-xs font-bold text-body-muted">RPAI 數位優化器</p>
-        <h1 className="mt-2 text-2xl font-bold text-navy">{view.courseTitle}</h1>
+        <h1 className="mt-2 text-2xl font-bold text-ink">{view.courseTitle}</h1>
         <ol className="mt-3 space-y-1.5 text-sm">
           {view.days.map((d) => {
             const current = multiDay && d.day === view.day;
@@ -46,11 +46,11 @@ export function StudentPortal({ code }: { code: string }) {
               <li
                 key={d.day}
                 aria-current={current ? "date" : undefined}
-                className={`flex flex-wrap gap-x-3 gap-y-0.5 ${current ? "border-l-[3px] border-navy pl-2" : ""}`}
+                className={`flex flex-wrap gap-x-3 gap-y-0.5 ${current ? "border-l-[3px] border-accent pl-2" : ""}`}
               >
-                {multiDay && <span className="shrink-0 font-bold text-navy">第 {d.day} 天</span>}
-                <span className="text-navy">{dayTimeText(d)}</span>
-                <span className={d.venue === null ? "font-bold text-warning" : "text-navy"}>{d.venue ?? VENUE_UNSET}</span>
+                {multiDay && <span className="shrink-0 font-bold text-ink">第 {d.day} 天</span>}
+                <span className="text-ink">{dayTimeText(d)}</span>
+                <span className={d.venue === null ? "font-bold text-warning" : "text-ink"}>{d.venue ?? VENUE_UNSET}</span>
               </li>
             );
           })}
@@ -58,17 +58,17 @@ export function StudentPortal({ code }: { code: string }) {
       </header>
 
       {view.state !== "open" ? (
-        <section aria-labelledby="notice" className={`${CARD} border-l-[3px] border-navy p-5`}>
+        <section aria-labelledby="notice" className={`${CARD} border-l-[3px] border-accent p-5`}>
           <h2 id="notice" className="sr-only">
             頁面狀態
           </h2>
-          <p className="text-base text-navy">{closedMessage}</p>
+          <p className="text-base text-ink">{closedMessage}</p>
         </section>
       ) : (
         <div className="space-y-8">
           {view.links.length > 0 && (
             <section aria-labelledby="links">
-              <h2 id="links" className="mb-3 text-lg font-bold text-navy">
+              <h2 id="links" className="mb-3 text-lg font-bold text-ink">
                 課堂連結
               </h2>
               <ul className="space-y-3">
@@ -78,9 +78,9 @@ export function StudentPortal({ code }: { code: string }) {
                       href={l.url}
                       target="_blank"
                       rel="noreferrer"
-                      className={`${CARD} block border-l-[3px] border-navy px-5 py-4 hover:bg-navy-tint`}
+                      className={`${CARD} block border-l-[3px] border-accent px-5 py-4 hover:bg-accent-tint`}
                     >
-                      <span className="block text-lg font-bold text-navy">{l.label}</span>
+                      <span className="block text-lg font-bold text-ink">{l.label}</span>
                       <span className="mt-0.5 block break-all text-xs text-body-muted">{l.url}</span>
                     </a>
                   </li>
@@ -90,7 +90,7 @@ export function StudentPortal({ code }: { code: string }) {
           )}
 
           <section aria-labelledby="artifacts">
-            <h2 id="artifacts" className="mb-3 text-lg font-bold text-navy">
+            <h2 id="artifacts" className="mb-3 text-lg font-bold text-ink">
               {multiDay ? `第 ${view.day} 天的上課教材` : "上課教材"}
             </h2>
             {multiDay && <p className="mb-3 text-sm">每一天的簡報與學員手冊（有動手環節的天才有）會在那一天出現。</p>}
@@ -101,7 +101,7 @@ export function StudentPortal({ code }: { code: string }) {
                 {view.artifacts.map((a) => (
                   <li key={a.id} className={`${CARD} flex items-center justify-between gap-3 px-5 py-4`}>
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className="font-bold text-navy">{a.label}</span>
+                      <span className="font-bold text-ink">{a.label}</span>
                       <Badge>v{a.version}</Badge>
                     </div>
                     <Button
@@ -122,7 +122,7 @@ export function StudentPortal({ code }: { code: string }) {
           </section>
 
           <section aria-labelledby="materials">
-            <h2 id="materials" className="mb-3 text-lg font-bold text-navy">
+            <h2 id="materials" className="mb-3 text-lg font-bold text-ink">
               課程素材
             </h2>
             {view.materials.length === 0 ? (
@@ -132,7 +132,7 @@ export function StudentPortal({ code }: { code: string }) {
                 {view.materials.map((m) => (
                   <li key={m.id} className={`${CARD} flex items-center justify-between gap-3 px-5 py-4`}>
                     <div className="min-w-0">
-                      <span className="block break-words text-sm font-bold text-navy">{m.name}</span>
+                      <span className="block break-words text-sm font-bold text-ink">{m.name}</span>
                       <span className="text-xs text-body-muted">{formatSize(m.sizeKb)}</span>
                     </div>
                     <Button

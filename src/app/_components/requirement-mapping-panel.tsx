@@ -23,7 +23,7 @@ function TimeChange({ m }: { m: RequirementMapping }) {
   return (
     <p className="text-sm">
       客戶要求 {m.requestedMinutes} 分 → 藍圖安排 {m.allocatedMinutes} 分
-      <span className={`ml-1.5 font-bold ${delta < 0 ? "text-danger" : "text-navy"}`}>
+      <span className={`ml-1.5 font-bold ${delta < 0 ? "text-danger" : "text-ink"}`}>
         （{delta === 0 ? "剛好" : `${signed(delta)} 分`}）
       </span>
     </p>
@@ -40,9 +40,9 @@ export function RequirementMappingPanel({ rows, blueprint }: { rows: Requirement
       {rows.map(({ requirement, mapping: m, review }) => {
         const s = STATUS[m.status];
         return (
-          <li key={requirement.id} className={`${CARD} p-5 ${m.status !== "covered" ? "border-l-[3px] border-navy" : ""}`}>
+          <li key={requirement.id} className={`${CARD} p-5 ${m.status !== "covered" ? "border-l-[3px] border-accent" : ""}`}>
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-              <h3 className="min-w-0 text-base font-bold text-navy">{requirement.text}</h3>
+              <h3 className="min-w-0 text-base font-bold text-ink">{requirement.text}</h3>
               <Badge tone={s.tone}>
                 <span aria-hidden className="mr-1">{s.icon}</span>
                 {statusLabel(m)}
@@ -64,8 +64,8 @@ export function RequirementMappingPanel({ rows, blueprint }: { rows: Requirement
               <p className="mt-2 text-sm text-body-muted">沒有任何單元提到「{requirement.keywords.join("」「") || requirement.text}」。</p>
             )}
             {review && (
-              <p className="mt-3 rounded-md bg-iced px-3 py-2 text-sm">
-                <span className="font-bold text-navy">實質涵蓋：{review.substantive ? "有" : "沒有"}</span>
+              <p className="mt-3 rounded-md bg-layer px-3 py-2 text-sm">
+                <span className="font-bold text-ink">實質涵蓋：{review.substantive ? "有" : "沒有"}</span>
                 <span className="text-body-muted">（設計稿標註，之後由 AI 判斷）</span>
                 <br />
                 {review.note}

@@ -15,7 +15,7 @@ export function BrowseFilter({ value, onChange, unitCount, recipeCount }: { valu
   return (
     <section aria-labelledby="browse-title" className={`${CARD} mb-10 p-5`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="browse-title" className="text-base font-bold text-navy">
+        <h2 id="browse-title" className="text-base font-bold text-ink">
           找單元卡與課程配方
         </h2>
         {hasFilter(value) && (
@@ -43,7 +43,7 @@ export function BrowseFilter({ value, onChange, unitCount, recipeCount }: { valu
           <legend className="text-xs font-bold text-body-muted">模組（可多選）</legend>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {MODULES.map((m) => (
-              <label key={m.id} className="flex items-center gap-1.5 text-sm text-navy">
+              <label key={m.id} className="flex items-center gap-1.5 text-sm text-ink">
                 <input type="checkbox" checked={value.moduleIds.includes(m.id)} onChange={() => onChange({ ...value, moduleIds: toggleTag(value.moduleIds, m.id) })} />
                 {moduleLabel(m.id)}
               </label>
@@ -57,7 +57,7 @@ export function BrowseFilter({ value, onChange, unitCount, recipeCount }: { valu
           <legend className="text-xs font-bold text-body-muted">規格（可多選，只篩課程配方）</legend>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {SPECS.map((s) => (
-              <label key={s} className="flex items-center gap-1.5 text-sm text-navy">
+              <label key={s} className="flex items-center gap-1.5 text-sm text-ink">
                 <input type="checkbox" checked={value.specs.includes(s)} onChange={() => onChange({ ...value, specs: toggleTag(value.specs, s) })} />
                 {s}
               </label>
@@ -66,7 +66,7 @@ export function BrowseFilter({ value, onChange, unitCount, recipeCount }: { valu
         </fieldset>
       </div>
 
-      <p role="status" aria-live="polite" className="mt-4 text-sm font-bold text-navy">
+      <p role="status" aria-live="polite" className="mt-4 text-sm font-bold text-ink">
         符合的單元卡 {unitCount} 張、課程配方 {recipeCount} 份
       </p>
     </section>
