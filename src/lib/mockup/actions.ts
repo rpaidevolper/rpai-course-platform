@@ -391,8 +391,9 @@ export function newSessionDay(startsAt: IsoTime, endsAt: IsoTime, venue: string 
 
 /**
  * 新課程的第一版藍圖：依 ADR 0002，從模組卡與產業素材包「複製內容」出生，之後各自演化。
- * 模組卡的骨架單元依序查出單元卡，每個單元記下來源（kind 為 framework，目前代表模組卡 vN 的那個單元；
- * 沿用程度「要改」）。查不到單元卡或沒有模組卡時，退回一個預設單元、標成新做、不記來源。
+ * 模組卡的骨架單元依序查出單元卡，每個單元記下來源（kind 為 unit_card，指向那張單元卡）、
+ * 所屬模組（單元卡的模組），沿用程度「要改」；應用層級單元卡還沒有，先留 null 讓講師與 AI 談。
+ * 查不到單元卡或沒有模組卡時，退回一個預設單元、標成新做、不記來源（模組歸 B1 流程診斷）。
  * 刻意留下缺的五元素與待確認事項，讓講師接著跟 AI 談。客戶的 IT 限制複製進限制。
  */
 export function starterBlueprint({
@@ -413,13 +414,15 @@ export function starterBlueprint({
   const cards = moduleCard
     ? moduleCard.skeletonUnitIds.map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined)
     : [];
-  const unitTitles = cards.length > 0 ? cards.map((u) => u.title) : ["開場與需求盤點"];
+  // 沒有骨架單元可用時，退回一個預設單元（沒有來源，模組取所選模組卡，沒有就歸 B1）
+  const entries: { title: string; module: ModuleId; source: UnitSource | null }[] =
+    cards.length > 0
+      ? cards.map((u) => ({ title: u.title, module: u.moduleId, source: { kind: "unit_card", id: u.id, version: null, unit: u.title } }))
+      : [{ title: "開場與需求盤點", module: moduleCard?.moduleId ?? "B1", source: null }];
   // 一天兩個三小時的時段，單元平均分進上午與下午
-  const half = Math.ceil(unitTitles.length / 2);
-  const groups = unitTitles.length > 1 ? [unitTitles.slice(0, half), unitTitles.slice(half)] : [unitTitles];
+  const half = Math.ceil(entries.length / 2);
+  const groups = entries.length > 1 ? [entries.slice(0, half), entries.slice(half)] : [entries];
   const slotLabels = ["上午", "下午"];
-  const sourceOf = (unit: string): UnitSource | null =>
-    moduleCard && cards.length > 0 ? { kind: "framework", id: moduleCard.moduleId, version: latestModuleCardVersion(moduleCard), unit } : null;
 
   return BlueprintSchema.parse({
     title,
@@ -443,14 +446,16 @@ export function starterBlueprint({
     days: [
       {
         theme: moduleCard ? moduleLabel(moduleCard.moduleId) : title,
-        slots: groups.map((titles, i) => {
-          const minutes = Math.floor(DEFAULT_SLOT_MINUTES / titles.length);
+        slots: groups.map((group, i) => {
+          const minutes = Math.floor(DEFAULT_SLOT_MINUTES / group.length);
           return {
             label: slotLabels[i] ?? `第 ${i + 1} 段`,
-            minutes: minutes * titles.length,
-            units: titles.map((t) => ({
+            minutes: minutes * group.length,
+            units: group.map(({ title: t, module, source }) => ({
               title: t,
               minutes,
+              module,
+              level: null,
               objective: `完成「${t}」的練習`,
               method: "講述＋示範",
               outcome: "待跟 AI 談",
@@ -458,8 +463,8 @@ export function starterBlueprint({
               activity: null,
               elements: [],
               carriesFrom: null,
-              source: sourceOf(t),
-              reuse: sourceOf(t) ? "modify" : "new",
+              source,
+              reuse: source ? "modify" : "new",
             })),
           };
         }),

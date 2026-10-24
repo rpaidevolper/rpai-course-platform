@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openItems } from "@/lib/blueprint/open-items";
-import { BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
+import { BLUEPRINT_MODULES, BlueprintSchema, checkBlueprint } from "@/lib/blueprint/schema";
 import {
   COURSE_RECIPES,
   COURSES,
@@ -491,16 +491,33 @@ describe("知識庫 fixture 參照完整", () => {
     for (const p of PROJECTS) expect(getIndustryPack(st, p.clientContext.industryPackId), p.id).toBeDefined();
   });
 
-  it.each(COURSES)("課程 $id 的模組來源單元：模組在 moduleIds 裡、模組卡有該版本、模組底下有同名單元卡", (c) => {
+  it.each(COURSES)("課程 $id 的單元卡來源單元：單元卡存在、標題相同，單元的模組與該卡一致", (c) => {
     for (const u of unitsOf(c)) {
-      if (!u.source || u.source.kind !== "framework") continue;
-      const src = u.source;
-      expect(c.source?.moduleIds, u.title).toContain(src.id);
-      const card = MODULE_CARDS.find((x) => x.moduleId === src.id);
-      expect(card, `${u.title} 來源模組卡 ${src.id}`).toBeDefined();
-      expect(card!.versions.map((v) => v.version), u.title).toContain(src.version);
-      expect(unitCardsOfModule(st, card!.moduleId).map((x) => x.title), `${u.title} 來源單元`).toContain(src.unit);
+      if (!u.source || u.source.kind !== "unit_card") continue;
+      const card = getUnitCard(st, u.source.id);
+      expect(card, `${u.title} 來源單元卡 ${u.source.id}`).toBeDefined();
+      expect(u.source.unit, u.title).toBe(card!.title);
+      expect(u.module, u.title).toBe(card!.moduleId);
     }
+  });
+
+  it.each(COURSES)("課程 $id 的課程來源單元：模組與來源課程裡同名單元一致", (c) => {
+    for (const u of unitsOf(c)) {
+      if (!u.source || u.source.kind !== "course") continue;
+      const from = getCourse(st, u.source.id)!;
+      const original = unitsOf(from).find((x) => x.title === u.source!.unit);
+      if (original) expect(u.module, u.title).toBe(original.module);
+    }
+  });
+
+  it("單元的模組都是知識庫裡存在的模組", () => {
+    const ids: string[] = MODULES.map((m) => m.id);
+    expect([...BLUEPRINT_MODULES]).toEqual(ids);
+    for (const c of COURSES) for (const u of unitsOf(c)) expect(ids, u.title).toContain(u.module);
+  });
+
+  it("沒有任何單元的來源是框架（已退場）", () => {
+    for (const c of COURSES) for (const u of unitsOf(c)) expect(u.source?.kind ?? "course", u.title).not.toBe("framework");
   });
 });
 
@@ -559,11 +576,17 @@ describe("知識庫查詢：課程配方、模組與單元卡", () => {
     expect(coursesUsingModule(st, "A5")).toEqual([]);
   });
 
-  it("模組卡最新版本號，以及單元來源文字指向模組卡", () => {
+  it("模組卡最新版本號", () => {
     expect(latestModuleCardVersion(getModuleCard(st, "A4")!)).toBe(2);
-    expect(unitSourceText(st, { kind: "framework", id: "A1", version: 2, unit: "用 Project 記住工作脈絡" })).toBe(
-      "模組卡「A1 通用生成 AI」v2・用 Project 記住工作脈絡",
+  });
+
+  it("單元來源文字：單元卡顯示卡名與模組，課程顯示課程名與藍圖版本，查不到就退回 id", () => {
+    expect(unitSourceText(st, { kind: "unit_card", id: "uc-a1-project", version: null, unit: "用 Project 記住工作脈絡" })).toBe(
+      "單元卡「用 Project 記住工作脈絡」・A1 通用生成 AI",
     );
-    expect(unitSourceText(st, { kind: "framework", id: "X9", version: 1, unit: "某單元" })).toBe("模組卡「X9」v1・某單元");
+    expect(unitSourceText(st, { kind: "unit_card", id: "uc-x", version: null, unit: "某單元" })).toBe("單元卡「某單元」（已不在知識庫）");
+    expect(unitSourceText(st, { kind: "course", id: "c-claude-intro", version: 3, unit: "提示詞的四個零件" })).toBe(
+      `課程「${getCourse(st, "c-claude-intro")!.title}」藍圖 v3・提示詞的四個零件`,
+    );
   });
 });

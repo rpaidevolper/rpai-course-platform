@@ -5,6 +5,8 @@ import { BlueprintSchema, type Blueprint } from "./schema";
 const unit = (title: string, minutes: number, extra: { keyPoints?: string[]; activity?: string | null } = {}) => ({
   title,
   minutes,
+  module: "A1" as const,
+  level: null,
   objective: `完成「${title}」`,
   method: "示範後個人實作",
   outcome: `一份「${title}」成品`,

@@ -41,8 +41,24 @@ export const REUSE_LABELS: Record<ReuseLevel, string> = {
   new: "新做",
 };
 
-/** 單元來源種類：過去的課程，或知識庫的框架。新做的單元沒有來源（null）。 */
-export const UNIT_SOURCE_KINDS = ["course", "framework"] as const;
+/** 模組：單元所屬的教材分類。A 類是工具環境，B 類是方法（和設計稿的 MODULES 同一份清單，新增模組時兩邊一起改）。 */
+export const BLUEPRINT_MODULES = ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3", "B4"] as const;
+export type BlueprintModule = (typeof BLUEPRINT_MODULES)[number];
+
+/** 應用層級：學員在單元裡用 AI 做到的程度，由淺到深（L1 問答、L2 產出、L3 工作流、L4 助理、L5 自動化）。 */
+export const APPLICATION_LEVELS = ["L1", "L2", "L3", "L4", "L5"] as const;
+export type ApplicationLevel = (typeof APPLICATION_LEVELS)[number];
+
+export const APPLICATION_LEVEL_LABELS: Record<ApplicationLevel, string> = {
+  L1: "問答",
+  L2: "產出",
+  L3: "工作流",
+  L4: "助理",
+  L5: "自動化",
+};
+
+/** 單元來源種類：知識庫的單元卡，或平台上另一門課程的單元。新做的單元沒有來源（null）。 */
+export const UNIT_SOURCE_KINDS = ["unit_card", "course"] as const;
 export type UnitSourceKind = (typeof UNIT_SOURCE_KINDS)[number];
 
 /**
@@ -50,13 +66,14 @@ export type UnitSourceKind = (typeof UNIT_SOURCE_KINDS)[number];
  * 不用 discriminated union，維持一個扁平物件，結構化輸出比較穩。
  */
 export const UnitSourceSchema = z.object({
-  kind: z.enum(UNIT_SOURCE_KINDS).describe("course＝過去的課程；framework＝知識庫的框架"),
-  id: NonEmpty.describe("來源課程或框架的 id"),
+  kind: z.enum(UNIT_SOURCE_KINDS).describe("unit_card＝知識庫的單元卡；course＝平台上另一門課程的單元"),
+  id: NonEmpty.describe("來源單元卡或課程的 id"),
   version: z
     .number()
     .int()
     .positive()
-    .describe("kind 為 course 時是該課程的藍圖版本；為 framework 時是框架版本"),
+    .nullable()
+    .describe("kind 為 course 時是該課程的藍圖版本；為 unit_card 時單元卡不分版本，填 null"),
   unit: NonEmpty.describe("來源裡那個單元的標題"),
 });
 
@@ -64,6 +81,13 @@ export const UnitSourceSchema = z.object({
 export const UnitSchema = z.object({
   title: NonEmpty,
   minutes: z.number().int().positive(),
+  module: z
+    .enum(BLUEPRINT_MODULES)
+    .describe("這個單元屬於哪個模組（A1–A5 工具環境、B1–B4 方法）；單元出自單元卡時與該卡的模組一致"),
+  level: z
+    .enum(APPLICATION_LEVELS)
+    .nullable()
+    .describe("應用層級：學員在這個單元用 AI 做到的程度，L1 問答、L2 產出、L3 工作流、L4 助理、L5 自動化；純方法、沒有用 AI 做事的單元為 null"),
   objective: NonEmpty.describe("學習目標：學員上完這段能做到什麼，動詞開頭"),
   method: NonEmpty.describe("教學方式，例如講述＋示範、分組實作、互評"),
   outcome: NonEmpty.describe("成果：學員上完這段手上會多出什麼"),
@@ -80,7 +104,7 @@ export const UnitSchema = z.object({
     .nullable()
     .describe("承接自哪個較早單元的標題（前一單元的成果是這個單元的輸入）；沒有則為 null"),
   source: UnitSourceSchema.nullable().describe(
-    "這個單元出自哪門過去課程或哪個框架的哪個單元；新做的單元為 null",
+    "這個單元出自哪張單元卡或哪門過去課程的哪個單元；新做的單元為 null",
   ),
   reuse: z
     .enum(REUSE_LEVELS)

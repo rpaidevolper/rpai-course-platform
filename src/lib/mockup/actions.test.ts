@@ -199,14 +199,14 @@ describe("從零開一門課到準備好", () => {
     expect(readiness(st, getSession(st, "s-x")!)).toEqual([]);
   });
 
-  it("沒有模組時從零開始：來源為 null、單元都是新做", () => {
+  it("沒有模組時從零開始：來源為 null、單元都是新做，預設歸在 B1 流程診斷", () => {
     const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleId: null, industryPackId: null }]);
     const c = getCourse(st, "c-z")!;
     expect(c.source).toBeNull();
-    expect(c.blueprint.days[0].slots[0].units.every((u) => u.reuse === "new" && u.source === null)).toBe(true);
+    expect(c.blueprint.days[0].slots[0].units.every((u) => u.reuse === "new" && u.source === null && u.module === "B1" && u.level === null)).toBe(true);
   });
 
-  it("起始藍圖通過 schema，單元依模組卡骨架出生、標示來自模組卡、要改", () => {
+  it("起始藍圖通過 schema，單元依模組卡骨架出生、來源是對應的單元卡、屬於該模組、要改", () => {
     const st = initialState();
     const card = getModuleCard(st, "A1")!;
     const bp = starterBlueprint({
@@ -218,7 +218,10 @@ describe("從零開一門課到準備好", () => {
     });
     const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
     expect(units.map((u) => u.title)).toEqual(card.skeletonUnitIds.map((id) => getUnitCard(st, id)!.title));
-    expect(units.every((u) => u.reuse === "modify" && u.source?.kind === "framework" && u.source.id === "A1" && u.source.version === 2)).toBe(true);
+    expect(units.map((u) => u.source)).toEqual(
+      card.skeletonUnitIds.map((id) => ({ kind: "unit_card", id, version: null, unit: getUnitCard(st, id)!.title })),
+    );
+    expect(units.every((u) => u.reuse === "modify" && u.module === "A1" && u.level === null)).toBe(true);
     expect(bp.days[0].theme).toBe("A1 通用生成 AI");
   });
 
@@ -227,7 +230,7 @@ describe("從零開一門課到準備好", () => {
     const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, moduleCard: getModuleCard(st, "A2")!, unitCards: [] });
     const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
     expect(units.map((u) => u.title)).toEqual(["開場與需求盤點"]);
-    expect(units.every((u) => u.reuse === "new" && u.source === null)).toBe(true);
+    expect(units.every((u) => u.reuse === "new" && u.source === null && u.module === "A2")).toBe(true);
   });
 
   it("course/create 帶模組：單元依骨架出生，來源記下模組與產業素材包", () => {
@@ -237,7 +240,8 @@ describe("從零開一門課到準備好", () => {
     expect(c.blueprintHistory[0].note).toBe("從模組卡「A4 雲端自動化」v2 複製出生");
     const units = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
     expect(units.map((u) => u.title)).toEqual(["雲端流程上手", "表單觸發器", "逾期提醒", "寄送前的安全網"]);
-    expect(units.every((u) => u.reuse === "modify" && u.source?.kind === "framework" && u.source.id === "A4" && u.source.version === 2)).toBe(true);
+    expect(units.every((u) => u.reuse === "modify" && u.module === "A4" && u.source?.kind === "unit_card")).toBe(true);
+    expect(units.map((u) => u.source?.id)).toEqual(["uc-a4-cloud-first", "uc-a4-form-trigger", "uc-a4-overdue", "uc-a4-safety-net"]);
   });
 });
 
