@@ -100,20 +100,53 @@ export function rewriteDraft(st: DemoState, draftId: string, patch: DraftRewrite
   return { ...st, drafts: st.drafts.map((d) => (d.id === draftId ? { ...d, proposal: next } : d)) };
 }
 
+/** 單元卡已在知識庫，或還在待審的新單元卡草稿裡（接受配方時會連同收進）。 */
+const unitCardAvailable = (st: DemoState, id: string): boolean =>
+  st.unitCards.some((u) => u.id === id) || st.drafts.some((d) => d.proposal.kind === "new_unit_card" && d.proposal.unitCard.id === id);
+
+/**
+ * 這份草稿現在不能接受的原因；可以接受則為 null。acceptDraft 與畫面共用，
+ * 所以拒絕時畫面能說出原因，而不是顯示成功。
+ * 結案草稿的配方 id 每門課固定（一門課最多一份配方），知識庫已有時是「更新這份配方」，可以接受；
+ * 其他來源的配方或單元卡 id 與知識庫撞號，則拒絕。
+ */
+export function draftAcceptBlock(st: DemoState, draftId: string): string | null {
+  const draft = st.drafts.find((d) => d.id === draftId);
+  if (!draft) return "找不到這份草稿";
+  const p = draft.proposal;
+  switch (p.kind) {
+    case "new_unit_card":
+      return st.unitCards.some((u) => u.id === p.unitCard.id) ? `知識庫已有同編號的單元卡（${p.unitCard.id}），這份草稿不能收進` : null;
+    case "update_unit_card":
+      return st.unitCards.some((u) => u.id === p.unitCardId) ? null : "找不到原單元卡";
+    case "new_course_recipe":
+      if (p.unitCardIds.length === 0) return "單元都被排除了，沒有東西可以收";
+      if (!p.unitCardIds.some((id) => unitCardAvailable(st, id))) return "配方裡的單元卡都找不到";
+      return isRecipeUpdate(st, draft) ? null : st.recipes.some((r) => r.id === p.recipe.id) ? `知識庫已有同編號的課程配方（${p.recipe.id}），這份草稿不能收進` : null;
+    case "module_card_version":
+      return getModuleCard(st, p.moduleId) ? null : "找不到原模組卡";
+  }
+}
+
+/** 結案草稿的課程配方，而且這門課的配方已經收進知識庫：接受時取代它，不是新增。 */
+export function isRecipeUpdate(st: DemoState, draft: KnowledgeDraft): boolean {
+  const p = draft.proposal;
+  return p.kind === "new_course_recipe" && draft.trigger === "closing" && st.recipes.some((r) => r.id === p.recipe.id);
+}
+
 /** 接受草稿，把提案套用到知識庫（編輯過的提案就是接受的內容）。 */
 export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoState {
   const draft = st.drafts.find((d) => d.id === draftId);
   if (!draft) return st;
+  if (draftAcceptBlock(st, draftId) !== null) return st;
   const p = draft.proposal;
 
   if (p.kind === "new_unit_card") {
-    if (st.unitCards.some((u) => u.id === p.unitCard.id)) return without(st, draftId);
     return without({ ...st, unitCards: [...st.unitCards, p.unitCard] }, draftId);
   }
 
   if (p.kind === "update_unit_card") {
-    const card = st.unitCards.find((u) => u.id === p.unitCardId);
-    if (!card) return st;
+    const card = st.unitCards.find((u) => u.id === p.unitCardId)!;
     const next: UnitCard = {
       ...card,
       // 只補還沒評的卡，不覆蓋講師已經評過的層級
@@ -126,7 +159,6 @@ export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoS
   }
 
   if (p.kind === "new_course_recipe") {
-    if (p.unitCardIds.length === 0 || st.recipes.some((r) => r.id === p.recipe.id)) return st;
     // 配方引用的單元卡還沒收進知識庫時，連同還在待審的新單元卡草稿一起收進；兩邊都找不到的略過
     let next = st;
     const unitIds: string[] = [];
@@ -138,12 +170,16 @@ export function acceptDraft(st: DemoState, draftId: string, now: IsoTime): DemoS
       }
       unitIds.push(id);
     }
+    if (isRecipeUpdate(st, draft)) {
+      // 再結案：取代這份配方的單元序列、上課年月與標籤；名稱與狀態是講師可能改過的，保留
+      const { heldOn, audiences, tools, industries, scenarios } = p.recipe;
+      return without({ ...next, recipes: next.recipes.map((r) => (r.id === p.recipe.id ? { ...r, unitIds, heldOn, audiences, tools, industries, scenarios } : r)) }, draftId);
+    }
     const recipe: CourseRecipe = { ...p.recipe, unitIds };
     return without({ ...next, recipes: [...next.recipes, recipe] }, draftId);
   }
 
-  const card = getModuleCard(st, p.moduleId);
-  if (!card) return st;
+  const card = getModuleCard(st, p.moduleId)!;
   // 新版本的骨架是上一版，把被改的單元換成新單元卡；新單元卡還在待審時連同草稿一起收進知識庫（和課程配方一致）
   let next = st;
   let skeleton = moduleCardSkeleton(card);

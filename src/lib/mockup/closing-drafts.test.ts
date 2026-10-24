@@ -49,9 +49,9 @@ describe("結案產生草稿", () => {
     expect(demoReducer(once, { type: "course/close", courseId: COURSE }).drafts).toHaveLength(once.drafts.length);
   });
 
-  it("草稿記下依據的藍圖版本與各天最終版（講師最後上傳的版本）", () => {
+  it("草稿記下依據的藍圖版本與各天最終版（簡報，以及有動手環節那天的手冊；講師最後上傳的版本）", () => {
     const st = closed();
-    for (const d of st.drafts) expect(d.basis).toEqual({ blueprintVersion: 2, finalArtifactIds: ["a-pp-slides-2"] });
+    for (const d of st.drafts) expect(d.basis).toEqual({ blueprintVersion: 2, finalArtifactIds: ["a-pp-slides-2", "a-pp-handbook-2"] });
   });
 
   it("最終版：每天的簡報取講師上傳的最新一版", () => {

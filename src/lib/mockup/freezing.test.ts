@@ -37,7 +37,6 @@ const FROZEN: Record<(typeof FROZEN_AFTER_CLOSING)[number], (st: DemoState) => D
   "session/updateDays": () => ({ type: "session/updateDays", sessionId: SESSION, days: [day] }),
   "link/add": () => ({ type: "link/add", sessionId: SESSION, label: "回饋表單", url: "https://example.com/form" }),
   "link/remove": () => ({ type: "link/remove", sessionId: SESSION, url: LINK.url }),
-  "session/publish": () => ({ type: "session/publish", sessionId: SESSION }),
   "artifact/request": () => ({ type: "artifact/request", id: "a-new", courseId: COURSE, kind: "outline", day: null }),
   "artifact/uploadEdit": () => ({ type: "artifact/uploadEdit", courseId: COURSE, baseId: "a-pp-slides-2", id: "a-up" }),
   "artifact/finalize": () => ({ type: "artifact/finalize", courseId: COURSE, artifactId: "a-pp-slides-2" }),

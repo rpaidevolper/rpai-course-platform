@@ -159,7 +159,7 @@ docs/                 架構與決策記錄
 - 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，`plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
 - 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）
 - 檔案不走 MCP 傳：`request_upload` 給 signed URL，plugin 用 curl 上傳，再 `complete_job`。
-- `plugin/skills/rpai-*`（`rpai-platform-runner` 除外）是帳號層 skill 的快照，以帳號層為準；要改 skill 內容，先改帳號層，再用同步 PR 更新 repo。`rpai-platform-runner` 只在 repo 裡，直接改 repo。
+- `plugin/skills/rpai-*`（`rpai-platform-runner` 除外）是帳號層 skill 的快照，以帳號層為準；要改 skill 內容，先改帳號層，再用同步 PR 更新 repo。`rpai-platform-runner` 只在 repo 裡，直接改 repo。同步 PR 要保留 repo 快照的去識別化，合併前掃描客戶名稱。
 
 ### 資料規範
 

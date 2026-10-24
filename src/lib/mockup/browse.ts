@@ -128,6 +128,6 @@ export const unitCardUsage = (st: DemoState, unitCardId: string): CourseUsage[] 
 
 /**
  * 用過某張模組卡的課程：藍圖裡有單元屬於該模組（unit.module）。
- * 不用 Course.source.moduleIds（那只記錄開課時挑了什麼，藍圖之後可能換掉模組）。
+ * 不用 Course.source.modules（那只記錄開課時挑了哪些模組與版本，藍圖之後可能換掉模組）。
  */
 export const moduleCardUsage = (st: DemoState, moduleId: ModuleId): CourseUsage[] => usageOf(st, (u) => u.module === moduleId);
