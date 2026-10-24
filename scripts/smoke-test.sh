@@ -1,5 +1,5 @@
 #!/bin/bash
-# 部署後 smoke test：確認線上的 app、資料庫與 MCP 路由都活著。
+# 部署後 smoke test：確認線上的 app、資料庫、登入閘與 MCP 路由都活著。
 #
 #   scripts/smoke-test.sh <base-url> [expected-commit]
 #
@@ -30,9 +30,15 @@ for i in $(seq 1 20); do
 done
 pass "/api/health  $health"
 
-code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$base/")
-[ "$code" = "200" ] || fail "GET / 回 $code，預期 200"
-pass "GET /  200"
+code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$base/login")
+[ "$code" = "200" ] || fail "GET /login 回 $code，預期 200"
+pass "GET /login  200"
+
+# 講師頁要登入：沒帶 session 打首頁，proxy 要導去登入頁
+read -r code location < <(curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}\n' --max-time 15 "$base/")
+case "$code" in 302 | 303 | 307 | 308) ;; *) fail "未登入 GET / 回 $code，預期導去 /login" ;; esac
+[[ "${location:-}" == "$base/login"* ]] || fail "未登入 GET / 導去 ${location:-（沒有 Location）}，預期 $base/login"
+pass "GET / 未登入  $code → /login"
 
 code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 \
   -X POST -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \

@@ -13,7 +13,8 @@ status: accepted
 
 ## Consequences
 
-- RLS 與 MCP 工具要從「以 `owner_id` 過濾」改成「以工作區過濾」。現行程式（schema v1、`src/lib/mcp/`）仍以 `owner_id` 過濾，要等 schema v2 才一起改；在那之前不要提前改 MCP 或 RLS。
-- 改成以工作區過濾之後，用 service role client 時一樣必須自己加工作區條件，不要相信 RLS 會擋。
+- RLS 與 MCP 工具以工作區過濾（#87，migration `0005_workspaces`）：policy 用 `is_workspace_member(workspace_id)`，MCP 的權杖對到講師所屬的工作區。`owner_id` 保留當「建立者」，不再用來授權。
+- 用 service role client 時一樣必須自己加工作區條件，不要相信 RLS 會擋。
+- 登入不等於加入工作區：公開註冊關閉，成員由 owner 用 `pnpm member:add` / `pnpm member:remove` 管理；被移除的人權杖立刻失效。
 - 專案價格對所有講師可見。
 - 平台仍然只有講師一種角色。之後若要讓團隊以外的人（例如客戶或外部講師）進來，另立 ADR。

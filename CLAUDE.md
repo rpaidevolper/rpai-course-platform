@@ -117,22 +117,30 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 | Lint | `pnpm lint` |
 | 型別檢查 | `pnpm typecheck`（會先跑 `next typegen` 產生 Next.js 的全域型別） |
 | 測試 | `pnpm test`（單檔：`pnpm test src/lib/blueprint/schema.test.ts`） |
+| DB 整合測試 | `pnpm test:db`（`*.db.test.ts`：RLS、trigger、MCP 的工作區過濾；要先 `pnpm db:start`） |
 | Build | `pnpm build` |
 | 本機 Supabase | `pnpm db:start`（啟動並把連線資訊寫入 `.env.local`）、`pnpm db:stop`、`pnpm db:reset`（清空並重套 migrations） |
 | 部署後 smoke test | `scripts/smoke-test.sh <url> [commit]` |
-| 建講師權杖 | `pnpm token:create --user <auth.users.id> --label 名稱` |
+| 加入／移除講師 | `pnpm member:add --email <email> --name 顯示名稱`、`pnpm member:remove --email <email>`（本機加 `--password` 才能用登入頁的密碼登入） |
+| 建講師權杖 | 講師在後台「設定」自己產生；owner 代建用 `pnpm token:create --user <auth.users.id> --label 名稱` |
 | 測 plugin | `claude --plugin-dir ./plugin` |
 
-提交前必跑 `pnpm lint && pnpm typecheck && pnpm test`。套件管理一律用 pnpm。
+提交前必跑 `pnpm lint && pnpm typecheck && pnpm test`；動到 migration、RLS 或 MCP 的資料存取時，再跑 `pnpm test:db`。套件管理一律用 pnpm。
 
 ### 目錄
 
 ```
 src/app/              Next.js 路由（頁面、API route；/api/mcp 是 MCP server）
+src/app/(app)/        登入後的真實頁面（工作區成員才進得來）；/login、/auth/callback、/no-workspace 是登入流程
+src/app/demo/         設計稿（資料存在瀏覽器，不接資料庫與 AI），保留當設計參考
+src/proxy.ts          每個頁面請求先更新 Supabase session，沒登入導去 /login（Next.js 16 的 Middleware 改名 Proxy）
+src/lib/auth/         登入流程的路由判斷、取目前講師與工作區（requireMember）
 src/lib/blueprint/    藍圖 schema 與完整性檢查（純函式，可單測）
 src/lib/claude/       所有 Anthropic API 呼叫集中在這裡
 src/lib/mcp/          MCP 工具、權杖驗證、工作佇列存取
-src/lib/supabase/     Supabase client
+src/lib/supabase/     Supabase client（server.ts／browser.ts 帶講師 session；admin.ts 是 service role）
+src/lib/workspace/    工作區成員的加入與移除（member:add / member:remove 用）
+src/test/             DB 整合測試的共用工具
 supabase/migrations/  SQL migration，只新增不改舊檔
 plugin/               講師端 Claude Code plugin（.mcp.json、runner skill、打包的 rpai-* skill）
 .claude-plugin/       marketplace.json，讓 `claude plugin marketplace add rpaidevolper/rpai-course-platform` 找得到 plugin
@@ -157,7 +165,7 @@ docs/                 架構與決策記錄
 ### MCP 與 plugin 規範
 
 - 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，`plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
-- 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）
+- 權杖對應到講師所屬的工作區，所有工具都以 `workspace_id` 過濾資料；用 service role client 時**必須**自己加工作區條件，不要相信 RLS 會擋。被移出工作區的人，權杖在驗證時就會被拒絕。
 - 檔案不走 MCP 傳：`request_upload` 給 signed URL，plugin 用 curl 上傳，再 `complete_job`。
 - `plugin/skills/rpai-*`（`rpai-platform-runner` 除外）是帳號層 skill 的快照，以帳號層為準；要改 skill 內容，先改帳號層，再用同步 PR 更新 repo。`rpai-platform-runner` 只在 repo 裡，直接改 repo。
 
@@ -165,8 +173,9 @@ docs/                 架構與決策記錄
 
 - `blueprints.content` 寫入前必須通過 `BlueprintSchema.parse()`。
 - 新增欄位 = 新增一個 migration 檔（`supabase/migrations/NNNN_*.sql`），並同步更新 zod schema 與 `docs/architecture.md`。
-- 所有表都開 RLS；資料只有 `owner_id` 本人可讀寫。
-  - **目標狀態**（[ADR 0004](docs/adr/0004-one-shared-workspace-for-all-instructors.md)）：全團隊共用一個工作區，RLS 與 MCP 都改以工作區過濾，用 service role 時仍要自己加工作區條件。schema v2 實作前，現行程式仍以 `owner_id` 過濾，這條與 MCP 規範的 owner 條件照舊；不要提前改 MCP 或 RLS。
+- 所有表都開 RLS。全團隊共用一個工作區（[ADR 0004](docs/adr/0004-one-shared-workspace-for-all-instructors.md)）：工作區成員可讀寫工作區裡的資料，policy 一律用 `is_workspace_member(workspace_id)`，子表透過父表回查；`api_tokens` 只有本人可讀寫。`owner_id` 保留當「建立者」照常寫入，不再用來授權。
+  - 新增的 view 要設 `security_invoker = true`，否則會以建立者的權限執行、繞過 RLS。
+  - 登入的帳號不等於工作區成員：公開註冊是關的，成員只由 owner 用 `pnpm member:add` 加入。頁面一律經過 `requireMember()`（`src/lib/auth/session.ts`）。
 - Migration 必須向下相容：合併後 CI 會先把 migration 套到 production、再部署程式碼，所以舊版程式碼會短暫面對新 schema。新增欄位可以；移除或改名要拆成兩個 PR（先上線不再使用它的程式碼，下一個 PR 才移除）。有破壞性的 migration 要在 PR 說明標明。
 
 ### 環境變數

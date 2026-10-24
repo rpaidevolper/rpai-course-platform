@@ -40,8 +40,8 @@ describe("sanitizeFilename", () => {
 describe("buildStoragePath", () => {
   it("四層路徑，檔名經過清理", () => {
     expect(
-      buildStoragePath({ ownerId: "o", courseId: "c", artifactId: "a", filename: "x/y.pptx" }),
-    ).toBe("o/c/a/y.pptx");
+      buildStoragePath({ workspaceId: "w", courseId: "c", artifactId: "a", filename: "x/y.pptx" }),
+    ).toBe("w/c/a/y.pptx");
   });
 });
 

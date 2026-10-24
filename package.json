@@ -9,14 +9,18 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.mts",
     "db:start": "scripts/db-start.sh",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "token:create": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/create-token.ts"
+    "token:create": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/create-token.ts",
+    "member:add": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/member.ts add",
+    "member:remove": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/member.ts remove"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",
     "@modelcontextprotocol/server": "^2.0.0",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.114.0",
     "mcp-handler": "^2.1.1",
     "next": "16.3.4",

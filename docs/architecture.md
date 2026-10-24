@@ -17,7 +17,7 @@
 │ 藍圖對話（Anthropic API streaming）           │   │ Claude Code + rpai-course-platform     │
 │ 抽藍圖（結構化輸出）→ blueprints 新版本       │   │   plugin                               │
 │ 排產檔工作 → artifacts(status=pending)        │◄──┤ MCP：list_jobs / claim_job /           │
-│ MCP server /api/mcp（權杖驗證、owner 過濾）    │   │      request_upload / complete_job     │
+│ MCP server /api/mcp（權杖驗證、工作區過濾）    │   │      request_upload / complete_job     │
 │ Supabase Storage 收成品、簽 URL 給講師下載     │◄──┤ 本機用 rpai-* skill 產檔             │
 └──────────────────────────────────────────────┘   └────────────────────────────────────────┘
 ```
@@ -29,7 +29,9 @@
 > **名詞正在改版。** 產品模組已改成「專案 → 課程 → 場次」，並新增發布、學員入口與知識庫（名詞見 `GLOSSARY.md`，取捨見 [ADR 0002](adr/0002-each-course-owns-its-blueprint.md)）。下圖仍是目前 schema 的樣子：其中的 `Course` 指「一場課」，對應新名詞的「課程」加上「場次」。schema 會等設計稿（#22）對齊後另外設計。領域模型 v2（多天課程、課綱討論、定稿、客戶文件與需求條目）見 #25 與 [ADR 0003](adr/0003-page-script-as-upstream-artifact.md)；其中「逐頁腳本是產物」已由 [ADR 0005](adr/0005-page-script-merged-into-slides.md) 取代：講稿寫在簡報的 speaker notes，學員手冊的上游是該天的簡報。領域模型 v3（知識庫改成模組框架、模組卡、單元卡、課程配方與產業素材包；課程結案回存；全團隊共用一個工作區）見 #53、[ADR 0002 的修訂](adr/0002-each-course-owns-its-blueprint.md) 與 [ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)。
 
 ```
-Course（一場課）
+Workspace（全團隊一個，ADR 0004）
+ └─ WorkspaceMember（講師；display_name、preferences）── 只有成員看得到工作區的資料
+Course（一場課；workspace_id，owner_id 只記建立者）
  ├─ Conversation（對話串；purpose = blueprint | outline | slides | handbook）
  │   └─ Message（Anthropic content blocks 原樣存）
  ├─ Blueprint v1, v2, v3 …（結構化 JSON，唯一真相來源）
@@ -37,11 +39,12 @@ Course（一場課）
       ├─ outline  v2  ready       ← blueprint v3
       ├─ slides   v1  ready       ← blueprint v2   ← 過期：藍圖已到 v3
       └─ handbook v1  pending     ← blueprint v3   ← 等講師的 Claude Code 來認領
-ApiToken（講師的 Claude Code 權杖；只存 sha256）
+ApiToken（講師的 Claude Code 權杖；只存 sha256；只有本人看得到）
 ```
 
 關鍵設計：
 
+- **權限以工作區劃分。** 講師用 Google 登入（Supabase Auth，`src/proxy.ts` 更新 session），但登入不等於能看資料：只有 `workspace_members` 裡的人，RLS 才放行。公開註冊關閉，成員由 owner 用 `pnpm member:add` 加入。MCP 用 service role，權杖對到講師所屬的工作區後，每個查詢自己加工作區條件。
 - **對話不是真相來源，藍圖才是。** 對話結束（或講師按「更新藍圖」）時，用結構化輸出把對話抽成 `Blueprint` JSON 存成新版本。之後生成任何產物都只讀藍圖。
 - **藍圖版本不可變。** 修改 = 新增一版，舊版保留，產物才能可靠地指向它出生時的那一版。
 - **產物不自動重生。** 藍圖升版後 UI 標示過期產物；講師決定要不要重生。
@@ -91,23 +94,22 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 | 決策 | 選擇 | 理由 | 日期 |
 |---|---|---|---|
 | 技術棧 | Next.js 16 + TypeScript，單一 repo | 前後端一起、串流聊天順手 | 2026-09-03 |
-| 資料庫 | Supabase Postgres + Storage，RLS 依 owner_id | 登入、檔案、資料庫一站解決 | 2026-09-03 |
+| 資料庫 | Supabase Postgres + Storage，RLS 依工作區（原為 owner_id） | 登入、檔案、資料庫一站解決；全團隊共用資料（ADR 0004） | 2026-09-03、2026-10-24 |
 | 模型 | 預設 `claude-opus-5-5`，每場對話可在 `conversations.model` 各自選（Opus 5.5／Sonnet 5.5／最新版 Haiku（目前 5.5）／Fable 5.1，清單在 `src/lib/claude/models.ts`）；不指定 thinking（各模型用自己的預設），用 effort 調深度 | 依 claude-api skill 的預設；講師依草稿／定稿、成本、速度自選 | 2026-09-03、2026-10-02、2026-10-24 |
 | 藍圖版本 | 不可變、只新增；產物綁定版本 | 產物才能可靠指向出生時的藍圖 | 2026-09-03 |
 | **長時間產檔在哪跑** | **講師自己的 Claude Code + plugin（MCP 橋接）** | 用講師的訂閱與電腦；既有 skill 原樣可用；不踩「第三方產品不得使用訂閱登入」的政策。捨棄的選項：雲端 worker（要付 API 費、skill 要重新上傳）、Agent SDK 打包成 runner app（政策上需要 API key，還要做打包與金鑰分發） | 2026-09-03 |
 | rpai-* skill 怎麼給講師 | 打包進 plugin | 講師裝一次就齊全，版本由 repo 控制 | 2026-09-03 |
 | 檔案怎麼回到後台 | signed upload URL + curl，不走 MCP | pptx 幾 MB，塞進工具參數不可行 | 2026-09-03 |
-| 講師身分 | 個人存取權杖（`rcp_` 開頭，只存 hash） | plugin 安裝時填一次；不用做 OAuth | 2026-09-03 |
+| 講師身分（plugin） | 個人存取權杖（`rcp_` 開頭，只存 hash），講師在設定頁自己產生與撤銷 | plugin 安裝時填一次；不用做 OAuth | 2026-09-03 |
+| 講師登入（後台） | Google OAuth（Supabase Auth + `@supabase/ssr`）；公開註冊關閉，成員由 owner 執行腳本管理 | 不用另接寄信服務；團隊都有 Google 帳號（#78 待決-2、3、4） | 2026-10-24 |
+| 設計稿去留 | 搬到 `/demo/*` 保留當設計參考，根路徑是需要登入的真實頁面 | 真假資料不混在同一個畫面（#78 待決-1） | 2026-10-24 |
 
 ## 7. 還沒決定的事
 
-- **權杖管理 UI**：現在只有 `pnpm token:create`；後台要有「產生／撤銷權杖」頁。
-- **講師登入**：Supabase Auth；Next.js 端要用 `@supabase/ssr` 處理 cookie session（尚未安裝）。
-- **後台頁面**：對話頁、藍圖版本頁、產物列表（含過期標示與下載）都還沒做。
+- **後台頁面**：真實後台目前只有首頁與設定頁（權杖）；專案與課程（#90）、對話頁（#93）、產物列表（含過期標示與下載）都還沒接資料庫，畫面先看 `/demo` 的設計稿。
 - **結構化輸出的 schema 相容性**：`BlueprintSchema` 用了 `min(1)`、`min(2)` 這類限制，第一次真的呼叫 `extractBlueprint()` 時要確認 API 接受；不接受就把限制移到 `checkBlueprint()` 做。
 - **藍圖 JSON → `*_教學藍圖.md`** 的轉換目前交給 runner skill 現場整理；若格式飄移影響下游 skill，改成後台先產好 Markdown 一起回傳。
 - **藍圖 diff UI**：v2 → v3 改了什麼要讓講師看得到。
-- **多講師／團隊**：已決定全團隊共用一個工作區（[ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)）；目前 schema 只有單一 owner，schema v2 時改以工作區過濾。
 - **卡住的工作**：`generating` 超過一定時間沒完成要能退回 `pending`（講師關了 Claude Code）。
 
 ## 8. 部署架構
@@ -122,7 +124,7 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
                                    ▼  deploy.yml（CI 通過後）
                                 supabase db push ─────────────► 雲端 Supabase（production）
                                 vercel build + deploy --prod ─► Vercel（Next.js app + /api/mcp）
-                                smoke-test.sh ──► /api/health、/、/api/mcp
+                                smoke-test.sh ──► /api/health、/login、/（未登入導去登入）、/api/mcp
 ```
 
 - 部署只由 GitHub Actions 觸發，Vercel 的 Git 自動部署關閉（`vercel.json`）。順序固定：migration 先、程式碼後，任何一步失敗就中止。

@@ -5,7 +5,15 @@ import { useState } from "react";
 type Status = "idle" | "copied" | "failed";
 
 /** 把一段文字複製到剪貼簿；結果用 aria-live 念給螢幕閱讀器。 */
-export function CopyButton({ text, children }: { text: string; children: React.ReactNode }) {
+export function CopyButton({
+  text,
+  children,
+  copiedText = "已複製，可以直接貼進信件",
+}: {
+  text: string;
+  children: React.ReactNode;
+  copiedText?: string;
+}) {
   const [status, setStatus] = useState<Status>("idle");
 
   async function copy() {
@@ -28,7 +36,7 @@ export function CopyButton({ text, children }: { text: string; children: React.R
         {children}
       </button>
       <span aria-live="polite" className="text-xs font-bold">
-        {status === "copied" && <span className="text-success">已複製，可以直接貼進信件</span>}
+        {status === "copied" && <span className="text-success">{copiedText}</span>}
         {status === "failed" && <span className="text-danger">瀏覽器不讓複製，請手動選取下面的文字</span>}
       </span>
     </div>

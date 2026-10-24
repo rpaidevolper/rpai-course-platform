@@ -258,7 +258,7 @@ export function Empty({ children }: { children: ReactNode }) {
  * demo 中找不到資料時的畫面（#48）。用法：hydration 前（useHydrated() 為 false）傳 loading，
  * 之後仍找不到才顯示「找不到」，避免 demo 中新建的頁面閃一下 404。
  */
-export function DemoMissing({ what, loading, backHref = "/", backLabel = "回首頁" }: { what: string; loading: boolean; backHref?: string; backLabel?: string }) {
+export function DemoMissing({ what, loading, backHref = "/demo", backLabel = "回首頁" }: { what: string; loading: boolean; backHref?: string; backLabel?: string }) {
   if (loading) return <p className="text-sm text-body-muted">載入中…</p>;
   return (
     <div className={`${CARD} p-6`}>

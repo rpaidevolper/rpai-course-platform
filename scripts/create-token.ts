@@ -1,4 +1,4 @@
-// 替講師建立一組 Claude Code 用的個人存取權杖（後台 UI 做好前的過渡工具）。
+// owner 替講師代建一組 Claude Code 用的個人存取權杖。講師平常在後台「設定」頁自己產生（#87）。
 // 用法：pnpm token:create --user <auth.users.id> --label "Eddy 的 MacBook"
 // 需要 .env.local 裡的 NEXT_PUBLIC_SUPABASE_URL 與 SUPABASE_SERVICE_ROLE_KEY。
 import { parseArgs } from "node:util";

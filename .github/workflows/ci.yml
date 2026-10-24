@@ -62,7 +62,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-  # 在全新的本機 Supabase 上從頭套用所有 migration；壞掉的 SQL 在 PR 階段就會被擋下。
+  # 在全新的本機 Supabase 上從頭套用所有 migration，再跑 DB 整合測試；壞掉的 SQL 與 RLS 在 PR 階段就會被擋下。
   # 不是 required check（見 docs/specs/2026-10-02-production-deployment-design.md）。
   migrations:
     runs-on: ubuntu-latest
@@ -81,7 +81,7 @@ jobs:
           set -euo pipefail
           set -a && . ./.env.local && set +a
           auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
-          for table in courses blueprints artifacts api_tokens; do
+          for table in courses blueprints artifacts api_tokens workspaces workspace_members; do
             curl --fail --silent --show-error "${auth[@]}" \
               "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/$table?select=id&limit=1" >/dev/null
             echo "table $table: ok"
@@ -89,5 +89,8 @@ jobs:
           curl --fail --silent --show-error "${auth[@]}" \
             "$NEXT_PUBLIC_SUPABASE_URL/storage/v1/bucket/artifacts" >/dev/null
           echo "bucket artifacts: ok"
+      # RLS、trigger 與 MCP 的工作區隔離（待決-27）；連線資訊由 vitest.db.config.mts 讀 .env.local
+      - name: Database integration tests
+        run: pnpm test:db
       - if: failure()
         run: pnpm exec supabase status || true

@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { ARTIFACT_KIND_LABELS, contentTypeFor } from "@/lib/artifacts";
-import { ownerIdFrom } from "./auth";
+import { instructorFrom } from "./auth";
 import type { JobStore } from "./store";
 
 function ok(data: Record<string, unknown>) {
@@ -26,13 +26,13 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
   server.registerTool(
     "rpai_platform_list_courses",
     {
-      title: "列出我的課程",
-      description: "列出目前講師在平台上的所有課程（id、標題、最後更新時間）。只讀。",
+      title: "列出工作區的課程",
+      description: "列出講師所屬工作區裡的所有課程（id、標題、最後更新時間），包括其他講師建立的。只讀。",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async (_args, ctx) => {
-      const courses = await store.listCourses(ownerIdFrom(ctx.http?.authInfo));
+      const courses = await store.listCourses(instructorFrom(ctx.http?.authInfo).workspaceId);
       return ok({ count: courses.length, courses });
     },
   );
@@ -50,7 +50,7 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ course_id, version }, ctx) => {
-      const record = await store.getBlueprint(ownerIdFrom(ctx.http?.authInfo), course_id, version);
+      const record = await store.getBlueprint(instructorFrom(ctx.http?.authInfo).workspaceId, course_id, version);
       if (!record) return fail("找不到這門課或這個版本的藍圖。先用 rpai_platform_list_courses 確認 course_id。");
       return ok({ ...record });
     },
@@ -61,12 +61,12 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
     {
       title: "列出待生成的教材",
       description:
-        "列出後台排下來、還沒有人認領的產檔工作（status=pending）。每筆含 kind（outline=課程大綱、slides=簡報、handbook=學員手冊）、課程、藍圖版本、講師的額外指示。只讀。",
+        "列出工作區裡後台排下來、還沒有人認領的產檔工作（status=pending），任何講師都可以接。每筆含 kind（outline=課程大綱、slides=簡報、handbook=學員手冊）、課程、藍圖版本、講師的額外指示。只讀。",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async (_args, ctx) => {
-      const jobs = await store.listPendingJobs(ownerIdFrom(ctx.http?.authInfo));
+      const jobs = await store.listPendingJobs(instructorFrom(ctx.http?.authInfo).workspaceId);
       return ok({
         count: jobs.length,
         jobs: jobs.map((job) => ({ ...job, kind_label: ARTIFACT_KIND_LABELS[job.kind] })),
@@ -87,8 +87,8 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     async ({ job_id, claimed_by }, ctx) => {
-      const job = await store.claimJob(ownerIdFrom(ctx.http?.authInfo), job_id, claimed_by);
-      if (!job) return fail("工作不存在、不屬於你，或已經被認領。重新 rpai_platform_list_jobs 看目前狀態。");
+      const job = await store.claimJob(instructorFrom(ctx.http?.authInfo).workspaceId, job_id, claimed_by);
+      if (!job) return fail("工作不存在、不在你的工作區，或已經被認領。重新 rpai_platform_list_jobs 看目前狀態。");
       return ok({ ...job, kind_label: ARTIFACT_KIND_LABELS[job.kind] });
     },
   );
@@ -108,8 +108,8 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
     async ({ job_id, filename }, ctx) => {
       const contentType = contentTypeFor(filename);
       if (!contentType) return fail("只接受 .pptx / .docx / .pdf / .md / .html，請確認檔名副檔名。");
-      const result = await store.createUploadUrl(ownerIdFrom(ctx.http?.authInfo), job_id, filename);
-      if (!result) return fail("工作不存在、不屬於你，或還沒認領（要先 rpai_platform_claim_job）。");
+      const result = await store.createUploadUrl(instructorFrom(ctx.http?.authInfo).workspaceId, job_id, filename);
+      if (!result) return fail("工作不存在、不在你的工作區，或還沒認領（要先 rpai_platform_claim_job）。");
       return ok({ ...result, content_type: contentType, expires_in_seconds: 7200 });
     },
   );
@@ -126,8 +126,8 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ job_id, storage_path }, ctx) => {
-      const result = await store.completeJob(ownerIdFrom(ctx.http?.authInfo), job_id, storage_path);
-      if (result === "not_found") return fail("工作不存在或不屬於你。");
+      const result = await store.completeJob(instructorFrom(ctx.http?.authInfo).workspaceId, job_id, storage_path);
+      if (result === "not_found") return fail("工作不存在或不在你的工作區。");
       if (result === "missing_file") return fail("Storage 裡找不到這個檔案，請確認 curl 上傳有成功（回應 200）再重試。");
       return ok({ job_id, status: "ready", storage_path });
     },
@@ -145,8 +145,8 @@ export function registerPlatformTools(server: McpServer, store: JobStore): void 
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ job_id, error }, ctx) => {
-      const done = await store.failJob(ownerIdFrom(ctx.http?.authInfo), job_id, error);
-      if (!done) return fail("工作不存在或不屬於你。");
+      const done = await store.failJob(instructorFrom(ctx.http?.authInfo).workspaceId, job_id, error);
+      if (!done) return fail("工作不存在或不在你的工作區。");
       return ok({ job_id, status: "failed" });
     },
   );
