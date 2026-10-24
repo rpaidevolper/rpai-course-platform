@@ -427,8 +427,8 @@ function splitMinutes(total: number, n: number): number[] {
  * 所選模組卡依 MODULES 順序接續，每張的核心單元骨架依序查出單元卡，每個單元記下來源
  * （kind 為 unit_card，指向那張單元卡）、所屬模組（單元卡的模組），沿用程度「要改」；
  * 應用層級單元卡還沒有，先留 null 讓講師與 AI 談。
- * 總長就是 totalHours（預設 6 小時，規格由總時數推得、不另存）：每 3 小時一個時段、一天最多兩個時段，
- * 單元依序平分進時段；單元比時段少時時段變長，避免出現空時段。
+ * 總長就是 totalHours（預設 6 小時，規格由總時數推得、不另存）：時段一律 180 分鐘（不足一段的短講座例外）、
+ * 一天兩個時段；單元依序分進時段，單元不夠排的時段補一個「待規劃」單元（新做、不記來源）。
  * 查不到任何單元卡時，退回一個預設單元、標成新做、不記來源；schema 要求單元一定有模組，
  * 所以歸在所選的第一個模組，沒選模組才歸 B1 流程診斷（它的第一堂就是需求盤點）。
  * 刻意留下缺的五元素與待確認事項，讓講師接著跟 AI 談。客戶的 IT 限制複製進限制。
@@ -458,11 +458,21 @@ export function starterBlueprint({
       ? cards.map((u) => ({ title: u.title, module: u.moduleId, source: { kind: "unit_card", id: u.id, version: null, unit: u.title } }))
       : [{ title: "開場與需求盤點", module: moduleCards[0]?.moduleId ?? "B1", source: null }];
   const totalMinutes = Math.round(totalHours * 60);
-  const slotCount = Math.min(Math.max(Math.ceil(totalMinutes / DEFAULT_SLOT_MINUTES), 1), entries.length);
-  const groups = splitInto(entries, slotCount);
-  const slotMinutes = splitMinutes(totalMinutes, slotCount);
+  // 時段一律 DEFAULT_SLOT_MINUTES；不足一段的短講座只有一段、長度就是總長；最後不整除的餘數成為最後一段
+  const slotMinutes: number[] =
+    totalMinutes < DEFAULT_SLOT_MINUTES
+      ? [totalMinutes]
+      : Array.from({ length: Math.ceil(totalMinutes / DEFAULT_SLOT_MINUTES) }, (_, i) => Math.min(DEFAULT_SLOT_MINUTES, totalMinutes - i * DEFAULT_SLOT_MINUTES));
+  // 單元比時段多就依序平分；比時段少就一段一個，剩下的時段補待規劃單元（模組沿用前一個單元），讓講師看得到還要排
+  let groups: typeof entries[];
+  if (entries.length >= slotMinutes.length) {
+    groups = splitInto(entries, slotMinutes.length);
+  } else {
+    const last = entries[entries.length - 1];
+    groups = slotMinutes.map((_, i) => (i < entries.length ? [entries[i]] : [{ title: "待規劃", module: last.module, source: null }]));
+  }
   // 一天最多兩個時段：上午、下午
-  const dayGroups = Array.from({ length: Math.ceil(slotCount / 2) }, (_, d) => groups.map((g, i) => ({ group: g, minutes: slotMinutes[i] })).slice(d * 2, d * 2 + 2));
+  const dayGroups = Array.from({ length: Math.ceil(slotMinutes.length / 2) }, (_, d) => groups.map((g, i) => ({ group: g, minutes: slotMinutes[i] })).slice(d * 2, d * 2 + 2));
   const slotLabels = ["上午", "下午"];
   const theme = (day: typeof dayGroups[number]) => {
     if (moduleCards.length === 0) return title;

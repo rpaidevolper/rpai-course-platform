@@ -16,6 +16,7 @@ import {
   readiness,
   recipeUnitCards,
 } from "./logic";
+import type { ModuleId } from "./types";
 import { initialState, type DemoState } from "./state";
 
 const run = (actions: DemoAction[], from: DemoState = initialState()) => actions.reduce(demoReducer, from);
@@ -229,7 +230,7 @@ describe("從零開一門課到準備好", () => {
     const st = initialState();
     const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, moduleCards: [getModuleCard(st, "A2")!], unitCards: [] });
     const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
-    expect(units.map((u) => u.title)).toEqual(["開場與需求盤點"]);
+    expect(units.map((u) => u.title)).toEqual(["開場與需求盤點", "待規劃"]);
     expect(units.every((u) => u.reuse === "new" && u.source === null && u.module === "A2")).toBe(true);
   });
 
@@ -256,14 +257,44 @@ describe("從零開一門課到準備好", () => {
     expect(c.blueprintHistory[0].note).toBe("從模組卡「A1 通用生成 AI」v2、「A4 雲端自動化」v2、「B1 流程診斷」v1 複製出生");
   });
 
-  it("總時數決定藍圖總長：藍圖的總分鐘數就是所選時數（不另存規格）", () => {
-    for (const hours of [2, 3, 6, 12]) {
-      const st = run([{ type: "course/create", id: "c-h", projectId: "p-a-2026", title: "t", moduleIds: ["A1", "A4", "B1"], totalHours: hours, industryPackId: null }]);
+  describe("總時數決定藍圖的時段與天數（時段一律 180 分鐘，一天兩段）", () => {
+    const build = (moduleIds: ModuleId[], hours: number) => {
+      const st = run([{ type: "course/create", id: "c-h", projectId: "p-a-2026", title: "t", moduleIds, totalHours: hours, industryPackId: null }]);
       const bp = getCourse(st, "c-h")!.blueprint;
+      const slots = bp.days.flatMap((d) => d.slots);
+      const units = slots.flatMap((s) => s.units);
+      return { bp, slots, units, placeholders: units.filter((u) => u.source === null && u.title === "待規劃") };
+    };
+
+    it.each([
+      ["12H 單一模組（A1 三個單元）", ["A1"], 12, 4, 1],
+      ["12H 沒有選模組", [], 12, 4, 3],
+      ["30H 只有幾個單元", ["A5", "B4"], 30, 10, 7],
+      ["6H", ["A1", "B1"], 6, 2, 0],
+    ] as [string, ModuleId[], number, number, number][])("%s：每段 180、天數 = ceil(時數/6)、總長 = 時數×60、只在需要時補待規劃", (_n, ids, hours, slotCount, placeholderCount) => {
+      const { bp, slots, placeholders } = build(ids, hours);
+      expect(slots).toHaveLength(slotCount);
+      expect(slots.every((s) => s.minutes === 180)).toBe(true);
+      expect(bp.days).toHaveLength(Math.ceil(hours / 6));
       expect(totalMinutes(bp)).toBe(hours * 60);
-      // 每個時段的單元分鐘數加總等於時段長度
-      expect(bp.days.flatMap((d) => d.slots).every((s) => plannedMinutes(s) === s.minutes)).toBe(true);
-    }
+      expect(slots.every((s) => plannedMinutes(s) === s.minutes)).toBe(true);
+      expect(placeholders).toHaveLength(placeholderCount);
+    });
+
+    it("2H 短講座：一段、長度就是 120 分鐘；3H 是一段 180", () => {
+      const short = build(["A1", "B1"], 2);
+      expect(short.slots.map((s) => s.minutes)).toEqual([120]);
+      expect(plannedMinutes(short.slots[0])).toBe(120);
+      expect(build(["A1"], 3).slots.map((s) => s.minutes)).toEqual([180]);
+    });
+
+    it("待規劃單元：schema 合法、不記來源、標成新做，模組沿用前一個單元", () => {
+      const { units, placeholders } = build(["A1"], 12);
+      expect(placeholders).toHaveLength(1);
+      const p = placeholders[0];
+      expect(p.reuse).toBe("new");
+      expect(p.module).toBe(units[units.indexOf(p) - 1].module);
+    });
   });
 
   it("沒有選模組時從零開始，總時數仍照所選", () => {
