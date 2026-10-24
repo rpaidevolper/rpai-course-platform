@@ -17,7 +17,7 @@
 | 課程 Course | 一場講座或課程，講師建立，一個 owner |
 | 教學藍圖 Blueprint | 結構化 JSON，課程的唯一真相來源；有版本號，版本不可變 |
 | 五元素 | 理論／動手／帶走／金句／故事，藍圖 schema 的一部分 |
-| 產物 Artifact | 從某一版藍圖生成的檔案：`outline`（課程大綱 .docx）、`slides`（簡報 .pptx）、`handbook`（學員手冊 .docx） |
+| 產物 Artifact | 從某一版藍圖生成的檔案：`outline`（課程大綱 .docx）、`slides`（簡報 .pptx）、`handbook`（學員手冊 .html，一天一份，只給含動手環節的天）。逐頁腳本不是產物，講稿寫在簡報的 speaker notes（[ADR 0005](adr/0005-page-script-merged-into-slides.md)） |
 | 工作 Job | `artifacts` 表中 `status = pending` 的一列；被講師的 Claude Code 認領後產檔 |
 | 過期 Stale | 產物綁定的藍圖版本不是課程最新版 |
 | 權杖 Token | 講師在後台產生、設定到 Claude Code plugin 的個人存取權杖（`rcp_` 開頭） |
@@ -139,15 +139,16 @@
 
 - 位置 `plugin/`，marketplace 為 repo 根目錄 `.claude-plugin/marketplace.json`（名稱 `rpai`）。
 - 安裝時詢問 `server_url`、`api_token`（sensitive）。
-- 內含 `rpai-platform-runner`（流程）與五個 rpai-* 內容 skill；`pptx`、`docx` 用 Claude Code 內建。
+- 內含 `rpai-platform-runner`（流程）與五個 rpai-* 內容 skill；`pptx`、`docx` 用 Claude Code 內建（簡報、課程大綱用；學員手冊是 HTML，不需要 `docx`）。內容 skill 與帳號層同步，方向見 CLAUDE.md 的同步規則。
 - 工具名或參數變更時，`rpai-platform-runner/SKILL.md` 同步更新（同一個 PR）。
 
 ### F6 產物儲存
 
 - Bucket `artifacts`（私有）。路徑 `owner_id/course_id/artifact_id/檔名`。
 - 上傳：`createSignedUploadUrl`（`upsert: true`），plugin 用 curl PUT。
-- 下載：`createSignedUrl`，10 分鐘。
-- 只接受 `.pptx`、`.docx`、`.pdf`、`.md`。
+- 下載：`createSignedUrl`，10 分鐘，選項帶 `download`（檔名；見 `artifactDownloadOptions`），回應是 `Content-Disposition: attachment`，上傳的 HTML 不會在平台網域內渲染。
+- 只接受 `.pptx`、`.docx`、`.pdf`、`.md`、`.html`。
+- 學員手冊 v1 只提供下載，不渲染也不預覽。真實 schema 的「按天產出」（`day` 欄位）與遺留的 `src/lib/claude/generate-artifact.ts`（仍產 .docx）都留給後端母規格 #78，本節不處理。
 
 ## 6. 資料模型
 

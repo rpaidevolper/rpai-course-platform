@@ -34,7 +34,7 @@ plugin/
     └── rpai-brand-guidelines/
 ```
 
-`pptx`、`docx` skill 用的是 Claude Code 內建的，不用另外裝。
+`pptx`、`docx` skill（簡報與課程大綱用；學員手冊是 HTML，由 `rpai-course-content` 直接產出）用的是 Claude Code 內建的，不用另外裝。
 
 ## 已經有帳號層 rpai-* skill 的人
 
