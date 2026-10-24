@@ -15,6 +15,7 @@ import {
   portalExpiresAt,
 } from "./logic";
 import type { DemoState } from "./state";
+import { MODULES } from "./types";
 import type {
   ArtifactKind,
   ClientContext,
@@ -45,8 +46,12 @@ export type DemoAction =
   | { type: "project/update"; projectId: string; title: string; priceTwd: number; status: ProjectStatus; clientContext: ClientContext }
   | { type: "clientDocument/add"; projectId: string; id: string; kind: ClientDocumentKind; title: string; fileName: string }
   // 課程與藍圖
-  /** moduleId 與 industryPackId 都有值時，藍圖從該模組的模組卡與該產業素材包複製出生；否則從零開始 */
-  | { type: "course/create"; id: string; projectId: string; title: string; moduleId: ModuleId | null; industryPackId: string | null }
+  /**
+   * moduleIds 是所選的模組（A 可多個、B 建議 1 個），藍圖依 MODULES 的順序接續各模組卡的核心單元骨架出生；
+   * 空陣列就從零開始。totalHours 是課程總時數（小時），藍圖的總長就是它（規格由總時數推得，不另存）。
+   * 組課提醒（composition.ts）只提醒、不擋建立，所以這裡不檢查。
+   */
+  | { type: "course/create"; id: string; projectId: string; title: string; moduleIds: ModuleId[]; totalHours: number; industryPackId: string | null }
   | { type: "blueprint/revise"; courseId: string; blueprint: Blueprint; note: string }
   | { type: "blueprint/finalize"; courseId: string }
   // 產物
@@ -159,22 +164,23 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case "course/create": {
       const project = st.projects.find((p) => p.id === action.projectId);
       if (!project) return state;
-      const moduleCard = action.moduleId ? getModuleCard(st, action.moduleId) : undefined;
+      const moduleCards = chosenModuleCards(st, action.moduleIds);
       const industryPack = action.industryPackId ? getIndustryPack(st, action.industryPackId) : undefined;
       const course: Course = {
         id: action.id,
         projectId: project.id,
         title: action.title,
-        source: moduleCard && industryPack ? { moduleIds: [moduleCard.moduleId], industryPackId: industryPack.id } : null,
+        source: moduleCards.length > 0 && industryPack ? { moduleIds: moduleCards.map((c) => c.moduleId), industryPackId: industryPack.id } : null,
         copiedFrom: null,
-        blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCard, unitCards: st.unitCards, industryPack }),
+        blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCards, unitCards: st.unitCards, industryPack, totalHours: action.totalHours }),
         blueprintHistory: [
           {
             version: 1,
             createdAt: now,
-            note: moduleCard
-              ? `從模組卡「${moduleLabel(moduleCard.moduleId)}」v${latestModuleCardVersion(moduleCard)} 複製出生`
-              : "從零開始的藍圖草稿",
+            note:
+              moduleCards.length > 0
+                ? `從模組卡${moduleCards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、")} 複製出生`
+                : "從零開始的藍圖草稿",
             finalizedAt: null,
           },
         ],
@@ -389,44 +395,100 @@ export function newSessionDay(startsAt: IsoTime, endsAt: IsoTime, venue: string 
   return { startsAt, endsAt, venue, instructorId: CURRENT_INSTRUCTOR_ID };
 }
 
+/** 所選模組的模組卡：去掉重複與沒有模組卡的，依 MODULES 的順序排（A 在前、B 在後），不看選的先後。 */
+export function chosenModuleCards(st: Pick<DemoState, "moduleCards">, moduleIds: ModuleId[]): ModuleCard[] {
+  return MODULES.flatMap((m) => {
+    const card = moduleIds.includes(m.id) ? st.moduleCards.find((c) => c.moduleId === m.id) : undefined;
+    return card ? [card] : [];
+  });
+}
+
+/** 把 list 依序切成 n 份，前面的份多拿一個（n ≤ list.length） */
+function splitInto<T>(list: T[], n: number): T[][] {
+  const base = Math.floor(list.length / n);
+  const extra = list.length % n;
+  let at = 0;
+  return Array.from({ length: n }, (_, i) => {
+    const size = base + (i < extra ? 1 : 0);
+    const part = list.slice(at, at + size);
+    at += size;
+    return part;
+  });
+}
+
+/** 把 total 平分成 n 份，餘數落在最後一份，加總永遠等於 total */
+function splitMinutes(total: number, n: number): number[] {
+  const base = Math.floor(total / n);
+  return Array.from({ length: n }, (_, i) => (i === n - 1 ? total - base * (n - 1) : base));
+}
+
 /**
  * 新課程的第一版藍圖：依 ADR 0002，從模組卡與產業素材包「複製內容」出生，之後各自演化。
- * 模組卡的骨架單元依序查出單元卡，每個單元記下來源（kind 為 unit_card，指向那張單元卡）、
- * 所屬模組（單元卡的模組），沿用程度「要改」；應用層級單元卡還沒有，先留 null 讓講師與 AI 談。
- * 查不到單元卡或沒有模組卡時，退回一個預設單元、標成新做、不記來源（模組歸 B1 流程診斷）。
+ * 所選模組卡依 MODULES 順序接續，每張的核心單元骨架依序查出單元卡，每個單元記下來源
+ * （kind 為 unit_card，指向那張單元卡）、所屬模組（單元卡的模組），沿用程度「要改」；
+ * 應用層級單元卡還沒有，先留 null 讓講師與 AI 談。
+ * 總長就是 totalHours（預設 6 小時，規格由總時數推得、不另存）：時段一律 180 分鐘（不足一段的短講座例外）、
+ * 一天兩個時段；單元依序分進時段，單元不夠排的時段補一個「待規劃」單元（新做、不記來源）。
+ * 查不到任何單元卡時，退回一個預設單元、標成新做、不記來源；schema 要求單元一定有模組，
+ * 所以歸在所選的第一個模組，沒選模組才歸 B1 流程診斷（它的第一堂就是需求盤點）。
  * 刻意留下缺的五元素與待確認事項，讓講師接著跟 AI 談。客戶的 IT 限制複製進限制。
  */
 export function starterBlueprint({
   title,
   clientContext,
-  moduleCard,
+  moduleCards = [],
   unitCards = [],
   industryPack,
+  totalHours = 6,
 }: {
   title: string;
   clientContext: ClientContext;
-  moduleCard?: ModuleCard;
+  /** 所選模組的模組卡，順序由 chosenModuleCards 決定（通常傳它的結果） */
+  moduleCards?: ModuleCard[];
   /** 用來查骨架單元的單元卡（通常傳 st.unitCards） */
   unitCards?: UnitCard[];
   industryPack?: IndustryPack;
+  /** 課程總時數（小時） */
+  totalHours?: number;
 }): Blueprint {
-  // 骨架依序查出單元卡；查不到的 id 略過
-  const cards = moduleCard
-    ? moduleCard.skeletonUnitIds.map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined)
-    : [];
-  // 沒有骨架單元可用時，退回一個預設單元（沒有來源，模組取所選模組卡，沒有就歸 B1）
+  // 各模組卡的骨架依序查出單元卡；查不到的 id 略過
+  const cards = moduleCards.flatMap((mc) => mc.skeletonUnitIds.map((id) => unitCards.find((u) => u.id === id)).filter((u): u is UnitCard => u !== undefined));
   const entries: { title: string; module: ModuleId; source: UnitSource | null }[] =
     cards.length > 0
       ? cards.map((u) => ({ title: u.title, module: u.moduleId, source: { kind: "unit_card", id: u.id, version: null, unit: u.title } }))
-      : [{ title: "開場與需求盤點", module: moduleCard?.moduleId ?? "B1", source: null }];
-  // 一天兩個三小時的時段，單元平均分進上午與下午
-  const half = Math.ceil(entries.length / 2);
-  const groups = entries.length > 1 ? [entries.slice(0, half), entries.slice(half)] : [entries];
+      : [{ title: "開場與需求盤點", module: moduleCards[0]?.moduleId ?? "B1", source: null }];
+  const totalMinutes = Math.round(totalHours * 60);
+  // 時段一律 DEFAULT_SLOT_MINUTES；不足一段的短講座只有一段、長度就是總長；最後不整除的餘數成為最後一段
+  const slotMinutes: number[] =
+    totalMinutes < DEFAULT_SLOT_MINUTES
+      ? [totalMinutes]
+      : Array.from({ length: Math.ceil(totalMinutes / DEFAULT_SLOT_MINUTES) }, (_, i) => Math.min(DEFAULT_SLOT_MINUTES, totalMinutes - i * DEFAULT_SLOT_MINUTES));
+  // 單元比時段多就依序平分；比時段少就一段一個，剩下的時段補待規劃單元（模組沿用前一個單元），讓講師看得到還要排
+  let groups: typeof entries[];
+  if (entries.length >= slotMinutes.length) {
+    groups = splitInto(entries, slotMinutes.length);
+  } else {
+    const last = entries[entries.length - 1];
+    groups = slotMinutes.map((_, i) => (i < entries.length ? [entries[i]] : [{ title: "待規劃", module: last.module, source: null }]));
+  }
+  // 一天最多兩個時段：上午、下午
+  const dayGroups = Array.from({ length: Math.ceil(slotMinutes.length / 2) }, (_, d) => groups.map((g, i) => ({ group: g, minutes: slotMinutes[i] })).slice(d * 2, d * 2 + 2));
   const slotLabels = ["上午", "下午"];
+  const theme = (day: typeof dayGroups[number]) => {
+    if (moduleCards.length === 0) return title;
+    const ids = [...new Set(day.flatMap((s) => s.group.map((e) => e.module)))];
+    return ids.map(moduleLabel).join("＋");
+  };
+  const summaries = moduleCards.map((c) => c.summary);
 
   return BlueprintSchema.parse({
     title,
-    oneLiner: moduleCard?.summary ?? `為${clientContext.company}量身設計的課程，內容還在跟 AI 談。`,
+    oneLiner:
+      moduleCards.length === 1
+        ? moduleCards[0].summary
+        : moduleCards.length > 1
+          ? `為${clientContext.company}結合${moduleCards.map((c) => moduleLabel(c.moduleId)).join("、")}的課程，內容還在跟 AI 談。`
+          : `為${clientContext.company}量身設計的課程，內容還在跟 AI 談。`,
     audience: {
       who: industryPack ? `${clientContext.company}的${industryPack.audience}` : `${clientContext.company}的學員`,
       size: null,
@@ -437,39 +499,37 @@ export function starterBlueprint({
     format: { mode: "workshop", venue: null },
     narrative: { model: "SCQA", arc: ["情境", "衝突", "提問", "解答"] },
     elements: {
-      theory: moduleCard ? [moduleCard.summary] : [],
+      theory: summaries,
       handsOn: industryPack?.cases.slice(0, 1) ?? [],
       takeaway: [],
       quote: [],
       story: [],
     },
-    days: [
-      {
-        theme: moduleCard ? moduleLabel(moduleCard.moduleId) : title,
-        slots: groups.map((group, i) => {
-          const minutes = Math.floor(DEFAULT_SLOT_MINUTES / group.length);
-          return {
-            label: slotLabels[i] ?? `第 ${i + 1} 段`,
-            minutes: minutes * group.length,
-            units: group.map(({ title: t, module, source }) => ({
-              title: t,
-              minutes,
-              module,
-              level: null,
-              objective: `完成「${t}」的練習`,
-              method: "講述＋示範",
-              outcome: "待跟 AI 談",
-              keyPoints: ["待跟 AI 談"],
-              activity: null,
-              elements: [],
-              carriesFrom: null,
-              source,
-              reuse: source ? "modify" : "new",
-            })),
-          };
-        }),
-      },
-    ],
+    days: dayGroups.map((day) => ({
+      theme: theme(day),
+      slots: day.map(({ group, minutes: slotMin }, i) => {
+        const unitMinutes = splitMinutes(slotMin, group.length);
+        return {
+          label: slotLabels[i] ?? `第 ${i + 1} 段`,
+          minutes: slotMin,
+          units: group.map(({ title: t, module, source }, k) => ({
+            title: t,
+            minutes: unitMinutes[k],
+            module,
+            level: null,
+            objective: `完成「${t}」的練習`,
+            method: "講述＋示範",
+            outcome: "待跟 AI 談",
+            keyPoints: ["待跟 AI 談"],
+            activity: null,
+            elements: [],
+            carriesFrom: null,
+            source,
+            reuse: source ? "modify" : "new",
+          })),
+        };
+      }),
+    })),
     constraints: [...clientContext.itConstraints],
     tools: [],
     openQuestions: [

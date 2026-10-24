@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { makeId } from "@/lib/mockup/actions";
+import { chosenModuleCards, makeId } from "@/lib/mockup/actions";
 import { ARTIFACT_LABELS, CLIENT_DOCUMENT_LABELS } from "@/lib/mockup/types";
 import {
   coursesOfProject,
@@ -12,7 +12,6 @@ import {
   getProject,
   getIndustryPack,
   latestBlueprintVersion,
-  getModuleCard,
   latestModuleCardVersion,
   moduleLabel,
   readiness,
@@ -337,10 +336,10 @@ export function ProjectView({ projectId }: { projectId: string }) {
           onClose={close}
           onSubmit={(v) => {
             const id = makeId("c");
-            const card = v.moduleId ? getModuleCard(st, v.moduleId) : undefined;
+            const cards = chosenModuleCards(st, v.moduleIds);
             dispatch({ type: "course/create", id, projectId: project.id, ...v });
             close();
-            toast(card ? `已建立課程，藍圖從模組卡「${moduleLabel(card.moduleId)}」v${latestModuleCardVersion(card)} 複製出生` : "已建立課程，藍圖從零開始");
+            toast(cards.length > 0 ? `已建立課程，藍圖從模組卡${cards.map((c) => `「${moduleLabel(c.moduleId)}」v${latestModuleCardVersion(c)}`).join("、")} 複製出生` : "已建立課程，藍圖從零開始");
             router.push(`/courses/${id}/chat`);
           }}
         />

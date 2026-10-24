@@ -14,7 +14,7 @@ const pa = bpOf("c-pa-finance"); // 完整
 const starter = starterBlueprint({
   title: "新課程",
   clientContext: PROJECTS[0].clientContext,
-  moduleCard: MODULE_CARDS[0],
+  moduleCards: [MODULE_CARDS[0]],
   unitCards: UNIT_CARDS,
   industryPack: INDUSTRY_PACKS[0],
 });
