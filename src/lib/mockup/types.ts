@@ -276,6 +276,11 @@ export interface Course extends TagSet {
   blueprintHistory: BlueprintVersion[];
   artifacts: Artifact[];
   materials: Material[];
+  /**
+   * 結案時間；null 表示還沒結案。結案後不能再新增場次，要再開同樣的課就複製課程。
+   * 專案的結案不另存，由底下的課程全部結案推得（closing.ts 的 isProjectClosed）。
+   */
+  closedAt: IsoTime | null;
 }
 
 export interface Link {

@@ -1,4 +1,5 @@
 import { BlueprintSchema, DEFAULT_SLOT_MINUTES, type Blueprint, type UnitSource } from "@/lib/blueprint/schema";
+import { closingGate, isCourseClosed } from "./closing";
 import { CURRENT_INSTRUCTOR_ID } from "./instructor";
 import {
   artifactSeries,
@@ -67,6 +68,7 @@ export type DemoAction =
   | { type: "material/add"; id: string; courseId: string; name: string; sizeKb: number }
   | { type: "material/remove"; courseId: string; materialId: string }
   // 場次
+  | { type: "course/close"; courseId: string }
   | { type: "session/create"; id: string; courseId: string; days: SessionDay[]; portalCode: string }
   | { type: "session/updateDays"; sessionId: string; days: SessionDay[] }
   | { type: "link/add"; sessionId: string; label: string; url: string }
@@ -180,6 +182,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         scenarios: uniqueTags(picked.scenarios),
         source: moduleCards.length > 0 && industryPack ? { moduleIds: moduleCards.map((c) => c.moduleId), industryPackId: industryPack.id } : null,
         copiedFrom: null,
+        closedAt: null,
         blueprint: starterBlueprint({ title: action.title, clientContext: project.clientContext, moduleCards, unitCards: st.unitCards, industryPack, totalHours: action.totalHours }),
         blueprintHistory: [
           {
@@ -295,8 +298,17 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case "material/remove":
       return mapCourse(action.courseId, (c) => ({ ...c, materials: c.materials.filter((m) => m.id !== action.materialId) }));
 
-    case "session/create":
-      if (!findCourse(action.courseId) || action.days.length === 0) return state;
+    case "course/close": {
+      const course = findCourse(action.courseId);
+      // 結案閘沒過、或已經結案：不動（closedAt 保留第一次結案的時間）
+      if (!course || isCourseClosed(course) || !closingGate(st, course, now).canClose) return state;
+      return mapCourse(course.id, (c) => ({ ...c, closedAt: now }));
+    }
+
+    case "session/create": {
+      const course = findCourse(action.courseId);
+      // 結案後不能再新增場次；要再開同樣的課，複製課程
+      if (!course || isCourseClosed(course) || action.days.length === 0) return state;
       return {
         ...st,
         sessions: [
@@ -311,6 +323,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           },
         ],
       };
+    }
 
     case "session/updateDays":
       if (action.days.length === 0) return state;

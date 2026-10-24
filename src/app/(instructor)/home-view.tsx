@@ -96,7 +96,7 @@ export function HomeView() {
       {drafts.length > 0 && (
         <aside className="mt-10 rounded-lg bg-iced px-5 py-4 text-sm sm:ml-[7rem]">
           <span className="font-bold text-navy">知識庫有 {drafts.length} 份草稿等你審核。</span>{" "}
-          上完的課會自動拆出框架與情境，確認後才會收進知識庫。{" "}
+          課程結案後，內容會拆成待審核的草稿；確認後才會收進知識庫。{" "}
           <Link href="/knowledge" className="font-bold text-navy underline underline-offset-2">
             去審核
           </Link>

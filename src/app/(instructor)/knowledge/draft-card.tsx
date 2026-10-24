@@ -13,7 +13,8 @@ import { TagList } from "../../_components/tags";
 import { Button, CARD, FieldLabel } from "../../_components/ui";
 
 const TRIGGER_TEXT: Record<KnowledgeDraft["trigger"], string> = {
-  auto: "課程結束後自動產生",
+  // 草稿在課程結案後才產生（產生與審核由 #60 實作；觸發值之後會改名）
+  auto: "課程結案後產生",
   manual: "講師手動",
   import: "匯入過往講義",
 };
