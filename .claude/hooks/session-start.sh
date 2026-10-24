@@ -38,6 +38,17 @@ else
   echo "無法切到 Node $NODE_MAJOR，沿用容器預設的 Node $(node --version)；CI 用 Node $NODE_MAJOR"
 fi
 
+# --- mattpocock-skills plugin --------------------------------------------
+# .claude/settings.json 的 extraKnownMarketplaces / enabledPlugins 在雲端 session 不會自動安裝，
+# 要自己裝。兩個指令都可以重複執行。失敗不擋 session，只提示手動安裝。
+# 放在 pnpm install 前面：pnpm install 失敗會中止 hook，不該連帶讓 skill 也不能用。
+if claude plugin marketplace add mattpocock/skills >&2 &&
+  claude plugin install mattpocock-skills@mattpocock >&2; then
+  :
+else
+  echo "mattpocock-skills plugin 安裝失敗；請手動執行 claude plugin marketplace add mattpocock/skills && claude plugin install mattpocock-skills@mattpocock"
+fi
+
 # --- 依賴 ----------------------------------------------------------------
 if ! command -v pnpm >/dev/null 2>&1; then
   corepack enable >/dev/null 2>&1 || npm install -g pnpm
@@ -45,13 +56,3 @@ fi
 
 # 容器狀態會在 hook 結束後被快取，用 install（非 ci）讓 pnpm store 可重用
 pnpm install --prefer-offline
-
-# --- mattpocock-skills plugin --------------------------------------------
-# .claude/settings.json 的 extraKnownMarketplaces / enabledPlugins 在雲端 session 不會自動安裝，
-# 要自己裝。兩個指令都可以重複執行。失敗不擋 session，只提示手動安裝。
-if claude plugin marketplace add mattpocock/skills >&2 &&
-  claude plugin install mattpocock-skills@mattpocock >&2; then
-  :
-else
-  echo "mattpocock-skills plugin 安裝失敗；請手動執行 claude plugin marketplace add mattpocock/skills && claude plugin install mattpocock-skills@mattpocock"
-fi
