@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { makeId } from "@/lib/mockup/actions";
-import { isCourseClosed } from "@/lib/mockup/closing";
+import { CLOSED_FROZEN_REASON, isCourseClosed } from "@/lib/mockup/closing";
 import { downloadPlaceholder } from "@/lib/mockup/download";
 import {
   artifactVersions,
@@ -52,6 +52,7 @@ import {
   TextButton,
 } from "../../../_components/ui";
 import { ClosingSection } from "./closing-section";
+import { ReopenCourseButton } from "./reopen-course";
 import { NewSessionButton } from "./new-session-dialog";
 
 const STATUS_TEXT = { pending: "排隊中", generating: "產出中", ready: "可用", failed: "產出失敗" } as const;
@@ -104,6 +105,7 @@ export function CourseView({ courseId }: { courseId: string }) {
   const history = [...course.blueprintHistory].sort((a, b) => b.version - a.version);
   const latestBpFinalized = history[0].finalizedAt !== null;
   const sessions = sessionsOfCourse(st, course.id);
+  const closed = isCourseClosed(course);
   const copiedFrom = course.copiedFrom ? getCourse(st, course.copiedFrom.courseId) : undefined;
 
   const finalizeBlueprint = () => {
@@ -164,9 +166,25 @@ export function CourseView({ courseId }: { courseId: string }) {
           )
         }
       >
-        {isCourseClosed(course) && <Badge tone="success">已結案</Badge>}
-        <ButtonLink href={`/courses/${course.id}/chat`}>繼續跟 AI 談藍圖</ButtonLink>
+        {closed && <Badge tone="success">已結案</Badge>}
+        {closed ? (
+          <Button disabled title={CLOSED_FROZEN_REASON}>
+            繼續跟 AI 談藍圖
+          </Button>
+        ) : (
+          <ButtonLink href={`/courses/${course.id}/chat`}>繼續跟 AI 談藍圖</ButtonLink>
+        )}
       </PageHeader>
+
+      {closed && (
+        <div role="note" className={`${CARD} -mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 border-l-[3px] border-navy p-4 text-sm`}>
+          <p>
+            <span className="font-bold text-navy">{CLOSED_FROZEN_REASON}。</span>
+            場次、產物、藍圖和素材都已凍結，查看、下載與管理學員入口仍可以。
+          </p>
+          <ReopenCourseButton st={st} course={course} />
+        </div>
+      )}
 
       <div className="-mt-4 mb-8">
         <CourseTags course={course} />
@@ -242,8 +260,10 @@ export function CourseView({ courseId }: { courseId: string }) {
             </ol>
             {!latestBpFinalized && (
               <div className="mt-4 border-t-2 border-white pt-3">
-                <p className="mb-2 text-xs">v{latestBp} 還沒定稿；定稿後才能產簡報。課程大綱與講師準備單隨時可以產。</p>
-                <Button variant="secondary" onClick={finalizeBlueprint}>
+                <p className="mb-2 text-xs">
+                  {closed ? `v${latestBp} 沒有定稿。${CLOSED_FROZEN_REASON}。` : `v${latestBp} 還沒定稿；定稿後才能產簡報。課程大綱與講師準備單隨時可以產。`}
+                </p>
+                <Button variant="secondary" onClick={finalizeBlueprint} disabled={closed} title={closed ? CLOSED_FROZEN_REASON : undefined}>
                   把 v{latestBp} 標成定稿
                 </Button>
               </div>
@@ -266,15 +286,17 @@ export function CourseView({ courseId }: { courseId: string }) {
                   <span className="min-w-0 break-words text-navy">{m.name}</span>
                   <span className="flex shrink-0 items-baseline gap-3">
                     <span className="text-xs text-body-muted">{formatSize(m.sizeKb)}</span>
-                    <TextButton
-                      tone="danger"
-                      onClick={() => {
-                        dispatch({ type: "material/remove", courseId: course.id, materialId: m.id });
-                        toast(`已移除素材「${m.name}」；已發布的場次不受影響，直到再次發布`);
-                      }}
-                    >
-                      移除
-                    </TextButton>
+                    {!closed && (
+                      <TextButton
+                        tone="danger"
+                        onClick={() => {
+                          dispatch({ type: "material/remove", courseId: course.id, materialId: m.id });
+                          toast(`已移除素材「${m.name}」；已發布的場次不受影響，直到再次發布`);
+                        }}
+                      >
+                        移除
+                      </TextButton>
+                    )}
                   </span>
                 </li>
               ))}
@@ -282,9 +304,10 @@ export function CourseView({ courseId }: { courseId: string }) {
           )}
           <div className="mt-3">
             <input ref={materialInput} type="file" multiple hidden onChange={addMaterials} />
-            <Button variant="secondary" onClick={() => materialInput.current?.click()}>
+            <Button variant="secondary" onClick={() => materialInput.current?.click()} disabled={closed} title={closed ? CLOSED_FROZEN_REASON : undefined}>
               上傳素材
             </Button>
+            {closed && <p className="mt-1 text-xs text-body-muted">{CLOSED_FROZEN_REASON}，素材不能新增或移除。</p>}
           </div>
         </section>
 
@@ -312,8 +335,8 @@ export function CourseView({ courseId }: { courseId: string }) {
             </ul>
           )}
           <div className="mt-3">
-            {isCourseClosed(course) ? (
-              <p className="text-sm text-body-muted">這門課程已結案，不能再新增場次。要再開同樣的課，請複製這門課程。</p>
+            {closed ? (
+              <p className="text-sm text-body-muted">{CLOSED_FROZEN_REASON}：不能新增場次，也不能改場次的日期與連結。要再開同樣的課，請複製這門課程。</p>
             ) : (
               <NewSessionButton course={course} now={st.now} />
             )}
@@ -362,6 +385,7 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
   const isSlides = series.kind === "slides";
   const canFinalize = isSlides && latest?.status === "ready" && latest.finalizedAt === null && !stale;
   const busy = latest?.status === "pending" || latest?.status === "generating";
+  const frozen = isCourseClosed(course);
 
   const request = () => {
     dispatch({ type: "artifact/request", id: makeId("a"), courseId: course.id, kind: series.kind, day: series.day });
@@ -438,21 +462,27 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <GatedAction
-          id={`gate-${series.kind}-${series.day ?? "all"}`}
-          blocks={blocks}
-          variant={!latest || stale ? "primary" : "secondary"}
-          onClick={request}
-          busy={busy}
-        >
-          {!latest ? `產出${label}` : stale ? "依最新藍圖與上游重新產出" : "產出新版本"}
-        </GatedAction>
+        {frozen ? (
+          <Button variant="secondary" disabled title={CLOSED_FROZEN_REASON}>
+            產出新版本
+          </Button>
+        ) : (
+          <GatedAction
+            id={`gate-${series.kind}-${series.day ?? "all"}`}
+            blocks={blocks}
+            variant={!latest || stale ? "primary" : "secondary"}
+            onClick={request}
+            busy={busy}
+          >
+            {!latest ? `產出${label}` : stale ? "依最新藍圖與上游重新產出" : "產出新版本"}
+          </GatedAction>
+        )}
         {latest?.status === "ready" && (
           <Button variant="secondary" onClick={() => download(course, latest)}>
             下載
           </Button>
         )}
-        {canFinalize && (
+        {canFinalize && !frozen && (
           <Button
             variant="secondary"
             onClick={() => {
@@ -466,17 +496,18 @@ function ArtifactCard({ course, project, series }: { course: Course; project: Pr
         {latestReady && (
           <>
             <input ref={uploadInput} type="file" hidden onChange={uploadEdit} />
-            <Button variant="secondary" disabled={busy} onClick={() => uploadInput.current?.click()}>
+            <Button variant="secondary" disabled={busy || frozen} title={frozen ? CLOSED_FROZEN_REASON : undefined} onClick={() => uploadInput.current?.click()}>
               上傳講師修改版
             </Button>
           </>
         )}
-        {isOutline && latest?.status === "ready" && !latest.sentToClientAt && (
+        {isOutline && latest?.status === "ready" && !latest.sentToClientAt && !frozen && (
           <Button variant="secondary" onClick={() => setConfirmSent(true)}>
             標記已寄給客戶
           </Button>
         )}
       </div>
+      {frozen && <p className="mt-2 text-xs text-body-muted">{CLOSED_FROZEN_REASON}；可以查看與下載。</p>}
 
       {isOutline && latest && (
         <Dialog

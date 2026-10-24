@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addMs } from "@/lib/mockup/actions";
+import { CLOSED_FROZEN_REASON, isCourseClosed } from "@/lib/mockup/closing";
 import { getInstructor } from "@/lib/mockup/instructor";
 import {
   PORTAL_VALID_DAYS,
@@ -87,6 +88,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const lockedMaterials = pub ? course.materials.filter((m) => pub.materialIds.includes(m.id)) : [];
   const linksChanged = pub !== null && !sameLinks(pub.links, session.links);
   const closeDialog = () => setDialog(null);
+  // 課程結案後場次凍結：不能發布、改日期、增減連結；學員入口的管理（關閉、重新開放、延長）仍可以
+  const frozen = isCourseClosed(course);
+  const frozenTitle = frozen ? CLOSED_FROZEN_REASON : undefined;
 
   return (
     <>
@@ -115,10 +119,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           {!pub ? (
             <>
               <p className="mt-3 max-w-xl text-sm">
-                發布後，學員入口才會打開；之後你再改藍圖或重新產出，學員看到的都不會變，直到再次發布。
+                {frozen
+                  ? `${CLOSED_FROZEN_REASON}，結案前沒發布的場次不能再發布。`
+                  : "發布後，學員入口才會打開；之後你再改藍圖或重新產出，學員看到的都不會變，直到再次發布。"}
               </p>
               <div className="mt-5">
-                <Button onClick={() => setDialog("publish")}>發布給學員</Button>
+                <Button onClick={() => setDialog("publish")} disabled={frozen} title={frozenTitle}>
+                  發布給學員
+                </Button>
               </div>
             </>
           ) : (
@@ -194,9 +202,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 </div>
               </div>
 
-              <p className="mt-5 max-w-xl text-sm">重新發布會把學員入口換成目前最新的產物、素材與連結。</p>
+              <p className="mt-5 max-w-xl text-sm">
+                {frozen ? `${CLOSED_FROZEN_REASON}，不能重新發布；學員入口維持結案前發布的內容。` : "重新發布會把學員入口換成目前最新的產物、素材與連結。"}
+              </p>
               <div className="mt-4">
-                <Button onClick={() => setDialog("publish")}>重新發布</Button>
+                <Button onClick={() => setDialog("publish")} disabled={frozen} title={frozenTitle}>
+                  重新發布
+                </Button>
               </div>
             </>
           )}
@@ -252,7 +264,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         <div className="grid gap-8 md:grid-cols-2">
           {/* 場次資訊與準備度 */}
           <section id="info" aria-labelledby="info-title" className="scroll-mt-6">
-            <SectionTitle aside={<TextButton onClick={() => setDialog("info")}>編輯</TextButton>}>
+            <SectionTitle aside={frozen ? <span className="text-xs text-body-muted">{CLOSED_FROZEN_REASON}</span> : <TextButton onClick={() => setDialog("info")}>編輯</TextButton>}>
               <span id="info-title">場次資訊</span>
             </SectionTitle>
             <Card>
@@ -297,23 +309,26 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       <span className="font-bold text-navy">{l.label}</span>
                       <span className="ml-3 break-all text-body-muted">{l.url}</span>
                     </a>
-                    <TextButton
-                      tone="danger"
-                      onClick={() => {
-                        dispatch({ type: "link/remove", sessionId: session.id, url: l.url });
-                        toast(pub ? `已移除「${l.label}」，重新發布後學員那邊才會拿掉` : `已移除「${l.label}」`);
-                      }}
-                    >
-                      移除
-                    </TextButton>
+                    {!frozen && (
+                      <TextButton
+                        tone="danger"
+                        onClick={() => {
+                          dispatch({ type: "link/remove", sessionId: session.id, url: l.url });
+                          toast(pub ? `已移除「${l.label}」，重新發布後學員那邊才會拿掉` : `已移除「${l.label}」`);
+                        }}
+                      >
+                        移除
+                      </TextButton>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
             <div className="mt-3">
-              <Button variant="secondary" onClick={() => setDialog("link")}>
+              <Button variant="secondary" onClick={() => setDialog("link")} disabled={frozen} title={frozenTitle}>
                 新增連結
               </Button>
+              {frozen && <p className="mt-1 text-xs text-body-muted">{CLOSED_FROZEN_REASON}，連結不能新增或移除。</p>}
             </div>
           </Card>
         </section>

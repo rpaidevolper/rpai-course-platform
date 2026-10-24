@@ -6,6 +6,7 @@ import { formatDateTime } from "@/lib/mockup/logic";
 import { dispatch } from "@/lib/mockup/store";
 import type { DemoState } from "@/lib/mockup/state";
 import type { Course } from "@/lib/mockup/types";
+import { ReopenCourseButton } from "./reopen-course";
 import { toast } from "../../../_components/demo-runtime";
 import { Badge, Button, CARD, SectionTitle } from "../../../_components/ui";
 
@@ -34,7 +35,7 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
           <>
             <Badge tone="success">已結案</Badge>
             <p className="mt-2 text-body-muted">
-              {formatDateTime(course.closedAt!)} 結案。結案後不能再新增場次；要再開同樣的課，請複製這門課程。
+              {formatDateTime(course.closedAt!)} 結案。結案後課程凍結，不能修改場次、產物、藍圖和素材（查看、下載與管理學員入口仍可以）；要改請先重新開啟，要再開同樣的課也可以複製這門課程。
             </p>
             <p className="mt-2">
               結案時內容已拆成待審核的知識庫草稿，
@@ -43,6 +44,9 @@ export function ClosingSection({ st, course }: { st: DemoState; course: Course }
               </Link>
               ；審核時可以排除單元，也可以改寫含客戶機密的文字。
             </p>
+            <div className="mt-3">
+              <ReopenCourseButton st={st} course={course} />
+            </div>
           </>
         ) : (
           <>

@@ -1,6 +1,7 @@
 import { coursesOfProject, seriesLabel, sessionEndsAt, sessionsOfCourse } from "./logic";
 import type { DemoState } from "./state";
-import type { Artifact, Course, IsoTime, Project, ProjectStatus } from "./types";
+import type { DemoAction } from "./actions";
+import type { Artifact, Course, IsoTime, KnowledgeDraft, Project, ProjectStatus } from "./types";
 
 /**
  * 結案閘與結案狀態（#59）。純函式，不碰 UI；結案動作在 actions.ts 的 course/close。
@@ -74,6 +75,40 @@ export function closingGateReasons(gate: ClosingGate): string[] {
 }
 
 export const isCourseClosed = (course: Pick<Course, "closedAt">): boolean => course.closedAt !== null;
+
+/**
+ * 結案後凍結的操作（#77）：不能新增或修改場次（含日期、連結、發布）、不能要求／上傳／定稿／寄出產物、
+ * 不能修改或定稿藍圖、不能增減素材、不能改標籤。仍可做的：查看與下載、管理學員入口（portal/*）。
+ * artifact/advance 是 demo 裡「講師端 plugin 把排隊的工作做完」的替身，不是講師的操作，不凍結。
+ * 「這個操作對這門課程是不是凍結了」只在 isFrozenByClosing 判斷，reducer 與畫面共用。
+ */
+export const FROZEN_AFTER_CLOSING = [
+  "session/create",
+  "session/updateDays",
+  "link/add",
+  "link/remove",
+  "session/publish",
+  "artifact/request",
+  "artifact/uploadEdit",
+  "artifact/finalize",
+  "artifact/markSent",
+  "blueprint/revise",
+  "blueprint/finalize",
+  "material/add",
+  "material/remove",
+  "course/updateTags",
+] as const satisfies readonly DemoAction["type"][];
+
+/** 畫面上停用凍結操作時的簡短理由 */
+export const CLOSED_FROZEN_REASON = "已結案，不能修改";
+
+export function isFrozenByClosing(course: Pick<Course, "closedAt"> | undefined, actionType: DemoAction["type"]): boolean {
+  return course !== undefined && isCourseClosed(course) && (FROZEN_AFTER_CLOSING as readonly string[]).includes(actionType);
+}
+
+/** 重新開啟會撤回的草稿：這門課程結案時產生、還在待審的（已接受的草稿早就不在待審清單裡）。 */
+export const reopenWithdrawals = (st: DemoState, courseId: string): KnowledgeDraft[] =>
+  st.drafts.filter((d) => d.fromCourseId === courseId && d.trigger === "closing");
 
 /**
  * 專案結案不另存，由底下的課程全部結案推得；PROJECT_STATUSES 不變（封存仍然只代表沒成交）。
