@@ -1,25 +1,23 @@
-import type { DraftProposal, TopicId } from "./types";
+import type { DraftProposal, ModuleId, UnitCard } from "./types";
 
 /**
- * 「匯入過往講義」的腳本化結果（#48）。demo 不真的讀檔，
- * 依檔名與講師選的主題，產生一份看起來合理的「新框架」草稿。
+ * 「匯入過往講義」的腳本化結果（#48、#55）。demo 不真的讀檔，
+ * 依檔名與講師選的模組，產生一份看起來合理的草稿：AI 會把講義拆成單元卡與一份課程配方。
  */
 
 export const IMPORT_ACCEPT = ".pdf,.pptx,.docx,.md";
 
-const SCRIPT: Record<TopicId, { summary: (title: string) => string; moduleTitles: string[] }> = {
-  claude: {
-    summary: (t) => `從講義「${t}」拆出來的 Claude 課程骨架：先看懂 AI 的邊界，再動手寫提示詞，最後留下能帶回工作的做法。`,
-    moduleTitles: ["AI 能做什麼、不能做什麼", "提示詞的基本零件", "用自己的文件動手練習", "帶走三個可以馬上用的情境"],
-  },
-  gas: {
-    summary: (t) => `從講義「${t}」拆出來的 Google Apps Script 課程骨架：從試算表的重複工作出發，寫出第一支自動化腳本。`,
-    moduleTitles: ["找出試算表裡的重複工作", "Apps Script 編輯器與第一支腳本", "觸發條件與排程", "錯誤處理與交接"],
-  },
-  "power-automate": {
-    summary: (t) => `從講義「${t}」拆出來的 Power Automate 課程骨架：把簽核與通知流程畫出來，再一步步做成雲端流程。`,
-    moduleTitles: ["畫出現在的流程", "第一個雲端流程：表單到通知", "條件、核准與例外"],
-  },
+/** 每個模組示範用的單元卡標題，各 2–3 張。 */
+const SCRIPT: Record<ModuleId, string[]> = {
+  A1: ["打開對話框，先把一份文件交給 AI", "用角色與格式把回答收斂", "把常用脈絡存進 Project"],
+  A2: ["把手冊切段後上傳", "設定只根據文件回答"],
+  A3: ["錄製第一段桌面操作", "批次開啟與整併檔案"],
+  A4: ["第一個雲端流程：表單到通知", "加上核准與退回", "逾期與例外的處理"],
+  A5: ["把重複步驟寫成 Skill", "用一段說明請 AI 寫出小程式"],
+  B1: ["畫出現在的工作流程", "找出重複與等待"],
+  B2: ["提示詞的基本零件", "把審核規則寫成指令"],
+  B3: ["上傳前的資料分級", "上線前的檢查與負責人"],
+  B4: ["算出每月的使用成本", "比較自動化省下的時間"],
 };
 
 /** 檔名去掉副檔名與前後空白；去完是空的就回傳原檔名 */
@@ -30,11 +28,29 @@ export function titleFromFileName(fileName: string): string {
   return title || base;
 }
 
-export function importProposal(fileName: string, topicId: TopicId): Extract<DraftProposal, { kind: "new_framework" }> {
-  const title = titleFromFileName(fileName);
-  const script = SCRIPT[topicId];
+/** 匯入的單元卡只有標題是腳本給的，目標、方法與成果用通用文字。 */
+const unitCardOf = (moduleId: ModuleId, title: string): Omit<UnitCard, "id"> => ({
+  moduleId,
+  title,
+  minutes: 60,
+  objective: `練習「${title}」的做法`,
+  method: "講述＋動手練習",
+  outcome: "一份可以帶回工作的成果",
+});
+
+/** 依檔名與講師選的模組，產生一份課程配方草稿（沒有來源課程、沒有日期，對象與工具待確認）。 */
+export function importProposal(fileName: string, moduleId: ModuleId): Extract<DraftProposal, { kind: "new_course_recipe" }> {
   return {
-    kind: "new_framework",
-    framework: { topicId, title, summary: script.summary(title), moduleTitles: [...script.moduleTitles] },
+    kind: "new_course_recipe",
+    recipe: {
+      title: titleFromFileName(fileName),
+      client: "匯入的講義",
+      status: "delivered",
+      heldOn: null,
+      industry: "通用",
+      audience: "待確認",
+      tools: [],
+    },
+    unitCards: SCRIPT[moduleId].map((title) => unitCardOf(moduleId, title)),
   };
 }

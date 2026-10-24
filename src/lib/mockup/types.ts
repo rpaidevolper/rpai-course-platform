@@ -5,12 +5,24 @@ import type { Blueprint } from "@/lib/blueprint/schema";
  * 這不是資料庫 schema：資料庫設計是下一步，屆時可能整個重來。
  */
 
-export const TOPICS = [
-  { id: "claude", label: "Claude" },
-  { id: "gas", label: "Google Apps Script" },
-  { id: "power-automate", label: "Power Automate" },
+/** 模組：教材分類的一格。A 類是學員課堂上打開的環境，彼此互斥；B 類是不綁工具的方法，可以疊加。 */
+export const MODULES = [
+  { id: "A1", kind: "A", label: "通用生成 AI" },
+  { id: "A2", kind: "A", label: "知識庫與檢索" },
+  { id: "A3", kind: "A", label: "桌面自動化" },
+  { id: "A4", kind: "A", label: "雲端自動化" },
+  { id: "A5", kind: "A", label: "Agent 與 AI 編碼" },
+  { id: "B1", kind: "B", label: "流程診斷" },
+  { id: "B2", kind: "B", label: "提問與指令" },
+  { id: "B3", kind: "B", label: "AI 治理與風險" },
+  { id: "B4", kind: "B", label: "AI 成本節費" },
 ] as const;
-export type TopicId = (typeof TOPICS)[number]["id"];
+export type ModuleId = (typeof MODULES)[number]["id"];
+export type ModuleKind = (typeof MODULES)[number]["kind"];
+
+/** 產業：課程配方與產業素材包標註的產業（之後 #57 改成可多選的標籤）。 */
+export const INDUSTRIES = ["金融", "製造", "服務零售", "電商客服", "B2B貿易", "HR", "教育", "公益", "通用"] as const;
+export type Industry = (typeof INDUSTRIES)[number];
 
 /**
  * 設計稿的產物種類（ADR 0003）。和 `src/lib/artifacts.ts`（MCP／plugin 用的真實種類）是兩回事。
@@ -30,27 +42,67 @@ export const ARTIFACT_LABELS: Record<ArtifactKind, string> = {
 /** ISO 8601，一律帶 +08:00。 */
 export type IsoTime = string;
 
-export interface FrameworkVersion {
+export interface ModuleCardVersion {
   version: number;
   createdAt: IsoTime;
   note: string;
-  /** 由哪門課程的課後草稿升版；直接編輯則為 null */
+  /** 由哪門課程的課後草稿升版；直接整理則為 null */
   fromCourseId: string | null;
 }
 
-export interface Framework {
-  id: string;
-  topicId: TopicId;
-  title: string;
+/** 模組卡：一個模組彙整後的最新版課綱模板。一個模組一張，有版本。 */
+export interface ModuleCard {
+  moduleId: ModuleId;
   summary: string;
-  moduleTitles: string[];
-  versions: FrameworkVersion[];
+  /** A 類寫學員打開的環境，B 類寫學員帶走的產出 */
+  scope: string;
+  /** 核心單元骨架：依序排列的單元卡 id，都屬於這個模組 */
+  skeletonUnitIds: string[];
+  /** 常見搭配，例如「常以 B1 流程診斷定錨」 */
+  combos: string[];
+  versions: ModuleCardVersion[];
 }
 
-export interface Scenario {
+/** 單元卡：知識庫裡一段可以重複使用的教學。被哪些課程配方用過由配方推得，不另存。 */
+export interface UnitCard {
+  id: string;
+  moduleId: ModuleId;
+  title: string;
+  minutes: number;
+  objective: string;
+  method: string;
+  outcome: string;
+}
+
+export const RECIPE_STATUSES = ["delivered", "proposal", "preparing"] as const;
+export type RecipeStatus = (typeof RECIPE_STATUSES)[number];
+export const RECIPE_STATUS_LABELS: Record<RecipeStatus, string> = {
+  delivered: "已交付",
+  proposal: "提案",
+  preparing: "籌備中",
+};
+
+/** 課程配方：一門過去課程的骨架。總分鐘數與用到的模組由單元卡推得，不另存。它不是藍圖。 */
+export interface CourseRecipe {
   id: string;
   title: string;
-  industry: string;
+  client: string;
+  status: RecipeStatus;
+  /** 上課年月 YYYY-MM；提案與籌備中為 null */
+  heldOn: string | null;
+  industry: Industry;
+  audience: string;
+  /** 課堂用到的工具 */
+  tools: string[];
+  /** 依序用到的單元卡 id */
+  unitIds: string[];
+}
+
+/** 產業素材包：套在模組上的案例、練習與資料檔。一份藍圖只套用一個。 */
+export interface IndustryPack {
+  id: string;
+  title: string;
+  industry: Industry;
   audience: string;
   cases: string[];
   materialNames: string[];
@@ -68,7 +120,8 @@ export interface ClientContext {
   company: string;
   industry: string;
   goal: string;
-  scenarioId: string;
+  /** 選定的產業素材包 */
+  industryPackId: string;
   /** 客戶的 IT 限制；新藍圖會把它複製進工具清單 */
   itConstraints: string[];
   /** null 表示沿用 RPAI 品牌 */
@@ -181,11 +234,11 @@ export interface Course {
   id: string;
   projectId: string;
   title: string;
-  /** 藍圖誕生時複製自哪個框架的哪一版、哪個情境（ADR 0002：記錄來源，不引用） */
-  source: { frameworkId: string; frameworkVersion: number; scenarioId: string } | null;
+  /** 藍圖誕生時複製自哪些模組、哪個產業素材包（ADR 0002：記錄來源，不引用） */
+  source: { moduleIds: ModuleId[]; industryPackId: string } | null;
   /**
    * 以另一門課程的某一版藍圖為底建立時，記錄複製自哪裡（ADR 0002：複製，之後兩邊各改各的）。
-   * 從框架或從零談出的課程為 null。
+   * 從模組卡或從零談出的課程為 null。
    */
   copiedFrom: { courseId: string; blueprintVersion: number } | null;
   /** 最新一版藍圖的內容；舊版只列出版本紀錄 */
@@ -249,6 +302,6 @@ export interface KnowledgeDraft {
 }
 
 export type DraftProposal =
-  | { kind: "framework_version"; frameworkId: string; changes: string[] }
-  | { kind: "new_framework"; framework: Pick<Framework, "topicId" | "title" | "summary" | "moduleTitles"> }
-  | { kind: "new_scenario"; scenario: Omit<Scenario, "id"> };
+  | { kind: "module_card_version"; moduleId: ModuleId; changes: string[] }
+  | { kind: "new_course_recipe"; recipe: Omit<CourseRecipe, "id" | "unitIds">; unitCards: Omit<UnitCard, "id">[] }
+  | { kind: "new_industry_pack"; industryPack: Omit<IndustryPack, "id"> };

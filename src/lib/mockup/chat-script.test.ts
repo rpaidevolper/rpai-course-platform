@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BlueprintSchema, checkBlueprint, plannedMinutes, type Blueprint } from "@/lib/blueprint/schema";
 import { demoReducer, starterBlueprint } from "./actions";
 import { openingMessage, reviseBlueprint, revisionNote, scriptedReply } from "./chat-script";
-import { COURSES, FRAMEWORKS, PROJECTS, SCENARIOS } from "./data";
+import { COURSES, INDUSTRY_PACKS, MODULE_CARDS, PROJECTS, UNIT_CARDS } from "./data";
 import { getCourse, getSession, readiness } from "./logic";
 import { initialState } from "./state";
 
@@ -14,8 +14,9 @@ const pa = bpOf("c-pa-finance"); // 完整
 const starter = starterBlueprint({
   title: "新課程",
   clientContext: PROJECTS[0].clientContext,
-  framework: FRAMEWORKS[0],
-  scenario: SCENARIOS[0],
+  moduleCard: MODULE_CARDS[0],
+  unitCards: UNIT_CARDS,
+  industryPack: INDUSTRY_PACKS[0],
 });
 const scratch = starterBlueprint({ title: "從零開始", clientContext: PROJECTS[0].clientContext });
 
@@ -94,7 +95,7 @@ describe("reviseBlueprint", () => {
     ["完整", pa],
     ["時段拉長", stretched],
     ["單元超時", overbooked],
-    ["框架起始草稿", starter],
+    ["模組卡起始草稿", starter],
     ["從零起始草稿", scratch],
   ];
 

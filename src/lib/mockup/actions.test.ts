@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { BlueprintSchema } from "@/lib/blueprint/schema";
 import { addMs, demoReducer, newSessionDay, starterBlueprint, type DemoAction } from "./actions";
-import { generationGate, getCourse, getSession, isStale, latestArtifact, portalState, portalView, readiness } from "./logic";
+import {
+  generationGate,
+  getCourse,
+  getIndustryPack,
+  getModuleCard,
+  getRecipe,
+  getSession,
+  getUnitCard,
+  isStale,
+  latestArtifact,
+  portalState,
+  portalView,
+  readiness,
+  recipeUnitCards,
+} from "./logic";
 import { initialState, type DemoState } from "./state";
 
 const run = (actions: DemoAction[], from: DemoState = initialState()) => actions.reduce(demoReducer, from);
@@ -128,7 +142,7 @@ describe("發布與學員入口", () => {
 });
 
 describe("從零開一門課到準備好", () => {
-  it("新專案 → 新課程（框架＋情境）→ 談完、定稿、產完整條鏈、上傳素材、場次排好、發布", () => {
+  it("新專案 → 新課程（模組卡＋產業素材包）→ 談完、定稿、產完整條鏈、上傳素材、場次排好、發布", () => {
     let st = run([
       {
         type: "project/create",
@@ -136,9 +150,9 @@ describe("從零開一門課到準備好", () => {
         title: "D 公司",
         priceTwd: 50000,
         status: "negotiating",
-        clientContext: { company: "D 公司", industry: "零售", goal: "門市主管會用 AI 回覆客訴", scenarioId: "sc-manufacturing", itConstraints: ["只能用瀏覽器"], brand: null },
+        clientContext: { company: "D 公司", industry: "零售", goal: "門市主管會用 AI 回覆客訴", industryPackId: "ip-manufacturing", itConstraints: ["只能用瀏覽器"], brand: null },
       },
-      { type: "course/create", id: "c-x", projectId: "p-x", title: "Claude 門市入門", frameworkId: "fw-claude-intro", scenarioId: "sc-manufacturing" },
+      { type: "course/create", id: "c-x", projectId: "p-x", title: "Claude 門市入門", moduleId: "A1", industryPackId: "ip-manufacturing" },
       {
         type: "session/create",
         id: "s-x",
@@ -148,7 +162,7 @@ describe("從零開一門課到準備好", () => {
       },
     ]);
     const course = getCourse(st, "c-x")!;
-    expect(course.source).toEqual({ frameworkId: "fw-claude-intro", frameworkVersion: 2, scenarioId: "sc-manufacturing" });
+    expect(course.source).toEqual({ moduleIds: ["A1"], industryPackId: "ip-manufacturing" });
     expect(course.blueprint.constraints).toContain("只能用瀏覽器");
     const kinds = () => readiness(st, getSession(st, "s-x")!).map((i) => i.kind);
     expect(kinds()).toEqual(expect.arrayContaining(["open_items", "missing_elements", "units_need_work", "artifact_missing", "no_materials", "no_links", "venue_unset", "unpublished"]));
@@ -185,19 +199,45 @@ describe("從零開一門課到準備好", () => {
     expect(readiness(st, getSession(st, "s-x")!)).toEqual([]);
   });
 
-  it("沒有框架時從零開始：來源為 null、單元都是新做", () => {
-    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", frameworkId: null, scenarioId: null }]);
+  it("沒有模組時從零開始：來源為 null、單元都是新做", () => {
+    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleId: null, industryPackId: null }]);
     const c = getCourse(st, "c-z")!;
     expect(c.source).toBeNull();
     expect(c.blueprint.days[0].slots[0].units.every((u) => u.reuse === "new" && u.source === null)).toBe(true);
   });
 
-  it("起始藍圖通過 schema，單元標示來自框架、要改", () => {
+  it("起始藍圖通過 schema，單元依模組卡骨架出生、標示來自模組卡、要改", () => {
     const st = initialState();
-    const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, framework: st.frameworks[0], scenario: st.scenarios[0] });
+    const card = getModuleCard(st, "A1")!;
+    const bp = starterBlueprint({
+      title: "t",
+      clientContext: st.projects[0].clientContext,
+      moduleCard: card,
+      unitCards: st.unitCards,
+      industryPack: getIndustryPack(st, "ip-manufacturing"),
+    });
     const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
-    expect(units.map((u) => u.title)).toEqual(st.frameworks[0].moduleTitles);
-    expect(units.every((u) => u.reuse === "modify" && u.source?.kind === "framework")).toBe(true);
+    expect(units.map((u) => u.title)).toEqual(card.skeletonUnitIds.map((id) => getUnitCard(st, id)!.title));
+    expect(units.every((u) => u.reuse === "modify" && u.source?.kind === "framework" && u.source.id === "A1" && u.source.version === 2)).toBe(true);
+    expect(bp.days[0].theme).toBe("A1 通用生成 AI");
+  });
+
+  it("模組卡的骨架單元查不到單元卡時退回預設單元，且不記來源", () => {
+    const st = initialState();
+    const bp = starterBlueprint({ title: "t", clientContext: st.projects[0].clientContext, moduleCard: getModuleCard(st, "A2")!, unitCards: [] });
+    const units = bp.days.flatMap((d) => d.slots.flatMap((s) => s.units));
+    expect(units.map((u) => u.title)).toEqual(["開場與需求盤點"]);
+    expect(units.every((u) => u.reuse === "new" && u.source === null)).toBe(true);
+  });
+
+  it("course/create 帶模組：單元依骨架出生，來源記下模組與產業素材包", () => {
+    const st = run([{ type: "course/create", id: "c-z", projectId: "p-a-2026", title: "新課", moduleId: "A4", industryPackId: "ip-finance-approval" }]);
+    const c = getCourse(st, "c-z")!;
+    expect(c.source).toEqual({ moduleIds: ["A4"], industryPackId: "ip-finance-approval" });
+    expect(c.blueprintHistory[0].note).toBe("從模組卡「A4 雲端自動化」v2 複製出生");
+    const units = c.blueprint.days.flatMap((d) => d.slots.flatMap((s) => s.units));
+    expect(units.map((u) => u.title)).toEqual(["雲端流程上手", "表單觸發器", "逾期提醒", "寄送前的安全網"]);
+    expect(units.every((u) => u.reuse === "modify" && u.source?.kind === "framework" && u.source.id === "A4" && u.source.version === 2)).toBe(true);
   });
 });
 
@@ -209,35 +249,46 @@ describe("專案與客戶文件", () => {
 });
 
 describe("知識庫草稿", () => {
-  it("升版：框架多一版、草稿消失", () => {
-    const st = run([{ type: "draft/accept", draftId: "d-pa-framework", newId: "" }]);
-    const fw = st.frameworks.find((f) => f.id === "fw-pa-basics")!;
-    expect(fw.versions.at(-1)).toMatchObject({ version: 3, fromCourseId: "c-pa-finance" });
-    expect(st.drafts.map((d) => d.id)).not.toContain("d-pa-framework");
+  it("模組卡升版：多一版（記下改了什麼與來源課程），草稿消失", () => {
+    const st = run([{ type: "draft/accept", draftId: "d-pa-module-card", newId: "" }]);
+    const card = getModuleCard(st, "A4")!;
+    expect(card.versions).toHaveLength(3);
+    expect(card.versions.at(-1)).toMatchObject({ version: 3, fromCourseId: "c-pa-finance" });
+    expect(card.versions.at(-1)!.note).toContain("逾期提醒");
+    expect(st.drafts.map((d) => d.id)).not.toContain("d-pa-module-card");
   });
 
-  it("另存成新框架：原框架不變", () => {
-    const st = run([{ type: "draft/saveAsFramework", draftId: "d-pa-framework", frameworkId: "fw-new", title: "簽核進階" }]);
-    expect(st.frameworks.find((f) => f.id === "fw-pa-basics")!.versions).toHaveLength(2);
-    expect(st.frameworks.find((f) => f.id === "fw-new")).toMatchObject({ title: "簽核進階", topicId: "power-automate" });
+  it("收進產業素材包、捨棄", () => {
+    const st = run([{ type: "draft/accept", draftId: "d-pa-pack", newId: "ip-new" }]);
+    expect(getIndustryPack(st, "ip-new")).toMatchObject({ title: "金融業：月結對帳", industry: "金融" });
+    expect(st.drafts.map((d) => d.id)).not.toContain("d-pa-pack");
+    expect(run([{ type: "draft/discard", draftId: "d-pa-pack" }]).drafts).toHaveLength(1);
   });
 
-  it("收進情境、捨棄", () => {
-    const st = run([{ type: "draft/accept", draftId: "d-pa-scenario", newId: "sc-new" }]);
-    expect(st.scenarios.find((s) => s.id === "sc-new")?.title).toBe("金融業：月結對帳");
-    expect(run([{ type: "draft/discard", draftId: "d-pa-scenario" }]).drafts).toHaveLength(1);
-  });
-
-  it("匯入講義產生沒有來源課程的草稿，收進後變成新框架", () => {
+  it("匯入講義產生的課程配方草稿，收進後單元卡依序編號、屬於各自的模組，配方引用它們", () => {
     const st = run([
       {
         type: "draft/import",
         id: "d-imp",
         fileName: "2025 行政班講義.pdf",
-        proposal: { kind: "new_framework", framework: { topicId: "gas", title: "試算表自動化", summary: "s", moduleTitles: ["一", "二"] } },
+        proposal: {
+          kind: "new_course_recipe",
+          recipe: { title: "試算表自動化", client: "匯入的講義", status: "delivered", heldOn: null, industry: "通用", audience: "待確認", tools: [] },
+          unitCards: [
+            { moduleId: "A2", title: "甲", minutes: 60, objective: "o", method: "m", outcome: "r" },
+            { moduleId: "B3", title: "乙", minutes: 90, objective: "o", method: "m", outcome: "r" },
+          ],
+        },
       },
-      { type: "draft/accept", draftId: "d-imp", newId: "fw-imp" },
+      { type: "draft/accept", draftId: "d-imp", newId: "rc-imp" },
     ]);
-    expect(st.frameworks.find((f) => f.id === "fw-imp")!.versions[0].note).toContain("2025 行政班講義.pdf");
+    const recipe = getRecipe(st, "rc-imp")!;
+    expect(recipe).toMatchObject({ title: "試算表自動化", status: "delivered" });
+    expect(recipe.unitIds).toEqual(["rc-imp-u1", "rc-imp-u2"]);
+    expect(recipeUnitCards(st, recipe).map((u) => [u.id, u.moduleId, u.title])).toEqual([
+      ["rc-imp-u1", "A2", "甲"],
+      ["rc-imp-u2", "B3", "乙"],
+    ]);
+    expect(st.drafts.map((d) => d.id)).not.toContain("d-imp");
   });
 });

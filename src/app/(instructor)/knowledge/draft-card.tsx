@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
-import { formatDate, getCourse, getFramework, latestFrameworkVersion } from "@/lib/mockup/logic";
+import { formatDate, getCourse, getModuleCard, latestModuleCardVersion, moduleLabel } from "@/lib/mockup/logic";
 import type { DemoState } from "@/lib/mockup/state";
 import { dispatch } from "@/lib/mockup/store";
-import { TOPICS, type KnowledgeDraft } from "@/lib/mockup/types";
+import type { KnowledgeDraft } from "@/lib/mockup/types";
 import { Dialog } from "../../_components/dialog";
 import { toast } from "../../_components/demo-runtime";
-import { Button, CARD, Field, FieldLabel, TextInput } from "../../_components/ui";
+import { Button, CARD, FieldLabel } from "../../_components/ui";
 
 const TRIGGER_TEXT: Record<KnowledgeDraft["trigger"], string> = {
   auto: "課程結束後自動產生",
@@ -17,44 +17,33 @@ const TRIGGER_TEXT: Record<KnowledgeDraft["trigger"], string> = {
   import: "匯入過往講義",
 };
 
-/** 一份待審核草稿。審核後呼叫 onDone(id) 讓頁面捲到、標出被改動的框架或情境。 */
+/** 一份待審核草稿。審核後呼叫 onDone(id) 讓頁面捲到、標出被改動的模組卡、課程配方或產業素材包。 */
 export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: KnowledgeDraft; onDone: (targetId: string) => void }) {
-  const [dialog, setDialog] = useState<"saveAs" | "discard" | null>(null);
-  const [newTitle, setNewTitle] = useState("");
+  const [dialog, setDialog] = useState<"discard" | null>(null);
   const course = draft.fromCourseId ? getCourse(st, draft.fromCourseId) : undefined;
   const p = draft.proposal;
-  const fw = p.kind === "framework_version" ? getFramework(st, p.frameworkId) : undefined;
-  const nextVersion = fw ? latestFrameworkVersion(fw) + 1 : undefined;
+  const card = p.kind === "module_card_version" ? getModuleCard(st, p.moduleId) : undefined;
+  const nextVersion = card ? latestModuleCardVersion(card) + 1 : undefined;
 
   const close = () => setDialog(null);
 
   const accept = () => {
-    if (p.kind === "framework_version") {
-      if (!fw) return;
+    if (p.kind === "module_card_version") {
+      if (!card) return;
       dispatch({ type: "draft/accept", draftId: draft.id, newId: "" });
-      toast(`框架已升到 v${nextVersion}`);
-      onDone(fw.id);
-    } else if (p.kind === "new_framework") {
-      const id = makeId("fw");
+      toast(`模組卡「${moduleLabel(p.moduleId)}」已升到 v${nextVersion}`);
+      onDone(`module-${p.moduleId}`);
+    } else if (p.kind === "new_course_recipe") {
+      const id = makeId("rc");
       dispatch({ type: "draft/accept", draftId: draft.id, newId: id });
-      toast(`已收進知識庫：框架「${p.framework.title}」`);
+      toast(`已收進知識庫：課程配方「${p.recipe.title}」與 ${p.unitCards.length} 張單元卡`);
       onDone(id);
     } else {
-      const id = makeId("sc");
+      const id = makeId("ip");
       dispatch({ type: "draft/accept", draftId: draft.id, newId: id });
-      toast(`已收進知識庫：情境「${p.scenario.title}」`);
+      toast(`已收進知識庫：產業素材包「${p.industryPack.title}」`);
       onDone(id);
     }
-  };
-
-  const saveAs = () => {
-    const title = newTitle.trim();
-    if (!title) return;
-    const id = makeId("fw");
-    close();
-    dispatch({ type: "draft/saveAsFramework", draftId: draft.id, frameworkId: id, title });
-    toast(`已另存成新框架「${title}」`);
-    onDone(id);
   };
 
   const discard = () => {
@@ -91,10 +80,10 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
         )}
       </p>
 
-      {p.kind === "framework_version" && (
+      {p.kind === "module_card_version" && (
         <>
           <h3 className="mt-2 text-base font-bold text-navy">
-            建議把框架「{fw?.title ?? p.frameworkId}」升到 v{nextVersion ?? "?"}
+            建議把模組卡「{moduleLabel(p.moduleId)}」升到 v{nextVersion ?? "?"}
           </h3>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
             {p.changes.map((c) => (
@@ -102,41 +91,36 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
             ))}
           </ul>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Button onClick={accept} disabled={!fw} title={fw ? undefined : "找不到原框架"}>
+            <Button onClick={accept} disabled={!card} title={card ? undefined : "找不到原模組卡"}>
               升成 v{nextVersion ?? "?"}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!fw}
-              onClick={() => {
-                setNewTitle(fw ? `${fw.title}（新版）` : "");
-                setDialog("saveAs");
-              }}
-            >
-              另存成新框架
             </Button>
             {discardButton}
           </div>
         </>
       )}
 
-      {p.kind === "new_framework" && (
+      {p.kind === "new_course_recipe" && (
         <>
-          <h3 className="mt-2 text-base font-bold text-navy">建議新增框架「{p.framework.title}」</h3>
-          <p className="mt-1.5 max-w-3xl text-sm">{p.framework.summary}</p>
+          <h3 className="mt-2 text-base font-bold text-navy">建議新增課程配方「{p.recipe.title}」</h3>
           <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div>
-              <FieldLabel>主題</FieldLabel>
-              <dd className="mt-0.5 text-navy">{TOPICS.find((t) => t.id === p.framework.topicId)?.label ?? p.framework.topicId}</dd>
+              <FieldLabel>產業</FieldLabel>
+              <dd className="mt-0.5 text-navy">{p.recipe.industry}</dd>
             </div>
             <div>
-              <FieldLabel>單元</FieldLabel>
+              <FieldLabel>對象</FieldLabel>
+              <dd className="mt-0.5 text-navy">{p.recipe.audience}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel>同時新增的單元卡（{p.unitCards.length}）</FieldLabel>
               <dd>
                 <ol className="mt-0.5 space-y-0.5">
-                  {p.framework.moduleTitles.map((m, i) => (
-                    <li key={m} className="flex gap-2.5">
+                  {p.unitCards.map((u, i) => (
+                    <li key={u.title} className="flex gap-2.5">
                       <span className="w-4 shrink-0 text-right font-bold text-navy">{i + 1}</span>
-                      <span>{m}</span>
+                      <span>
+                        {u.title}（{moduleLabel(u.moduleId)}・{u.minutes} 分）
+                      </span>
                     </li>
                   ))}
                 </ol>
@@ -150,23 +134,23 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
         </>
       )}
 
-      {p.kind === "new_scenario" && (
+      {p.kind === "new_industry_pack" && (
         <>
-          <h3 className="mt-2 text-base font-bold text-navy">建議新增情境「{p.scenario.title}」</h3>
+          <h3 className="mt-2 text-base font-bold text-navy">建議新增產業素材包「{p.industryPack.title}」</h3>
           <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div>
               <FieldLabel>產業</FieldLabel>
-              <dd className="mt-0.5 text-navy">{p.scenario.industry}</dd>
+              <dd className="mt-0.5 text-navy">{p.industryPack.industry}</dd>
             </div>
             <div>
               <FieldLabel>受眾</FieldLabel>
-              <dd className="mt-0.5 text-navy">{p.scenario.audience}</dd>
+              <dd className="mt-0.5 text-navy">{p.industryPack.audience}</dd>
             </div>
             <div>
               <FieldLabel>案例</FieldLabel>
               <dd>
                 <ul className="mt-0.5 list-disc space-y-0.5 pl-5">
-                  {p.scenario.cases.map((c) => (
+                  {p.industryPack.cases.map((c) => (
                     <li key={c}>{c}</li>
                   ))}
                 </ul>
@@ -175,7 +159,7 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
             <div>
               <FieldLabel>素材檔</FieldLabel>
               <dd className="mt-0.5 text-navy">
-                {p.scenario.materialNames.length > 0 ? p.scenario.materialNames.join("、") : "沒有素材檔"}
+                {p.industryPack.materialNames.length > 0 ? p.industryPack.materialNames.join("、") : "沒有素材檔"}
               </dd>
             </div>
           </dl>
@@ -185,20 +169,6 @@ export function DraftCard({ st, draft, onDone }: { st: DemoState; draft: Knowled
           </div>
         </>
       )}
-
-      <Dialog
-        open={dialog === "saveAs"}
-        onClose={close}
-        title="另存成新框架"
-        description={<>原框架「{fw?.title}」不會改動。新框架從 v1 開始，單元先沿用原框架，這份草稿的修改記在 v1 的說明裡。</>}
-        submitLabel="另存"
-        onSubmit={saveAs}
-        submitDisabled={newTitle.trim() === ""}
-      >
-        <Field label="新框架名稱">
-          <TextInput value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required />
-        </Field>
-      </Dialog>
 
       <Dialog
         open={dialog === "discard"}
