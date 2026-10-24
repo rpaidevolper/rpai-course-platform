@@ -46,7 +46,7 @@ const FROZEN: Record<(typeof FROZEN_AFTER_CLOSING)[number], (st: DemoState) => D
   "blueprint/finalize": () => ({ type: "blueprint/finalize", courseId: COURSE }),
   "material/add": () => ({ type: "material/add", id: "m-new", courseId: COURSE, name: "x.pdf", sizeKb: 1 }),
   "material/remove": () => ({ type: "material/remove", courseId: COURSE, materialId: "m-pp-1" }),
-  "course/updateTags": () => ({ type: "course/updateTags", courseId: COURSE, tags: { audiences: ["人資"], industries: [], scenarios: [] } }),
+  "course/updateTags": () => ({ type: "course/updateTags", courseId: COURSE, tags: { audiences: ["特定職能"], industries: [], scenarios: [] } }),
 };
 
 describe("結案後凍結的操作，reducer 一律拒絕", () => {
