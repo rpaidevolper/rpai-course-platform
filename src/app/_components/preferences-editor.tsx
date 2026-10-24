@@ -12,7 +12,7 @@ const INPUT =
   "min-w-0 flex-1 rounded-md bg-card px-3 py-2 text-sm text-ink ring-[1.5px] ring-inset ring-body-muted placeholder:text-body-muted focus:ring-accent";
 const BTN = "inline-flex shrink-0 items-center justify-center rounded-md px-3 py-2 text-sm font-bold";
 const PRIMARY = `${BTN} bg-accent text-on-accent hover:bg-accent-press disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent`;
-const SECONDARY = `${BTN} bg-accent-tint text-ink hover:bg-layer`;
+const SECONDARY = `${BTN} bg-accent-tint text-ink hover:bg-accent-tint-hover`;
 const DANGER = `${BTN} bg-card text-danger ring-[1.5px] ring-inset ring-danger-tint hover:bg-danger-tint`;
 
 /** 講師偏好清單：檢視、新增、編輯、刪除。設計稿只存在記憶體，重新整理就還原。 */

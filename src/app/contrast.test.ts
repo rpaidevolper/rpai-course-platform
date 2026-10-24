@@ -32,7 +32,7 @@ const AA_SMALL = 4.5;
 
 // 文字 token × 它實際會出現的底色。停用的按鈕不在 WCAG 要求範圍內。
 const PAIRS: [text: string, backgrounds: string[]][] = [
-  ["ink", ["card", "canvas", "layer", "accent-tint"]],
+  ["ink", ["card", "canvas", "layer", "accent-tint", "accent-tint-hover"]],
   ["accent", ["card", "canvas", "layer", "accent-tint"]],
   ["body", ["card", "canvas", "layer", "accent-tint", "warning-tint"]],
   ["body-muted", ["card", "canvas", "layer"]],

@@ -130,7 +130,7 @@ const BTN = "inline-flex items-center rounded-md px-4 py-2 text-sm font-bold";
 const PRIMARY_FILL = "bg-accent text-on-accent";
 const SECONDARY_FILL = "bg-accent-tint text-ink";
 const PRIMARY = `${BTN} ${PRIMARY_FILL} hover:bg-accent-press`;
-const SECONDARY = `${BTN} ${SECONDARY_FILL} hover:bg-layer`;
+const SECONDARY = `${BTN} ${SECONDARY_FILL} hover:bg-accent-tint-hover`;
 
 export function ButtonLink({ href, children, variant = "primary" }: { href: string; children: ReactNode; variant?: "primary" | "secondary" }) {
   return (

@@ -138,7 +138,7 @@ export function KnowledgeView() {
 
         <nav aria-label="跳到模組" className="mb-6 flex flex-wrap gap-2">
           {visibleModules.map((m) => (
-            <a key={m.id} href={`#module-${m.id}`} className="rounded-md bg-accent-tint px-3 py-1.5 text-sm font-bold text-ink hover:bg-layer">
+            <a key={m.id} href={`#module-${m.id}`} className="rounded-md bg-accent-tint px-3 py-1.5 text-sm font-bold text-ink hover:bg-accent-tint-hover">
               {moduleLabel(m.id)}（{units.filter((u) => u.moduleId === m.id).length}）
             </a>
           ))}

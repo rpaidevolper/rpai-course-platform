@@ -26,6 +26,8 @@
   --color-accent-press: #000d3a;
   /* NavyTint：次按鈕、選取態淡底 */
   --color-accent-tint: #dce4f5;
+  /* 次按鈕 hover：淺色沿用 IceD */
+  --color-accent-tint-hover: #dbeaee;
   /* 主按鈕上的字 */
   --color-on-accent: #ffffff;
   /* 對話框背後的遮罩 */
@@ -92,6 +94,8 @@ html:has([data-section-nav]) {
   --color-accent-press: #54d8cd;
   /* NavyL */
   --color-accent-tint: #1a2c6e;
+  /* 次按鈕 hover：NavyL 跟 layer 同色，hover 到 layer 看不出變化，提亮一階 */
+  --color-accent-tint-hover: #24387f;
   /* Navy：Teal 主按鈕上的字 */
   --color-on-accent: #011455;
   --color-scrim: rgb(0 13 58 / 0.7);
