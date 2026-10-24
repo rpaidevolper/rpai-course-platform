@@ -26,7 +26,7 @@
 
 ## 3. 資料模型
 
-> **名詞正在改版。** 產品模組已改成「專案 → 課程 → 場次」，並新增發布、學員入口與知識庫（名詞見 `GLOSSARY.md`，取捨見 [ADR 0002](adr/0002-each-course-owns-its-blueprint.md)）。下圖仍是目前 schema 的樣子：其中的 `Course` 指「一場課」，對應新名詞的「課程」加上「場次」。schema 會等設計稿（#22）對齊後另外設計。領域模型 v2（多天課程、課綱討論、逐頁腳本與定稿、客戶文件與需求條目）見 #25 與 [ADR 0003](adr/0003-page-script-as-upstream-artifact.md)。
+> **名詞正在改版。** 產品模組已改成「專案 → 課程 → 場次」，並新增發布、學員入口與知識庫（名詞見 `GLOSSARY.md`，取捨見 [ADR 0002](adr/0002-each-course-owns-its-blueprint.md)）。下圖仍是目前 schema 的樣子：其中的 `Course` 指「一場課」，對應新名詞的「課程」加上「場次」。schema 會等設計稿（#22）對齊後另外設計。領域模型 v2（多天課程、課綱討論、逐頁腳本與定稿、客戶文件與需求條目）見 #25 與 [ADR 0003](adr/0003-page-script-as-upstream-artifact.md)。領域模型 v3（知識庫改成模組框架、模組卡、單元卡、課程配方與產業素材包；課程結案回存；全團隊共用一個工作區）見 #53、[ADR 0002 的修訂](adr/0002-each-course-owns-its-blueprint.md) 與 [ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)。
 
 ```
 Course（一場課）
@@ -105,7 +105,7 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 - **結構化輸出的 schema 相容性**：`BlueprintSchema` 用了 `min(1)`、`min(2)` 這類限制，第一次真的呼叫 `extractBlueprint()` 時要確認 API 接受；不接受就把限制移到 `checkBlueprint()` 做。
 - **藍圖 JSON → `*_教學藍圖.md`** 的轉換目前交給 runner skill 現場整理；若格式飄移影響下游 skill，改成後台先產好 Markdown 一起回傳。
 - **藍圖 diff UI**：v2 → v3 改了什麼要讓講師看得到。
-- **多講師／團隊**：目前 schema 只有單一 owner，團隊共享要加 membership 表。
+- **多講師／團隊**：已決定全團隊共用一個工作區（[ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)）；目前 schema 只有單一 owner，schema v2 時改以工作區過濾。
 - **卡住的工作**：`generating` 超過一定時間沒完成要能退回 `pending`（講師關了 Claude Code）。
 
 ## 8. 部署架構
