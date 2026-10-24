@@ -133,6 +133,7 @@ describe("用過的課程（由藍圖推得，不另存）", () => {
       expect(u.unitTitles.length).toBeGreaterThan(0);
     }
     expect(moduleCardUsage(st, "A5")).toEqual([]);
+    expect(moduleCardUsage(st, "B3").map((u) => u.course.id)).toEqual(["c-claude-advanced", "c-pa-finance", "c-gas-two-day"]);
   });
   it("藍圖單元改了，用過的課程跟著變（不存在別處）", () => {
     const next = structuredClone(st);

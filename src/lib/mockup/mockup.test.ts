@@ -15,7 +15,6 @@ import {
 } from "./data";
 import {
   coursesOfProject,
-  coursesUsingModule,
   getCourse,
   getIndustryPack,
   getModuleCard,
@@ -568,11 +567,6 @@ describe("知識庫查詢：課程配方、模組與單元卡", () => {
       "uc-a4-form-trigger",
       "uc-a4-safety-net",
     ]);
-  });
-
-  it("藍圖從含該模組的模組卡複製出生的課程", () => {
-    expect(coursesUsingModule(st, "B3").map((c) => c.id)).toEqual(["c-claude-intro-managers", "c-claude-advanced", "c-pa-finance"]);
-    expect(coursesUsingModule(st, "A5")).toEqual([]);
   });
 
   it("模組卡最新版本號", () => {
