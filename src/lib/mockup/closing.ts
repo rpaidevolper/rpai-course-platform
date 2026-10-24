@@ -1,17 +1,26 @@
-import { coursesOfProject, seriesLabel, sessionEndsAt, sessionsOfCourse } from "./logic";
+import { coursesOfProject, isHandsOnDay, seriesLabel, sessionEndsAt, sessionsOfCourse } from "./logic";
 import type { DemoState } from "./state";
 import type { DemoAction } from "./actions";
 import type { Artifact, Course, IsoTime, KnowledgeDraft, Project, ProjectStatus } from "./types";
 
 /**
  * 結案閘與結案狀態（#59）。純函式，不碰 UI；結案動作在 actions.ts 的 course/close。
- * 最終版（GLOSSARY）：課後由講師上傳、代表實際上課內容的簡報版本（講稿在簡報備忘稿裡，不另算）。
+ * 最終版（GLOSSARY）：課後由講師上傳、代表實際上課內容的版本（講稿在簡報備忘稿裡，不另算）。
+ * 每一天都要有簡報的最終版；有動手環節的天另外要有學員手冊的最終版（#107，ADR 0005）。
  * 它和定稿不同：定稿是產下游之前的認可，最終版是課上實際用過的版本。
  */
 
 /** 結案要有最終版的產物種類 */
-export const FINAL_KINDS = ["slides"] as const;
+export const FINAL_KINDS = ["slides", "handbook"] as const;
 export type FinalKind = (typeof FINAL_KINDS)[number];
+
+/**
+ * 某一天結案要有最終版的產物種類，簡報在前：每天都要簡報，有動手環節（isHandsOnDay）的天另外要學員手冊。
+ * 「哪一天需要哪些最終版」只在這裡決定，結案閘與最終版清單共用。
+ */
+export function requiredFinalKinds(course: Course, day: number): FinalKind[] {
+  return FINAL_KINDS.filter((kind) => kind === "slides" || isHandsOnDay(course, day));
+}
 
 export interface MissingFinal {
   kind: FinalKind;
@@ -38,19 +47,19 @@ function latestFinal(course: Course, kind: FinalKind, day: number): Artifact | u
   return uploads.reduce<Artifact | undefined>((best, a) => (best === undefined || a.version > best.version ? a : best), undefined);
 }
 
-/** 各天簡報的最終版，依天數排列；沒有最終版的那一份不出現。 */
+/** 各天簡報的最終版，依天數排列；沒有最終版的那一份不出現。結案草稿只讀簡報（講稿在備忘稿裡），學員手冊不算。 */
 export function finalArtifacts(course: Course): Artifact[] {
-  return course.blueprint.days.flatMap((_, i) =>
-    FINAL_KINDS.flatMap((kind) => {
-      const latest = latestFinal(course, kind, i + 1);
-      return latest ? [latest] : [];
-    }),
-  );
+  return course.blueprint.days.flatMap((_, i) => {
+    const latest = latestFinal(course, "slides", i + 1);
+    return latest ? [latest] : [];
+  });
 }
 
 export function closingGate(st: DemoState, course: Course, now: IsoTime): ClosingGate {
   const missingFinals = course.blueprint.days.flatMap((_, i): MissingFinal[] =>
-    FINAL_KINDS.filter((kind) => latestFinal(course, kind, i + 1) === undefined).map((kind) => ({ kind, day: i + 1 })),
+    requiredFinalKinds(course, i + 1)
+      .filter((kind) => latestFinal(course, kind, i + 1) === undefined)
+      .map((kind) => ({ kind, day: i + 1 })),
   );
   const sessions = sessionsOfCourse(st, course.id);
   const unfinishedSessionIds = sessions.filter((s) => Date.parse(sessionEndsAt(s)) > Date.parse(now)).map((s) => s.id);

@@ -803,7 +803,7 @@ export const COURSES: Course[] = [
     materials: [],
   },
   {
-    // 示範「可以結案」：場次已上完、每天的簡報都有講師上傳的最終版，結案閘全過
+    // 示範「可以結案」：場次已上完、每天的簡報與含動手環節那天的學員手冊都有講師上傳的最終版，結案閘全過
     id: "c-pa-pilot",
     projectId: "p-f-2026",
     title: "請款簽核先導班",
@@ -824,6 +824,9 @@ export const COURSES: Course[] = [
       artifact({ id: "a-pp-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-08-21T23:00:00+08:00", createdAt: "2026-08-21T22:00:00+08:00" }),
       // 課後講師上傳實際上課用的版本（含備忘稿裡的講稿）：最終版
       artifact({ id: "a-pp-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 2, editedFromId: "a-pp-slides-1", createdAt: "2026-09-05T20:30:00+08:00" }),
+      artifact({ id: "a-pp-handbook-1", kind: "handbook", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pp-slides-1"], createdAt: "2026-08-22T10:00:00+08:00" }),
+      // 課後講師上傳實際發給學員的手冊：學員手冊的最終版
+      artifact({ id: "a-pp-handbook-2", kind: "handbook", day: 1, version: 2, blueprintVersion: 2, upstreamIds: ["a-pp-slides-1"], editedFromId: "a-pp-handbook-1", createdAt: "2026-09-05T20:40:00+08:00" }),
     ],
     materials: [],
   },
