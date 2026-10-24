@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { chosenModuleCards, makeId } from "@/lib/mockup/actions";
+import { isCourseClosed, isProjectClosed } from "@/lib/mockup/closing";
 import { ARTIFACT_LABELS, CLIENT_DOCUMENT_LABELS } from "@/lib/mockup/types";
 import {
   coursesOfProject,
@@ -68,7 +69,13 @@ export function ProjectView({ projectId }: { projectId: string }) {
   return (
     <>
       <Breadcrumb items={[{ label: "專案", href: "/projects" }, { label: project.title }]} />
-      <PageHeader title={project.title} description={<ProjectStatusBadge status={project.status} />}>
+      <PageHeader title={project.title} description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <ProjectStatusBadge status={project.status} />
+            {isProjectClosed(st, project.id) && <Badge tone="success">結案</Badge>}
+          </span>
+        }
+      >
         <Button variant="secondary" onClick={() => setDialog("edit")}>
           編輯專案
         </Button>
@@ -285,7 +292,9 @@ export function ProjectView({ projectId }: { projectId: string }) {
                         <TagList tags={c} spec={courseSpec(c)} />
                       </div>
                     </div>
-                    {sessions.length === 0 ? (
+                    {isCourseClosed(c) ? (
+                      <Badge tone="success">已結案</Badge>
+                    ) : sessions.length === 0 ? (
                       <Badge>還沒排場次</Badge>
                     ) : missing === 0 ? (
                       <Badge tone="success">場次都準備好了</Badge>

@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { makeId } from "@/lib/mockup/actions";
 import { coursesOfProject, formatDate, formatTwd, projectsByStatus, sessionStartsAt, upcomingSessions } from "@/lib/mockup/logic";
+import { isProjectClosed } from "@/lib/mockup/closing";
 import { dispatch, useDemoState } from "@/lib/mockup/store";
 import { PROJECT_STATUS_LABELS, type Project, type ProjectStatus, type Session } from "@/lib/mockup/types";
 import type { DemoState } from "@/lib/mockup/state";
 import { toast } from "../../_components/demo-runtime";
-import { Button, CARD, Empty, PageHeader, ProjectStatusBadge, SectionTitle } from "../../_components/ui";
+import { Badge, Button, CARD, Empty, PageHeader, ProjectStatusBadge, SectionTitle } from "../../_components/ui";
 import { ProjectDialog } from "./project-dialog";
 
 const STATUS_HINTS: Record<ProjectStatus, string> = {
@@ -84,6 +85,7 @@ function ProjectRow({ st, project: p, upcoming }: { st: DemoState; project: Proj
             </Link>
           </h3>
           <ProjectStatusBadge status={p.status} />
+          {isProjectClosed(st, p.id) && <Badge tone="success">結案</Badge>}
         </div>
         <p className="mt-0.5 text-sm">
           {p.clientContext.company}，{p.clientContext.industry}

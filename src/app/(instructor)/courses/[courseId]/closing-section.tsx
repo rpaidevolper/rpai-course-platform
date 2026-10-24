@@ -1,0 +1,69 @@
+"use client";
+
+import { closingGate, isCourseClosed } from "@/lib/mockup/closing";
+import { formatDateTime, seriesLabel } from "@/lib/mockup/logic";
+import { dispatch } from "@/lib/mockup/store";
+import type { DemoState } from "@/lib/mockup/state";
+import type { Course } from "@/lib/mockup/types";
+import { toast } from "../../../_components/demo-runtime";
+import { Badge, Button, CARD, SectionTitle } from "../../../_components/ui";
+
+/**
+ * 結案：每天的最終版逐頁腳本與簡報（課後由講師上傳）都齊了、所有場次都已結束，才能按。
+ * 缺哪一天、缺哪一種，以及還有沒有場次沒結束，都列在按鈕上方。
+ * 結案後內容才會回存知識庫（草稿的產生是另一張票，這裡只負責結案）。
+ */
+export function ClosingSection({ st, course }: { st: DemoState; course: Course }) {
+  const closed = isCourseClosed(course);
+  const gate = closingGate(st, course, st.now);
+
+  const close = () => {
+    dispatch({ type: "course/close", courseId: course.id });
+    toast(`「${course.title}」已結案，不能再新增場次`);
+  };
+
+  return (
+    <section aria-labelledby="closing" className="mt-10">
+      <SectionTitle aside="場次都上完、每天的最終版都上傳了，才能結案">
+        <span id="closing">結案</span>
+      </SectionTitle>
+      <div className={`${CARD} p-4 text-sm`}>
+        {closed ? (
+          <>
+            <Badge tone="success">已結案</Badge>
+            <p className="mt-2 text-body-muted">
+              {formatDateTime(course.closedAt!)} 結案。結案後不能再新增場次；要再開同樣的課，請複製這門課程。
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-body-muted">最終版是課後由你上傳、代表實際上課內容的逐頁腳本與簡報。AI 產的版本即使沒改，也要重新上傳一次才算。</p>
+            <ul className="mt-3 space-y-1">
+              {gate.missingFinals.length === 0 ? (
+                <li>每一天的最終版都齊了。</li>
+              ) : (
+                gate.missingFinals.map((m) => (
+                  <li key={`${m.kind}-${m.day}`} className="text-danger">
+                    缺最終版：{seriesLabel({ kind: m.kind, day: m.day })}
+                  </li>
+                ))
+              )}
+              {!gate.hasSessions ? (
+                <li className="text-danger">還沒有任何場次。</li>
+              ) : gate.unfinishedSessionIds.length > 0 ? (
+                <li className="text-danger">還有 {gate.unfinishedSessionIds.length} 個場次沒結束。</li>
+              ) : (
+                <li>所有場次都已結束。</li>
+              )}
+            </ul>
+            <div className="mt-3">
+              <Button onClick={close} disabled={!gate.canClose} title={gate.canClose ? undefined : "上面列的事情都完成才能結案"}>
+                結案
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}

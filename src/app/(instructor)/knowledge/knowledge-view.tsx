@@ -97,7 +97,7 @@ export function KnowledgeView() {
           )}
         </div>
         {drafts.length === 0 ? (
-          !importing && <Empty>目前沒有草稿。課程最後一個場次結束後，AI 會自動拆出新的草稿。</Empty>
+          !importing && <Empty>目前沒有草稿。課程結案後，內容會拆成待審核的草稿。</Empty>
         ) : (
           <ul className="space-y-4">
             {drafts.map((d) => (

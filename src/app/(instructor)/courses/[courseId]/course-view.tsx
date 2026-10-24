@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { makeId } from "@/lib/mockup/actions";
+import { isCourseClosed } from "@/lib/mockup/closing";
 import { downloadPlaceholder } from "@/lib/mockup/download";
 import {
   artifactVersions,
@@ -49,6 +50,7 @@ import {
   SectionTitle,
   TextButton,
 } from "../../../_components/ui";
+import { ClosingSection } from "./closing-section";
 import { NewSessionButton } from "./new-session-dialog";
 
 const STATUS_TEXT = { pending: "排隊中", generating: "產出中", ready: "可用", failed: "產出失敗" } as const;
@@ -128,6 +130,7 @@ export function CourseView({ courseId }: { courseId: string }) {
           )
         }
       >
+        {isCourseClosed(course) && <Badge tone="success">已結案</Badge>}
         <ButtonLink href={`/courses/${course.id}/chat`}>繼續跟 AI 談藍圖</ButtonLink>
       </PageHeader>
 
@@ -276,10 +279,16 @@ export function CourseView({ courseId }: { courseId: string }) {
             </ul>
           )}
           <div className="mt-3">
-            <NewSessionButton course={course} now={st.now} />
+            {isCourseClosed(course) ? (
+              <p className="text-sm text-body-muted">這門課程已結案，不能再新增場次。要再開同樣的課，請複製這門課程。</p>
+            ) : (
+              <NewSessionButton course={course} now={st.now} />
+            )}
           </div>
         </section>
       </div>
+
+      <ClosingSection st={st} course={course} />
     </>
   );
 }

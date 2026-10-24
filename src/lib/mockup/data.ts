@@ -359,6 +359,22 @@ export const PROJECTS: Project[] = [
     clientDocuments: [],
     requirements: [],
   },
+  {
+    id: "p-f-2026",
+    title: "F 公司請款簽核先導班",
+    status: "active",
+    priceTwd: 52000,
+    clientContext: {
+      company: "F 公司",
+      industry: "批發零售",
+      goal: "財務部先用一天試辦請款簽核自動化，確認可行再推到其他部門。",
+      industryPackId: "ip-finance-approval",
+      itConstraints: [],
+      brand: null,
+    },
+    clientDocuments: [],
+    requirements: [],
+  },
 ];
 
 /**
@@ -667,6 +683,7 @@ export const COURSES: Course[] = [
     scenarios: ["文書", "會議與紀錄"],
     source: { moduleIds: ["A1", "B1", "B2"], industryPackId: "ip-manufacturing" },
     copiedFrom: null,
+    closedAt: null,
     blueprint: claudeIntroBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-09-12T15:20:00+08:00", note: "由模組卡與製造業的產業素材包談出初版", finalizedAt: null },
@@ -701,6 +718,7 @@ export const COURSES: Course[] = [
     scenarios: ["文書", "知識整理"],
     source: { moduleIds: ["A1", "B2", "B3"], industryPackId: "ip-manufacturing" },
     copiedFrom: { courseId: "c-claude-intro", blueprintVersion: 3 },
+    closedAt: null,
     blueprint: claudeIntroManagersBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-10-08T09:30:00+08:00", note: "以「Claude 入門」藍圖 v3 為底複製，改成主管視角", finalizedAt: null },
@@ -718,6 +736,7 @@ export const COURSES: Course[] = [
     scenarios: ["文書", "數據分析"],
     source: { moduleIds: ["B1", "B2", "B3"], industryPackId: "ip-manufacturing" },
     copiedFrom: null,
+    closedAt: null,
     blueprint: claudeAdvancedBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-10-05T14:00:00+08:00", note: "由模組卡談出初版，帶入專案的客戶背景", finalizedAt: null },
@@ -735,6 +754,7 @@ export const COURSES: Course[] = [
     scenarios: ["文書", "客服與信件"],
     source: { moduleIds: ["A4", "B3"], industryPackId: "ip-finance-approval" },
     copiedFrom: null,
+    closedAt: null,
     blueprint: paFinanceBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-08-28T10:00:00+08:00", note: "由模組卡與金融業的產業素材包談出初版", finalizedAt: null },
@@ -759,6 +779,7 @@ export const COURSES: Course[] = [
     scenarios: ["數據分析", "客服與信件"],
     source: { moduleIds: ["A4", "B1"], industryPackId: "ip-manufacturing" },
     copiedFrom: null,
+    closedAt: null,
     blueprint: gasTwoDayBlueprint,
     blueprintHistory: [
       { version: 1, createdAt: "2026-09-22T10:00:00+08:00", note: "由模組卡與製造業的產業素材包談出初版，一天", finalizedAt: null },
@@ -774,6 +795,34 @@ export const COURSES: Course[] = [
       artifact({ id: "a-gas-slides-d2-1", kind: "slides", day: 2, version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d2-1"], createdAt: "2026-10-04T22:00:00+08:00" }),
       artifact({ id: "a-gas-handbook-1", kind: "handbook", version: 1, blueprintVersion: 2, upstreamIds: ["a-gas-script-d1-1", "a-gas-script-d2-1"], createdAt: "2026-10-05T10:00:00+08:00" }),
       artifact({ id: "a-gas-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 2, editedFromId: "a-gas-script-d1-1", createdAt: "2026-10-06T21:00:00+08:00" }),
+    ],
+    materials: [],
+  },
+  {
+    // 示範「可以結案」：場次已上完、每天的逐頁腳本與簡報都有講師上傳的最終版，結案閘全過
+    id: "c-pa-pilot",
+    projectId: "p-f-2026",
+    title: "請款簽核先導班",
+    audiences: ["財務", "行政"],
+    tools: ["Power Automate", "Microsoft Teams"],
+    industries: ["金融"],
+    scenarios: ["文書", "客服與信件"],
+    source: { moduleIds: ["A4", "B3"], industryPackId: "ip-finance-approval" },
+    copiedFrom: null,
+    closedAt: null,
+    blueprint: paFinanceBlueprint,
+    blueprintHistory: [
+      { version: 1, createdAt: "2026-08-10T10:00:00+08:00", note: "由模組卡與金融業的產業素材包談出初版", finalizedAt: null },
+      { version: 2, createdAt: "2026-08-18T09:30:00+08:00", note: "先導班只留差旅請款一條流程", finalizedAt: "2026-08-19T09:00:00+08:00" },
+    ],
+    artifacts: [
+      artifact({ id: "a-pp-outline-1", kind: "outline", version: 1, blueprintVersion: 2, sentToClientAt: "2026-08-19T15:00:00+08:00", createdAt: "2026-08-19T12:00:00+08:00" }),
+      artifact({ id: "a-pp-prep-1", kind: "prep_sheet", version: 1, blueprintVersion: 2, createdAt: "2026-08-19T12:05:00+08:00" }),
+      artifact({ id: "a-pp-script-d1-1", kind: "page_script", day: 1, version: 1, blueprintVersion: 2, finalizedAt: "2026-08-21T10:00:00+08:00", createdAt: "2026-08-20T20:00:00+08:00" }),
+      artifact({ id: "a-pp-slides-1", kind: "slides", day: 1, version: 1, blueprintVersion: 2, upstreamIds: ["a-pp-script-d1-1"], createdAt: "2026-08-21T22:00:00+08:00" }),
+      // 課後講師上傳實際上課用的版本：兩個都是最終版
+      artifact({ id: "a-pp-script-d1-2", kind: "page_script", day: 1, version: 2, blueprintVersion: 2, upstreamIds: [], editedFromId: "a-pp-script-d1-1", createdAt: "2026-09-05T20:00:00+08:00" }),
+      artifact({ id: "a-pp-slides-2", kind: "slides", day: 1, version: 2, blueprintVersion: 2, upstreamIds: ["a-pp-script-d1-1"], editedFromId: "a-pp-slides-1", createdAt: "2026-09-05T20:30:00+08:00" }),
     ],
     materials: [],
   },
@@ -859,6 +908,14 @@ export const SESSIONS: Session[] = [
       links: [SLIDO_GAS_1020],
     },
     portal: { code: "e1020", closedAt: null, expiresAtOverride: null },
+  },
+  {
+    id: "s-pp-0904",
+    courseId: "c-pa-pilot",
+    days: [{ startsAt: "2026-09-04T09:30:00+08:00", endsAt: "2026-09-04T16:30:00+08:00", venue: "F 公司財務部會議室", instructorId: "inst-lin" }],
+    links: [],
+    publication: null,
+    portal: { code: "f0904", closedAt: null, expiresAtOverride: null },
   },
 ];
 
