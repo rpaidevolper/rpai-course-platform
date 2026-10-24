@@ -1,6 +1,8 @@
 ---
-status: accepted
+status: superseded in part by 0005
 ---
+
+> 「逐頁腳本是獨立產物」的部分已被 [ADR 0005](0005-page-script-merged-into-slides.md) 取代；「產物可以讀一份上游產物，但前提只能來自藍圖」仍然有效。
 
 # 逐頁腳本是產物，簡報與學員手冊以它為上游
 
