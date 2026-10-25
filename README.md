@@ -83,7 +83,7 @@ pnpm dev          # http://localhost:3000
 ```
 
 - 本機 Supabase 會自動套用 `supabase/migrations/`。管理介面在 http://localhost:54323 。
-- 藍圖對話需要 Anthropic API key：向團隊索取後填入 `.env.local` 的 `ANTHROPIC_API_KEY`。只跑 `lint`、`typecheck`、`test` 不需要任何金鑰。
+- 只跑 `lint`、`typecheck`、`test` 不需要任何金鑰。
 - `pnpm db:stop` 停止資料庫；`pnpm db:reset` 清空並重新套用 migrations。
 
 確認環境正常：
@@ -111,7 +111,6 @@ session 開好就能跑 `pnpm lint && pnpm typecheck && pnpm test`，也能用 `
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `ANTHROPIC_API_KEY`（藍圖對話需要）
 
 環境變數優先於 `.env.local`，所以雲端 session 不需要 `.env.local`。這是正式資料：不要刪改既有資料，也不要手動套 migration。
 

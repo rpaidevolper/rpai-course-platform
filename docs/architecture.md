@@ -59,8 +59,8 @@
 
 ```
 Course（一場課）
- ├─ Conversation（對話串；purpose = blueprint | outline | slides | handbook）
- │   └─ Message（Anthropic content blocks 原樣存）
+ ├─ Conversation（已不使用，見下；原為對話串，purpose = blueprint | outline | slides | handbook）
+ │   └─ Message（已不使用，見下；原為 Anthropic content blocks 原樣存）
  ├─ Blueprint v1, v2, v3 …（結構化 JSON，唯一真相來源）
  └─ Artifact（產物；每一筆綁定「基於哪一版藍圖」，簡報與學員手冊另記第幾天）
       ├─ outline        v2  ready       ← blueprint v3
@@ -71,7 +71,8 @@ ApiToken（講師的 Claude Code 權杖；只存 sha256）
 
 關鍵設計：
 
-- **對話不是真相來源，藍圖才是。** 對話結束（或講師按「更新藍圖」）時，用結構化輸出把對話抽成 `Blueprint` JSON 存成新版本。之後生成任何產物都只讀藍圖。
+- **對話不是真相來源，藍圖才是。** 對話在講師自己的 AI 裡進行；講師確認後，AI 用 `rpai_platform_save_blueprint` 把藍圖存成新版本。之後生成任何產物都只讀藍圖。
+- **`conversations`、`messages` 兩張表與 `conversations.model` 欄位已不使用。** 它們是後台跑藍圖對話時留下的；後台不再呼叫 AI（[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)）後，沒有任何程式寫入它們。移除是破壞性變更，依 CLAUDE.md 的 migration 規則拆成兩個 PR（先上線不再碰它們的程式碼，下一個 PR 才 drop），本次不動 schema。
 - **藍圖版本不可變。** 修改 = 新增一版，舊版保留，產物才能可靠地指向它出生時的那一版。
 - **產物不自動重生。** 藍圖升版後 UI 標示過期產物；講師決定要不要重生。
 - **產物分天、記上游。** `day` 是第幾天（課程大綱沒有）；`upstream_id` 是學員手冊的上游簡報；`edited_from_id` 是講師自己改過再上傳時，原本那一份。版本在「課程＋種類＋第幾天」裡遞增。
@@ -108,15 +109,7 @@ MCP 工具在 `src/lib/mcp/tools/`，流程寫在 `src/lib/mcp/instructions.ts`�
 
 ## 5. 後台的 AI 呼叫
 
-> **已由 [ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md) 取代：後台不呼叫 AI。** 本節描述的程式都沒有接線，由 #138 移除。
-
-| 階段 | 用什麼 | 為什麼 |
-|---|---|---|
-| 藍圖對話 | Messages API streaming（`client.messages.stream`） | 即時回覆、自己掌控對話與存檔 |
-| 抽藍圖 | `client.messages.parse` + `zodOutputFormat(BlueprintSchema)` | 直接拿到通過 schema 驗證的 JSON |
-| 雲端後備產檔（未接線） | `client.beta.messages.stream` + `container.skills` + code execution（`src/lib/claude/generate-artifact.ts`） | 給沒有 Claude Code 的講師用；要啟用得先把 rpai-* skill 上傳成 API 自訂 skill，並補一個常駐 worker |
-
-Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最穩定，加 `cache_control`）→ 藍圖 JSON（同版本內穩定）→ 該產物的指示 + 講師這次的要求（每次都變）。會變的內容永遠放最後。
+後台不呼叫 AI（[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)）。舊的藍圖對話、抽藍圖與雲端後備產檔程式（`src/lib/claude/`）以及 Anthropic SDK 已在 #138 移除。
 
 ## 6. 已做的決策
 
@@ -125,7 +118,7 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 | **平台定位** | **講師在自己的 AI 裡備課；平台是團隊的記憶與知識後台（MCP＋網頁），後台不呼叫 AI** | 一個 AI session 記不住團隊的事；講師留在平常用的 Claude；換成 Codex 等其他 AI 也能用（[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)）。下面的「模型」一列因此退場 | 2026-10-25 |
 | 技術棧 | Next.js 16 + TypeScript，單一 repo | 前後端一起、串流聊天順手 | 2026-09-03 |
 | 資料庫 | Supabase Postgres + Storage，RLS 依 owner_id | 登入、檔案、資料庫一站解決 | 2026-09-03 |
-| 模型 | 預設 `claude-opus-5-5`，每場對話可在 `conversations.model` 各自選（Opus 5.5／Sonnet 5.5／最新版 Haiku（目前 5.5）／Fable 5.1，清單在 `src/lib/claude/models.ts`）；不指定 thinking（各模型用自己的預設），用 effort 調深度 | 依 claude-api skill 的預設；講師依草稿／定稿、成本、速度自選 | 2026-09-03、2026-10-02、2026-10-24 |
+| 模型 | （已退場，見「平台定位」一列）預設 `claude-opus-5-5`，每場對話可在 `conversations.model` 各自選（Opus 5.5／Sonnet 5.5／最新版 Haiku（目前 5.5）／Fable 5.1）；不指定 thinking（各模型用自己的預設），用 effort 調深度 | 依 claude-api skill 的預設；講師依草稿／定稿、成本、速度自選 | 2026-09-03、2026-10-02、2026-10-24 |
 | 藍圖版本 | 不可變、只新增；產物綁定版本 | 產物才能可靠指向出生時的藍圖 | 2026-09-03 |
 | 長時間產檔在哪跑（已由「平台定位」一列取代：產檔在講師自己的 AI 裡跑，不限 Claude Code） | 講師自己的 Claude Code + plugin（MCP 橋接） | 用講師的訂閱與電腦；既有 skill 原樣可用；不踩「第三方產品不得使用訂閱登入」的政策。捨棄的選項：雲端 worker（要付 API 費、skill 要重新上傳）、Agent SDK 打包成 runner app（政策上需要 API key，還要做打包與金鑰分發） | 2026-09-03 |
 | rpai-* skill 怎麼給講師 | 打包進 plugin | 講師裝一次就齊全，版本由 repo 控制 | 2026-09-03 |
@@ -137,7 +130,6 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 - **權杖管理 UI**：現在只有 `pnpm token:create`；後台要有「產生／撤銷權杖」頁。
 - **分辨是哪位講師**：v0 的網頁用共用密碼，claude.ai 連接器用一組全組織共用的權杖，平台分不出是誰。要分人得做 OAuth（連接器）與個人登入（網頁）。
 - **共用密碼的防護**：登入沒有次數限制；登出只刪瀏覽器的 cookie，被複製的 cookie 在 30 天內或換密碼前都有效。
-- **結構化輸出的 schema 相容性**：`BlueprintSchema` 用了 `min(1)`、`min(2)` 這類限制，第一次真的呼叫 `extractBlueprint()` 時要確認 API 接受；不接受就把限制移到 `checkBlueprint()` 做。
 - **藍圖 diff UI**：v2 → v3 改了什麼要讓講師看得到。
 - **多講師／團隊**：已決定全團隊共用一個工作區（[ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)）；目前 schema 只有單一 owner，schema v2 時改以工作區過濾。
 - **沒完成的上傳**：要了上傳網址卻沒有完成的產物會一直停在 `generating`；之後可以定期清掉超過一天的。

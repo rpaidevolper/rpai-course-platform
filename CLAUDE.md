@@ -127,7 +127,6 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 ### 技術棧
 
 - Next.js 16（App Router、`src/` 目錄）+ TypeScript strict + Tailwind v4
-- Anthropic TypeScript SDK `@anthropic-ai/sdk`：只剩 `src/lib/claude/` 裡沒有接線的舊程式，由 #138 移除
 - MCP server：`mcp-handler` + `@modelcontextprotocol/server` v2，掛在 `src/app/api/mcp/route.ts`
 - Supabase（Postgres + Auth + Storage），schema 在 `supabase/migrations/`
 - zod v4（藍圖 schema、結構化輸出、MCP 工具輸入）、vitest
@@ -156,7 +155,6 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 src/app/              Next.js 路由：(dashboard) 是登入後的網頁，login 是登入頁，u 是上傳頁，demo 是設計稿，api/mcp 是 MCP server
 src/proxy.ts          只做樂觀檢查：沒有登入 cookie 就導去 /login；頁面與 route handler 自己再驗一次
 src/lib/blueprint/    藍圖 schema 與完整性檢查（純函式，可單測）
-src/lib/claude/       沒有接線的舊 Anthropic API 程式，由 #138 移除
 src/lib/dashboard/    網頁用的資料讀取、上傳與下載（不以 owner 過濾，見「資料規範」）
 src/lib/knowledge/    知識庫的解析、去識別化、同步與查詢；`scripts/kb-sync.ts` 直接執行，只能用加 `.ts` 的相對路徑 import
 src/lib/mcp/          MCP 工具、server instructions、權杖驗證、每組工具的資料存取（*-store.ts）
@@ -170,19 +168,6 @@ Dockerfile            production image（Next.js standalone；目前部署在 Ve
 scripts/              維運腳本（`setup-production.sh` 建 production 環境、`smoke-test.sh` 部署後檢查）
 docs/                 架構與決策記錄
 ```
-
-### Claude API 規範
-
-這一節只管 `src/lib/claude/` 裡的舊程式，#138 會連同這一節一起移除；新功能照北極星規則 1，後台不呼叫 AI。
-
-動任何 `src/lib/claude/` 程式前，先載入 `claude-api` skill 確認 API 形狀，不要憑記憶寫。
-
-- 模型由每場對話的 `conversations.model` 決定（清單與預設在 `src/lib/claude/models.ts`），呼叫端一律把 `ModelId` 傳進來，不要寫死模型字串。清單一律用各系列的最新版（Haiku 用最新版 Haiku，目前是 `claude-haiku-5-5`）。各模型參數支援不同（例如 effort 的預設值不一樣），新增參數前先確認清單內每個模型都吃得下。
-- thinking 預設 adaptive（可省略參數），用 `output_config.effort` 控制深度。**不要**用 `budget_tokens`、`temperature`，**不要**做 assistant prefill——這些在現行模型都會回 400。
-- 對話一律 streaming（`client.messages.stream`）；非串流 `max_tokens` 約 16000，串流約 64000。
-- 從對話抽藍圖用 `client.messages.parse` + `zodOutputFormat(BlueprintSchema)`；schema 只有一份，在 `src/lib/blueprint/schema.ts`，不要另外手刻 JSON schema。
-- Prompt 順序固定：品牌規範 → 藍圖 → 該產物的指示 → 講師這次的要求。穩定的前段加 `cache_control`；時間戳、UUID 這類會變的內容一律放最後。
-- 錯誤處理用 SDK 的 typed error class（`Anthropic.RateLimitError` 等），不要字串比對。
 
 ### MCP 與 plugin 規範
 
