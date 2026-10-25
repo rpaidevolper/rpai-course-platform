@@ -5,8 +5,8 @@ import { MODULE_IDS } from "./modules";
  * 教學藍圖：一場課的唯一真相來源。
  * 課程大綱、簡報、學員手冊都從這份資料生成，所以欄位以「生成時需要知道什麼」為準。
  *
- * 這份 schema 同時餵給 Claude 的結構化輸出（zodOutputFormat），
- * 所以不用 optional / default，可缺的欄位一律 nullable，陣列可為空。
+ * 講師的 AI 透過 MCP 的 rpai_platform_save_blueprint 寫入這份資料，工具的輸入就是這份 schema 轉成的 JSON Schema。
+ * 不用 optional / default：每個欄位都要明確給值，沒有的資訊寫 null，陣列可為空，存下來的每一版欄位都齊全。
  */
 
 /** 五元素：每場課都應該同時具備，缺一則藍圖不完整。 */
@@ -56,7 +56,7 @@ export const APPLICATION_LEVEL_LABELS: Record<ApplicationLevel, string> = {
 
 /**
  * 單元（藍圖單元與單元卡）的應用層級值：L1–L5、na（不適用，純方法：評過了、這個單元本來就沒有層級），
- * 或 null（未評：還沒評）。兩者是不同狀態；結構化輸出不能用 optional／default，所以未評用 nullable。
+ * 或 null（未評：還沒評）。兩者是不同狀態；欄位不用 optional（見檔頭），所以未評用 null。
  */
 export const UNIT_LEVELS = [...APPLICATION_LEVELS, "na"] as const;
 export type UnitLevelValue = (typeof UNIT_LEVELS)[number];
@@ -75,7 +75,7 @@ export type UnitSourceKind = (typeof UNIT_SOURCE_KINDS)[number];
 
 /**
  * 單元的來源（ADR 0002：來源記錄在單元層級，內容是複製來的，不引用）。
- * 不用 discriminated union，維持一個扁平物件，結構化輸出比較穩。
+ * 不用 discriminated union，維持一個扁平物件：轉成 JSON Schema 後是單純的物件，AI 填起來比較穩。
  */
 export const UnitSourceSchema = z.object({
   kind: z.enum(UNIT_SOURCE_KINDS).describe("unit_card＝知識庫的單元卡；course＝平台上另一門課程的單元"),

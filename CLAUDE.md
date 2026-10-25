@@ -129,7 +129,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 - Next.js 16（App Router、`src/` 目錄）+ TypeScript strict + Tailwind v4
 - MCP server：`mcp-handler` + `@modelcontextprotocol/server` v2，掛在 `src/app/api/mcp/route.ts`
 - Supabase（Postgres + Auth + Storage），schema 在 `supabase/migrations/`
-- zod v4（藍圖 schema、結構化輸出、MCP 工具輸入）、vitest
+- zod v4（藍圖 schema、MCP 工具輸入）、vitest
 
 ### 常用指令
 
