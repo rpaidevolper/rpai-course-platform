@@ -92,30 +92,24 @@ export function createSupabaseCourseStore(): CourseStore {
 
   return {
     async listCourses(ownerId) {
+      // 每門課只嵌入最新一版的版本號，回傳列數＝課程數，不會因為版本多而被 API 的列數上限截斷
       const { data: courses, error } = await supabase
         .from("courses")
-        .select("id, title, updated_at")
+        .select("id, title, updated_at, blueprints(version)")
         .eq("owner_id", ownerId)
-        .order("updated_at", { ascending: false });
+        .order("updated_at", { ascending: false })
+        .order("version", { referencedTable: "blueprints", ascending: false })
+        .limit(1, { referencedTable: "blueprints" });
       if (error) throw error;
-      if (!courses || courses.length === 0) return [];
 
-      const { data: versions, error: versionsError } = await supabase
-        .from("blueprints")
-        .select("course_id, version")
-        .in("course_id", courses.map((c) => c.id));
-      if (versionsError) throw versionsError;
-
-      const latest = new Map<string, number>();
-      for (const row of versions ?? []) {
-        latest.set(row.course_id, Math.max(latest.get(row.course_id) ?? 0, row.version));
-      }
-      return courses.map((c) => ({
-        id: c.id,
-        title: c.title,
-        latest_version: latest.get(c.id) ?? null,
-        updated_at: c.updated_at,
-      }));
+      return ((courses ?? []) as { id: string; title: string; updated_at: string; blueprints: { version: number }[] }[]).map(
+        (c) => ({
+          id: c.id,
+          title: c.title,
+          latest_version: c.blueprints[0]?.version ?? null,
+          updated_at: c.updated_at,
+        }),
+      );
     },
 
     async getBlueprint(ownerId, courseId, version) {
@@ -194,13 +188,14 @@ export function createSupabaseCourseStore(): CourseStore {
 
       const version = await insertNextVersion(courseId, content, input.changeNote);
 
-      // 課程標題跟著最新一版走；updated_at 由資料庫 trigger 更新
+      // 課程標題跟著最新一版走；updated_at 由資料庫 trigger 更新。
+      // 這一版已經存進去了：標題沒改成功不回錯，免得 AI 重試又多存一版；下次存藍圖時會再改一次。
       const { error: titleError } = await supabase
         .from("courses")
         .update({ title: content.title })
         .eq("id", courseId)
         .eq("owner_id", ownerId);
-      if (titleError) throw titleError;
+      if (titleError) console.error("藍圖已存，但課程標題沒有更新：", titleError.message);
 
       return { courseId, courseTitle: content.title, version, createdCourse: false };
     },
