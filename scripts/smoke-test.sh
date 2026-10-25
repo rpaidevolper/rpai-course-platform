@@ -30,9 +30,21 @@ for i in $(seq 1 20); do
 done
 pass "/api/health  $health"
 
-code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$base/")
-[ "$code" = "200" ] || fail "GET / 回 $code，預期 200"
-pass "GET /  200"
+code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$base/login")
+[ "$code" = "200" ] || fail "GET /login 回 $code，預期 200"
+pass "GET /login  200"
+
+# 沒帶登入 cookie 的 / 要導去登入頁；不跟隨轉址，只看回應的狀態碼與 Location
+result=$(curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' --max-time 15 "$base/")
+code=${result%% *}
+location=${result#* }
+case "$code" in 3??) ;; *) fail "GET / 沒帶 cookie 回 $code，預期 3xx 導去 /login" ;; esac
+case "$location" in */login*) ;; *) fail "GET / 轉址到 $location，預期含 /login" ;; esac
+pass "GET /（沒帶 cookie）  $code → $location"
+
+code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$base/demo")
+[ "$code" = "200" ] || fail "GET /demo 回 $code，預期 200"
+pass "GET /demo  200"
 
 code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 \
   -X POST -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \

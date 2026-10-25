@@ -7,7 +7,7 @@ import type { Session } from "@/lib/mockup/types";
  * 需求對照、產物在課程頁；場次安排與發布在場次頁。
  */
 function sourceHref(source: ReadinessSource, session: Session): string {
-  const course = `/courses/${session.courseId}`;
+  const course = `/demo/courses/${session.courseId}`;
   switch (source) {
     case "blueprint":
       return `${course}/chat`;
@@ -16,9 +16,9 @@ function sourceHref(source: ReadinessSource, session: Session): string {
     case "artifacts":
       return `${course}#artifacts`;
     case "session":
-      return `/sessions/${session.id}#info`;
+      return `/demo/sessions/${session.id}#info`;
     case "publication":
-      return `/sessions/${session.id}#publish`;
+      return `/demo/sessions/${session.id}#publish`;
   }
 }
 
@@ -80,7 +80,7 @@ export function ReadinessList({
                     <>
                       {" "}
                       <Link
-                        href={`/courses/${session.courseId}#materials`}
+                        href={`/demo/courses/${session.courseId}#materials`}
                         className="text-xs font-bold text-accent underline underline-offset-2"
                       >
                         到課程頁上傳
