@@ -81,7 +81,7 @@ jobs:
           set -euo pipefail
           set -a && . ./.env.local && set +a
           auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
-          for table in courses blueprints artifacts api_tokens; do
+          for table in courses blueprints artifacts api_tokens knowledge_documents; do
             curl --fail --silent --show-error "${auth[@]}" \
               "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/$table?select=id&limit=1" >/dev/null
             echo "table $table: ok"
