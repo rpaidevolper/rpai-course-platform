@@ -40,8 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# claude code 個人設定與沙箱下載
+# claude code 個人設定、agent 的 worktree 與沙箱下載
 .claude/settings.local.json
+.claude/worktrees/
 /claude_outputs/
 
 # 範例環境變數要進版控

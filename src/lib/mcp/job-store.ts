@@ -1,22 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buildStoragePath, type ArtifactKind } from "@/lib/artifacts";
+import { ARTIFACT_BUCKET, buildStoragePath, type ArtifactKind } from "@/lib/artifacts";
 import type { Blueprint } from "@/lib/blueprint/schema";
-
-export const ARTIFACT_BUCKET = "artifacts";
-
-export interface CourseSummary {
-  id: string;
-  title: string;
-  updated_at: string;
-}
-
-export interface BlueprintRecord {
-  id: string;
-  version: number;
-  content: Blueprint;
-  change_note: string | null;
-  created_at: string;
-}
 
 export interface JobSummary {
   id: string;
@@ -33,12 +17,10 @@ export interface ClaimedJob extends JobSummary {
 }
 
 /**
- * MCP 工具要用的資料存取。用 service role client，所以每個方法都自己用 ownerId 過濾——
- * 這裡沒有 RLS 幫忙擋。
+ * 工作佇列的資料存取（後台排工作、講師的 Claude Code 認領後產檔）。第 3 段改成講師直接在對話裡要產物，這組會移除。
+ * 用 service role client，所以每個方法都自己用 ownerId 過濾——這裡沒有 RLS 幫忙擋。
  */
 export interface JobStore {
-  listCourses(ownerId: string): Promise<CourseSummary[]>;
-  getBlueprint(ownerId: string, courseId: string, version?: number): Promise<BlueprintRecord | null>;
   listPendingJobs(ownerId: string): Promise<JobSummary[]>;
   /** 原子地把 pending 改成 generating；已被認領或不存在回 null。 */
   claimJob(ownerId: string, jobId: string, claimedBy: string): Promise<ClaimedJob | null>;
@@ -92,34 +74,6 @@ export function createSupabaseJobStore(): JobStore {
   }
 
   return {
-    async listCourses(ownerId) {
-      const { data, error } = await supabase
-        .from("courses")
-        .select("id, title, updated_at")
-        .eq("owner_id", ownerId)
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data as CourseSummary[];
-    },
-
-    async getBlueprint(ownerId, courseId, version) {
-      const { data: course } = await supabase
-        .from("courses")
-        .select("id")
-        .eq("id", courseId)
-        .eq("owner_id", ownerId)
-        .maybeSingle();
-      if (!course) return null;
-
-      let query = supabase
-        .from("blueprints")
-        .select("id, version, content, change_note, created_at")
-        .eq("course_id", courseId);
-      query = version === undefined ? query.order("version", { ascending: false }).limit(1) : query.eq("version", version);
-      const { data } = await query.maybeSingle();
-      return (data as BlueprintRecord | null) ?? null;
-    },
-
     async listPendingJobs(ownerId) {
       const { data, error } = await supabase
         .from("artifacts")

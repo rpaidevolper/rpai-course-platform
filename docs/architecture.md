@@ -14,19 +14,27 @@
 
 ## 2. 兩個部分
 
-> **已由 [ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md) 取代。** 下圖是原本的設計：後台自己做藍圖對話，網頁排產檔工作，再由 Claude Code 認領。新的分工是「講師的 AI ↔ MCP ↔ 平台」，由 #133–#136 實作時改寫本節。
+講師在自己的 AI 裡備課，平台是團隊的記憶與知識後台（[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)）。
 
 ```
-┌─ 後台（Next.js，你的伺服器）────────────────┐   ┌─ 講師的電腦 ──────────────────────────┐
-│ 藍圖對話（Anthropic API streaming）           │   │ Claude Code + rpai-course-platform     │
-│ 抽藍圖（結構化輸出）→ blueprints 新版本       │   │   plugin                               │
-│ 排產檔工作 → artifacts(status=pending)        │◄──┤ MCP：list_jobs / claim_job /           │
-│ MCP server /api/mcp（權杖驗證、owner 過濾）    │   │      request_upload / complete_job     │
-│ Supabase Storage 收成品、簽 URL 給講師下載     │◄──┤ 本機用 rpai-* skill 產檔             │
-└──────────────────────────────────────────────┘   └────────────────────────────────────────┘
+講師 ──► 講師的 AI（claude.ai／Claude 桌面版／Claude Code／Codex，帶 rpai-* skill）
+             │ MCP：/api/mcp，Authorization: Bearer rcp_…
+             ▼
+         平台（Next.js + Supabase）：藍圖的每一版、產物登記、知識庫
+             ▲
+講師 ──► 網頁：看、下載、上傳
 ```
 
-產檔跑在講師自己的 Claude Code 裡：用講師自己的 Claude 訂閱、吃講師的電腦，既有 rpai-* skill 一行不用改。後台只做它擅長的事：對話、版本、佇列、檔案登記。
+- **講師的 AI** 跟講師談藍圖、用 rpai-* skill 產教材。備課流程寫在 MCP server 的 instructions（`src/lib/mcp/instructions.ts`）與工具描述裡，任何支援 MCP 的 AI 都收得到；`plugin/skills/rpai-platform-runner/SKILL.md` 只補 Claude Code 特有的事。怎麼接上見 [`connect-ai.md`](connect-ai.md)。
+- **平台**只存資料、簽檔案網址，不呼叫 AI。MCP 工具在 `src/lib/mcp/tools/`，一組工具一個 store（`src/lib/mcp/*-store.ts`）。store 用 service role client，每個查詢自己加 owner 條件。
+
+| 工具 | 做什麼 |
+|---|---|
+| `rpai_platform_list_courses` | 用標題關鍵字找課程，附最新藍圖版本 |
+| `rpai_platform_get_blueprint` | 讀某一版藍圖：JSON、給人讀的 Markdown、完整性檢查（report）、所有版本 |
+| `rpai_platform_save_blueprint` | 存一版藍圖；沒給課程就建立課程，課程標題跟著最新一版 |
+
+舊的工作佇列工具（`list_jobs`、`claim_job`、`request_upload`、`complete_job`、`fail_job`）由 #135 移除。
 
 ## 3. 資料模型
 

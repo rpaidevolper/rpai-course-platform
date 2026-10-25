@@ -10,7 +10,7 @@ RPAI 講師備課用的團隊記憶與知識後台。講師在自己的 AI 裡�
 | 講師的 AI | claude.ai、Claude 桌面版或 Claude Code；之後也可以是 Codex | 談藍圖、用 rpai-* skill 產教材，透過 MCP 存回平台 |
 | Claude Code plugin（`plugin/`） | 講師自己的電腦 | 給用 Claude Code 的講師：連線設定與打包的 rpai-* skill |
 
-v0 規格見 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131)，定位見 [ADR 0007](docs/adr/0007-north-star.md) 與 [ADR 0008](docs/adr/0008-platform-is-memory-and-knowledge-backend.md)，架構見 [`docs/architecture.md`](docs/architecture.md)。[`docs/spec.md`](docs/spec.md) 是最早的 v0.1 草案，已由 #131 取代。
+v0 規格見 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131)，定位見 [ADR 0007](docs/adr/0007-north-star.md) 與 [ADR 0008](docs/adr/0008-platform-is-memory-and-knowledge-backend.md)，架構見 [`docs/architecture.md`](docs/architecture.md)，把 AI 接上平台見 [`docs/connect-ai.md`](docs/connect-ai.md)。[`docs/spec.md`](docs/spec.md) 是最早的 v0.1 草案，已由 #131 取代。
 
 ## 部署速查
 
@@ -209,6 +209,7 @@ claude plugin install mattpocock-skills@mattpocock
 | [`CLAUDE.md`](CLAUDE.md) | 給 Claude Code 與人共用的專案規範、skill 分工 |
 | [`docs/spec.md`](docs/spec.md) | 最早的產品規格 v0.1，已由 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131) 取代 |
 | [`docs/architecture.md`](docs/architecture.md) | 資料模型、產檔流程 |
+| [`docs/connect-ai.md`](docs/connect-ai.md) | 把 claude.ai、Claude 桌面版、Claude Code、Codex 接上平台的 MCP server |
 | [`docs/runbook.md`](docs/runbook.md) | 部署、回滾與故障排除 |
 | `docs/specs/` | 設計文件（例如 [正式環境與自動部署](docs/specs/2026-10-02-production-deployment-design.md)） |
 | `docs/adr/` | 架構與流程決策記錄 |
