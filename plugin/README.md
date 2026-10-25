@@ -1,7 +1,7 @@
 # RPAI Course Platform plugin
 
-讓講師在**自己的 Claude Code** 裡產出後台排下來的教材：大綱、簡報、學員手冊。
-用講師自己的 Claude 訂閱、吃自己的電腦，平台只負責藍圖與檔案登記。
+讓講師在**自己的 Claude Code** 裡用 RPAI Course Platform 備課：讀回藍圖、談完存回平台，做好的課程大綱、簡報、學員手冊也存回平台。
+用講師自己的 Claude 訂閱、吃自己的電腦，平台只負責記住藍圖與產物。備課流程寫在平台的 MCP 說明裡；用 claude.ai 或 Codex 的講師不需要這個 plugin，見 [`docs/connect-ai.md`](../docs/connect-ai.md)。
 
 ## 安裝
 
@@ -14,10 +14,10 @@ claude plugin install rpai-course-platform@rpai
 
 | 設定 | 內容 |
 |---|---|
-| `server_url` | 平台網址，例如 `https://course.rpai.tw`（不含結尾斜線） |
-| `api_token` | 在平台「設定 → Claude Code 權杖」產生的 `rcp_` 開頭權杖 |
+| `server_url` | 平台網址，例如 `https://rpai-course-platform.vercel.app`（不含結尾斜線） |
+| `api_token` | `rcp_` 開頭的權杖，向 owner 拿（owner 用 `pnpm token:create` 建立） |
 
-裝好後在 Claude Code 裡說「有沒有待生成的教材」或 `/rpai-platform-runner` 就會開始跑。
+裝好後在 Claude Code 裡說「我要備一門 X 課」「繼續 X 課」「做第 1 天的簡報」，或輸入 `/rpai-platform-runner`。
 
 ## 內容
 
@@ -26,7 +26,7 @@ plugin/
 ├── .claude-plugin/plugin.json   # 名稱、版本、安裝時要問的設定
 ├── .mcp.json                    # 連到平台的 MCP server（/api/mcp）
 └── skills/
-    ├── rpai-platform-runner/    # 串流程：拉藍圖 → 產檔 → 上傳
+    ├── rpai-platform-runner/    # Claude Code 特有的事：藍圖落地成本機檔案、用 curl 存回產物
     ├── rpai-talk-blueprint/     # 以下五個是打包進來的 RPAI 內容 skill
     ├── rpai-course-outline/
     ├── rpai-course-content/

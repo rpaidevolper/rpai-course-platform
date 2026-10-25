@@ -35,8 +35,10 @@
 | `rpai_platform_save_blueprint` | 存一版藍圖；沒給課程就建立課程，課程標題跟著最新一版 |
 | `rpai_platform_search_knowledge` | 查知識庫：模組框架、模組卡、單元卡、課程配方（全團隊共用） |
 | `rpai_platform_read_knowledge` | 讀一份知識庫文件的完整內容 |
-
-舊的工作佇列工具（`list_jobs`、`claim_job`、`request_upload`、`complete_job`、`fail_job`）由 #135 移除。
+| `rpai_platform_request_artifact_upload` | 檢查產物規則、登記產物，回 signed upload URL 與一次性上傳頁連結 |
+| `rpai_platform_complete_artifact_upload` | 確認 Storage 裡有檔案，把產物標成 ready |
+| `rpai_platform_list_artifacts` | 列出課程的產物與過期原因 |
+| `rpai_platform_get_artifact_download` | 10 分鐘的下載網址 |
 
 ## 3. 資料模型
 
@@ -47,10 +49,10 @@ Course（一場課）
  ├─ Conversation（對話串；purpose = blueprint | outline | slides | handbook）
  │   └─ Message（Anthropic content blocks 原樣存）
  ├─ Blueprint v1, v2, v3 …（結構化 JSON，唯一真相來源）
- └─ Artifact（產物；status 是佇列狀態，每一筆綁定「基於哪一版藍圖」）
-      ├─ outline  v2  ready       ← blueprint v3
-      ├─ slides   v1  ready       ← blueprint v2   ← 過期：藍圖已到 v3
-      └─ handbook v1  pending     ← blueprint v3   ← 等講師的 Claude Code 來認領
+ └─ Artifact（產物；每一筆綁定「基於哪一版藍圖」，簡報與學員手冊另記第幾天）
+      ├─ outline        v2  ready       ← blueprint v3
+      ├─ slides   第1天 v1  ready       ← blueprint v2   ← 藍圖過期：藍圖已到 v3
+      └─ handbook 第1天 v1  generating  ← blueprint v3   ← 等檔案上傳；上游是第 1 天的簡報 v1
 ApiToken（講師的 Claude Code 權杖；只存 sha256）
 ```
 
@@ -59,7 +61,9 @@ ApiToken（講師的 Claude Code 權杖；只存 sha256）
 - **對話不是真相來源，藍圖才是。** 對話結束（或講師按「更新藍圖」）時，用結構化輸出把對話抽成 `Blueprint` JSON 存成新版本。之後生成任何產物都只讀藍圖。
 - **藍圖版本不可變。** 修改 = 新增一版，舊版保留，產物才能可靠地指向它出生時的那一版。
 - **產物不自動重生。** 藍圖升版後 UI 標示過期產物；講師決定要不要重生。
-- **`artifacts` 同時是佇列。** `pending` 等認領、`generating` 有人在做（`claimed_by`、`claimed_at`）、`ready` 有檔案、`failed` 有錯誤訊息。不另外開 jobs 表。
+- **產物分天、記上游。** `day` 是第幾天（課程大綱沒有）；`upstream_id` 是學員手冊的上游簡報；`edited_from_id` 是講師自己改過再上傳時，原本那一份。版本在「課程＋種類＋第幾天」裡遞增。
+- **產物狀態。** `generating` 是已登記、等檔案上傳；`ready` 是平台確認過 Storage 裡有檔案。`pending`、`failed` 與 `runner`、`claimed_at`、`claimed_by` 是舊的工作佇列留下的，不再使用。
+- **過期在讀取時算，不存。** `staleReasons()`（`src/lib/artifact-rules.ts`）：照舊版藍圖做的是 `blueprint_outdated`；學員手冊的上游簡報有新版、或上游本身照舊版藍圖做的是 `upstream_outdated`。
 - **五元素是 schema 的一部分。** `elements.{theory, handsOn, takeaway, quote, story}` 哪一格是空的，`missingElements()` 直接算得出來。
 - **時間骨架是天 → 時段 → 單元。** `days[].slots[].units[]`；時段預設 180 分鐘、不另排休息。總時長由 `totalMinutes()` 從時段推得，不另存。`checkBlueprint()` 逐時段比對單元分鐘加總，並標出純講述單元（`activity` 為 null）。每個單元記錄所屬模組 `module`（A1–B4）與應用層級 `level`（`L1`–`L5`、`na`＝不適用（純方法，評過了）或 `null`＝未評；單元卡與藍圖單元用同一組值，`checkBlueprint()` 把未評的單元列為 `unit_unrated`，準備度也列出），以及來源 `source`（`{ kind: unit_card | course, id, version, unit }`；`unit_card` 的 version 為 null，`course` 是該課程的藍圖版本；新做為 null）與沿用程度 `reuse`（`reuse` 沿用／`modify` 要改／`new` 新做），`checkBlueprint()` 把要改與新做的單元列為 `unit_needs_work`。課程「複製自哪門課程的哪一版藍圖」記在課程上（設計稿的 `Course.copiedFrom`），不在藍圖裡。`blueprints.content` 只是 jsonb，形狀改了不需要 migration，但改版前存的藍圖不符合新 schema。
 - **工具與待確認事項。** `tools[]` 記名稱、方案等級（free／paid／enterprise）與是否已跟客戶確認；`openQuestions[]` 是物件（`text`、`audience`：client 問客戶／self 自己決定、`unit`：受影響單元的標題或 null，與 `carriesFrom` 同一種參照方式）。`checkBlueprint()` 回報 `open_question` 與 `unconfirmed_tool`；`openItems()` 把兩者合成一份清單（未確認工具視為問客戶），`clientEmailText()` 把問客戶的事項排成可貼進信件的文字（`src/lib/blueprint/open-items.ts`）。
@@ -70,29 +74,24 @@ zod schema：`src/lib/blueprint/schema.ts`。DB schema：`supabase/migrations/`�
 
 ## 4. 產檔流程
 
-> **已由 [ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md) 取代。** 產物改由講師的 AI 直接存回平台，不再經過網頁排工作；本節由 #135 改寫。
+講師在自己的 AI 裡說「做第 1 天的簡報」：
 
 ```
-講師在後台點「生成簡報」
-  → artifacts 新增 (kind=slides, blueprint_id=v3, version=next, status=pending, runner=claude_code)
+講師的 AI
+  → rpai_platform_get_blueprint              讀最新一版藍圖（JSON、markdown、report）
+  → 用 rpai-* skill 產出 .docx／.pptx／.html（claude.ai 在雲端的程式碼執行環境裡做，Claude Code 在講師的電腦上做）
+  → rpai_platform_request_artifact_upload    檢查規則、登記產物（status=generating），拿 signed upload URL 與一次性上傳頁連結
+  → HTTP PUT 上傳到 Supabase Storage         連不出去時，講師打開上傳頁在瀏覽器上傳
+  → rpai_platform_complete_artifact_upload   確認 Storage 裡有檔案，標成 ready
 
-講師在自己的 Claude Code 說「有沒有待生成的教材」（rpai-platform-runner skill）
-  → rpai_platform_list_jobs           列出 pending
-  → rpai_platform_claim_job           pending→generating，回傳藍圖 JSON + 講師指示
-  → 本機寫 <課程>_教學藍圖.md，跑對應的 rpai-* skill 產出 .pptx / .docx / .html
-  → rpai_platform_request_upload      拿 Supabase Storage 的 signed upload URL
-  → curl PUT 上傳
-  → rpai_platform_complete_job        generating→ready，記 storage_path
-  （失敗 → rpai_platform_fail_job）
-
-講師回後台下載（後台簽 download URL，帶 `download` 選項 → attachment）
+要下載時：rpai_platform_get_artifact_download，或在網頁下載（10 分鐘的 signed URL，帶 download 選項 → attachment）
 ```
 
-kind 對應：`outline` → `rpai-course-outline`（客戶版 .docx）；`slides` → `rpai-pptx-workflow`（.pptx）；`handbook` → `rpai-course-content`，產出 HTML 單檔學員實作手冊，一天一份，只給含動手環節的天（上游是該天的簡報；v1 只提供下載，不在平台網域內渲染）。簡報的逐頁講稿寫在 speaker notes，不是獨立產物（ADR 0005）。
+產物規則在 `src/lib/artifact-rules.ts`：課程大綱沒有 `day`，是 .docx；簡報一天一份，是 .pptx；學員手冊一天一份，是 .html，只限有動手環節的天，上游是那天最新的 ready 簡報。照舊版藍圖做，或那天還沒有簡報時照樣收下，但回 warning。簡報的逐頁講稿寫在 speaker notes，不是獨立產物（ADR 0005）。平台不會自動重做過期的產物。
 
-> 範圍備註：真實 schema 的「按天產出」（`day` 欄位）與遺留路徑 `src/lib/claude/generate-artifact.ts`（仍產 .docx）留給後端母規格 #78。
+上傳頁連結的權杖只存 sha256 與到期時間（`artifacts.meta`，2 小時），產物標成 ready 後就清掉（`src/lib/upload-token.ts`）。
 
-MCP 工具定義在 `src/lib/mcp/`，plugin 端流程在 `plugin/skills/rpai-platform-runner/SKILL.md`，兩邊的工具名與參數要同步。
+MCP 工具在 `src/lib/mcp/tools/`，流程寫在 `src/lib/mcp/instructions.ts`，Claude Code 特有的事寫在 `plugin/skills/rpai-platform-runner/SKILL.md`。三邊的工具名要一致，`src/lib/mcp/instructions.test.ts` 會檢查。
 
 ## 5. 後台的 AI 呼叫
 
@@ -115,9 +114,9 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 | 資料庫 | Supabase Postgres + Storage，RLS 依 owner_id | 登入、檔案、資料庫一站解決 | 2026-09-03 |
 | 模型 | 預設 `claude-opus-5-5`，每場對話可在 `conversations.model` 各自選（Opus 5.5／Sonnet 5.5／最新版 Haiku（目前 5.5）／Fable 5.1，清單在 `src/lib/claude/models.ts`）；不指定 thinking（各模型用自己的預設），用 effort 調深度 | 依 claude-api skill 的預設；講師依草稿／定稿、成本、速度自選 | 2026-09-03、2026-10-02、2026-10-24 |
 | 藍圖版本 | 不可變、只新增；產物綁定版本 | 產物才能可靠指向出生時的藍圖 | 2026-09-03 |
-| **長時間產檔在哪跑** | **講師自己的 Claude Code + plugin（MCP 橋接）** | 用講師的訂閱與電腦；既有 skill 原樣可用；不踩「第三方產品不得使用訂閱登入」的政策。捨棄的選項：雲端 worker（要付 API 費、skill 要重新上傳）、Agent SDK 打包成 runner app（政策上需要 API key，還要做打包與金鑰分發） | 2026-09-03 |
+| 長時間產檔在哪跑（已由「平台定位」一列取代：產檔在講師自己的 AI 裡跑，不限 Claude Code） | 講師自己的 Claude Code + plugin（MCP 橋接） | 用講師的訂閱與電腦；既有 skill 原樣可用；不踩「第三方產品不得使用訂閱登入」的政策。捨棄的選項：雲端 worker（要付 API 費、skill 要重新上傳）、Agent SDK 打包成 runner app（政策上需要 API key，還要做打包與金鑰分發） | 2026-09-03 |
 | rpai-* skill 怎麼給講師 | 打包進 plugin | 講師裝一次就齊全，版本由 repo 控制 | 2026-09-03 |
-| 檔案怎麼回到後台 | signed upload URL + curl，不走 MCP | pptx 幾 MB，塞進工具參數不可行 | 2026-09-03 |
+| 檔案怎麼回到後台 | signed upload URL + PUT，不走 MCP；連不出去時講師用一次性的上傳頁 | pptx 幾 MB，塞進工具參數不可行；claude.ai 的程式碼執行環境不一定連得出去 | 2026-09-03、2026-10-25 |
 | 講師身分 | 個人存取權杖（`rcp_` 開頭，只存 hash） | plugin 安裝時填一次；不用做 OAuth | 2026-09-03 |
 
 ## 7. 還沒決定的事
@@ -126,10 +125,9 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 - **講師登入**：Supabase Auth；Next.js 端要用 `@supabase/ssr` 處理 cookie session（尚未安裝）。
 - **後台頁面**：對話頁、藍圖版本頁、產物列表（含過期標示與下載）都還沒做。
 - **結構化輸出的 schema 相容性**：`BlueprintSchema` 用了 `min(1)`、`min(2)` 這類限制，第一次真的呼叫 `extractBlueprint()` 時要確認 API 接受；不接受就把限制移到 `checkBlueprint()` 做。
-- **藍圖 JSON → `*_教學藍圖.md`** 的轉換目前交給 runner skill 現場整理；若格式飄移影響下游 skill，改成後台先產好 Markdown 一起回傳。
 - **藍圖 diff UI**：v2 → v3 改了什麼要讓講師看得到。
 - **多講師／團隊**：已決定全團隊共用一個工作區（[ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)）；目前 schema 只有單一 owner，schema v2 時改以工作區過濾。
-- **卡住的工作**：`generating` 超過一定時間沒完成要能退回 `pending`（講師關了 Claude Code）。
+- **沒完成的上傳**：要了上傳網址卻沒有完成的產物會一直停在 `generating`；之後可以定期清掉超過一天的。
 
 ## 8. 部署架構
 
