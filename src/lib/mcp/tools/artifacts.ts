@@ -3,7 +3,6 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import {
   ARTIFACT_KINDS,
-  ARTIFACT_KIND_LABELS,
   buildStoragePath,
   contentTypeFor,
   sanitizeFilename,
@@ -12,8 +11,7 @@ import {
   checkArtifactRequest,
   checkEditedFrom,
   resolveUpstream,
-  staleReasons,
-  type ArtifactRecord,
+  summarizeArtifacts,
 } from "@/lib/artifact-rules";
 import { createUploadToken, uploadPageUrl } from "@/lib/upload-token";
 import { ownerIdFrom } from "../auth";
@@ -29,15 +27,6 @@ const NOT_FOUND_COURSE = "找不到這門課。先用 rpai_platform_list_courses
 const NOT_FOUND_ARTIFACT = "找不到這份產物，或不屬於你。先用 rpai_platform_list_artifacts 看這門課的產物 id。";
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
-
-/** 列表排序：種類（課程大綱、簡報、學員手冊）→ 天由小到大 → 版本由大到小。 */
-function byKindDayVersion(a: ArtifactRecord, b: ArtifactRecord): number {
-  return (
-    ARTIFACT_KINDS.indexOf(a.kind) - ARTIFACT_KINDS.indexOf(b.kind) ||
-    (a.day ?? 0) - (b.day ?? 0) ||
-    b.version - a.version
-  );
-}
 
 /**
  * 產物：講師的 AI 把自己產出的教材存回平台。流程寫在工具描述裡（ADR 0008）。
@@ -194,18 +183,7 @@ export function registerArtifactTools(
       const latest = course.latestBlueprintVersion;
       return ok({
         latest_blueprint_version: latest,
-        artifacts: [...artifacts].sort(byKindDayVersion).map((a) => ({
-          id: a.id,
-          kind: a.kind,
-          kind_label: ARTIFACT_KIND_LABELS[a.kind],
-          day: a.day,
-          version: a.version,
-          blueprint_version: a.blueprint_version,
-          status: a.status,
-          filename: a.filename,
-          stale_reasons: staleReasons(a, artifacts, latest),
-          created_at: a.created_at,
-        })),
+        artifacts: summarizeArtifacts(artifacts, latest),
       });
     },
   );

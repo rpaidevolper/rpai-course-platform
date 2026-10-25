@@ -7,6 +7,7 @@ import {
   nextArtifactVersion,
   resolveUpstream,
   staleReasons,
+  summarizeArtifacts,
   type ArtifactRecord,
 } from "./artifact-rules";
 
@@ -233,5 +234,72 @@ describe("staleReasons", () => {
     const handbook = artifact({ id: "h1", kind: "handbook", day: 1, version: 1, blueprint_version: 2, upstream_id: "s1" });
     expect(staleReasons(slides, [slides, handbook], 2)).toEqual([]);
     expect(staleReasons(handbook, [slides, handbook], 2)).toEqual([]);
+  });
+});
+
+describe("summarizeArtifacts", () => {
+  it("依種類（課程大綱、簡報、學員手冊）、天由小到大、版本由大到小排序", () => {
+    const artifacts = [
+      artifact({ id: "h1", kind: "handbook", day: 1, version: 1 }),
+      artifact({ id: "s2", kind: "slides", day: 2, version: 1 }),
+      artifact({ id: "s1v1", kind: "slides", day: 1, version: 1 }),
+      artifact({ id: "s1v2", kind: "slides", day: 1, version: 2 }),
+      artifact({ id: "o1", kind: "outline", version: 1 }),
+    ];
+    expect(summarizeArtifacts(artifacts, 1).map((a) => a.id)).toEqual(["o1", "s1v2", "s1v1", "s2", "h1"]);
+  });
+
+  it("不改傳進來的陣列順序", () => {
+    const artifacts = [
+      artifact({ id: "h1", kind: "handbook", day: 1, version: 1 }),
+      artifact({ id: "o1", kind: "outline", version: 1 }),
+    ];
+    summarizeArtifacts(artifacts, 1);
+    expect(artifacts.map((a) => a.id)).toEqual(["h1", "o1"]);
+  });
+
+  it("每筆只有清單要的欄位：附中文種類名與過期原因，不含儲存路徑與權杖", () => {
+    const slides = artifact({
+      id: "s1",
+      kind: "slides",
+      day: 1,
+      version: 1,
+      blueprint_version: 1,
+      filename: "第1天_簡報.pptx",
+      storage_path: "owner/course/s1/第1天_簡報.pptx",
+      meta: { upload_token_hash: "abc", upload_expires_at: "2026-10-25T05:00:00.000Z" },
+    });
+    expect(summarizeArtifacts([slides], 2)).toEqual([
+      {
+        id: "s1",
+        kind: "slides",
+        kind_label: "簡報",
+        day: 1,
+        version: 1,
+        blueprint_version: 1,
+        status: "ready",
+        filename: "第1天_簡報.pptx",
+        stale_reasons: ["blueprint_outdated"],
+        created_at: "2026-10-25T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("過期原因用全部產物判斷：手冊的上游簡報有新版，手冊標 upstream_outdated", () => {
+    const s1 = artifact({ id: "s1", kind: "slides", day: 1, version: 1 });
+    const s2 = artifact({ id: "s2", kind: "slides", day: 1, version: 2 });
+    const handbook = artifact({ id: "h1", kind: "handbook", day: 1, version: 1, upstream_id: "s1" });
+    const rows = summarizeArtifacts([s1, s2, handbook], 1);
+    expect(rows.find((r) => r.id === "h1")?.stale_reasons).toEqual(["upstream_outdated"]);
+    expect(rows.find((r) => r.id === "s2")?.stale_reasons).toEqual([]);
+  });
+
+  it("還沒有藍圖（最新版本是 null）時，不判藍圖過期", () => {
+    const slides = artifact({ id: "s1", kind: "slides", day: 1, version: 1, blueprint_version: 1 });
+    expect(summarizeArtifacts([slides], null)[0].stale_reasons).toEqual([]);
+  });
+
+  it("沒有產物回空陣列", () => {
+    expect(summarizeArtifacts([], 1)).toEqual([]);
   });
 });

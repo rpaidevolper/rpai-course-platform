@@ -46,6 +46,11 @@ code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15
 [ "$code" = "200" ] || fail "GET /demo 回 $code，預期 200"
 pass "GET /demo  200"
 
+# 上傳頁不需要登入：沒帶 cookie 也要直接 200。這個 id 不存在，頁面會顯示連結無效
+code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$base/u/00000000-0000-4000-8000-000000000000?t=x")
+[ "$code" = "200" ] || fail "GET /u/<不存在的 id>?t=x 回 $code，預期 200（上傳頁不需要登入）"
+pass "GET /u/<不存在的 id>?t=x  200（不需要登入）"
+
 code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 \
   -X POST -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$base/api/mcp")
