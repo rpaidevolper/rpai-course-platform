@@ -71,10 +71,12 @@ export function sanitizeFramework(input: { fm: Frontmatter; body: string }): San
   };
 }
 
-/** 配方的 modules：只留合法的模組代號，保留原本的順序。 */
+/** 配方的 modules：只留合法的模組代號，保留原本的順序。寫成一串文字（例如「A1、B2」）時也拆開。 */
 function moduleList(value: FrontmatterValue | undefined): string[] {
   const items: FrontmatterScalar[] = Array.isArray(value) ? value : value === undefined ? [] : [value];
-  return items.filter((item): item is string => typeof item === "string" && isModuleId(item));
+  return items
+    .flatMap((item) => (typeof item === "string" ? item.split(/[、,，\s]+/) : []))
+    .filter((item) => isModuleId(item));
 }
 
 /** stub 的產業前綴（<產業>_...）；第一段是數字（年月）或「提案」時不是產業。 */
