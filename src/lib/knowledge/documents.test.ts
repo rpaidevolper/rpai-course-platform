@@ -39,9 +39,9 @@ describe("fixture 資料夾：四種文件都讀到，略過的檔案不進來",
     expect(built.skipped).toEqual(["README.md", "原始課綱暫存/某課綱.md"]);
   });
 
-  it("名稱表的統計只有數量：配方來源 3、別名檔 3", async () => {
+  it("名稱表的統計只有數量：配方來源 4、別名檔 3，2 個字以下的名稱 2 個（虛工、虛精）", async () => {
     const built = await buildFixture();
-    expect(built.names).toEqual({ total: 6, fromRecipes: 3, fromAliases: 3 });
+    expect(built.names).toEqual({ total: 7, fromRecipes: 4, fromAliases: 3, short: 2 });
   });
 });
 
@@ -77,7 +77,7 @@ describe("fixture 資料夾：種類、模組與標題", () => {
     const paths = built.documents.map((d) => d.path);
     expect(paths).toContain("課程配方/202405_〔已遮蔽〕_AI週報實戰.md");
     expect(paths).toContain("課程配方/提案_〔已遮蔽〕_AI入門.md");
-    expect(paths).toContain("課程配方/202406_虛工_AI小講.md");
+    expect(paths).toContain("課程配方/202406_〔已遮蔽〕_AI小講.md");
     expect(paths.some((path) => path.includes("虛構"))).toBe(false);
   });
 });
@@ -123,7 +123,7 @@ describe("fixture 資料夾：去識別化", () => {
   it("沒有旗標的文件，標題、本文與 frontmatter 裡都不出現任何 fixture 的客戶名稱", async () => {
     const built = await buildFixture();
     const clean = built.documents.filter((d) => d.flags.length === 0);
-    expect(clean.length).toBe(built.documents.length - 3);
+    expect(clean.length).toBe(built.documents.length - 4);
     for (const doc of clean) {
       const text = JSON.stringify({ title: doc.title, body: doc.body, frontmatter: doc.frontmatter }).toLowerCase();
       for (const name of FIXTURE_CLIENT_NAMES) {
@@ -134,19 +134,19 @@ describe("fixture 資料夾：去識別化", () => {
 });
 
 describe("fixture 資料夾：客戶名稱旗標", () => {
-  it("只有該帶旗標的三份帶旗標：學習目標含客戶、學員成果含別名、常見搭配含別名（小寫）", async () => {
+  it("帶旗標的是這四份：A1 學員成果含別名、A2 學習目標含客戶、B1 教學方式含 2 字的客戶（虛工）、B2 常見搭配含英文別名（小寫）", async () => {
     const built = await buildFixture();
     const flagged = built.documents.filter((d) => d.flags.length > 0).map((d) => d.path).sort();
-    expect(flagged).toEqual(["單元卡/A1_會議紀錄整理.md", "單元卡/A2_資料整理實作.md", "模組卡/B2_提問與指令.md"]);
+    expect(flagged).toEqual(["單元卡/A1_會議紀錄整理.md", "單元卡/A2_資料整理實作.md", "單元卡/B1_流程診斷練習.md", "模組卡/B2_提問與指令.md"]);
     for (const doc of built.documents.filter((d) => d.flags.length > 0)) {
       expect(doc.flags).toEqual([CLIENT_NAME_FLAG]);
     }
   });
 
-  it("2 字的配方客戶（虛工）沒列在別名檔，所以教學方式提到它也不帶旗標", async () => {
+  it("2 字的配方客戶（虛工）不用列在別名檔，教學方式提到它就帶旗標", async () => {
     const doc = docAt(await buildFixture(), "單元卡/B1_流程診斷練習.md");
     expect(doc.body).toContain("虛工");
-    expect(doc.flags).toEqual([]);
+    expect(doc.flags).toEqual([CLIENT_NAME_FLAG]);
   });
 
   it("講師備註與出處被刪掉，所以它們含的客戶名稱不會帶旗標", async () => {

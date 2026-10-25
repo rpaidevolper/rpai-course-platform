@@ -1,4 +1,5 @@
 import { buildKnowledgeDocuments } from "./documents.ts";
+import type { NameStats } from "./names.ts";
 import type { DocumentRow, SyncStore } from "./store.ts";
 import { planSync, type SyncPlan } from "./sync-plan.ts";
 import { KNOWLEDGE_KIND_LABELS, KNOWLEDGE_KINDS, type KnowledgeDocumentInput, type MarkdownFile } from "./types.ts";
@@ -65,7 +66,7 @@ function reportLines(input: {
   fileCount: number;
   skipped: number;
   documents: KnowledgeDocumentInput[];
-  names: { total: number; fromRecipes: number; fromAliases: number };
+  names: NameStats;
   plan: SyncPlan;
 }): string[] {
   const { apply, fileCount, skipped, documents, names, plan } = input;
@@ -77,7 +78,7 @@ function reportLines(input: {
   return [
     apply ? "知識庫同步（已寫入）" : "知識庫同步（試跑，沒有寫入；加 --apply 才會寫入）",
     `讀到 ${fileCount} 個 Markdown：${kindCounts}；略過 ${skipped} 個（不是知識庫文件）`,
-    `名稱表：${names.total} 個名稱（配方 ${names.fromRecipes}、別名檔 ${names.fromAliases}）。報告不列出名稱。`,
+    `名稱表：${names.total} 個名稱（配方 ${names.fromRecipes}、別名檔 ${names.fromAliases}）；其中 ${names.short} 個是 2 個字以下的短名稱，容易誤判，誤判時在別名檔用 ! 列為例外。報告不列出名稱。`,
     `暫停使用：${flagged.length} 份文字含客戶名稱，AI 查不到，修正資料夾後重跑。`,
     ...flagged.map((doc) => `  - ${doc.path}`),
     `與平台比對：新增 ${plan.inserts.length}、更新 ${plan.updates.length}、不變 ${plan.unchanged.length}、退役 ${plan.retirements.length}`,
