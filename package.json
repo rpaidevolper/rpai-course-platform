@@ -12,7 +12,8 @@
     "db:start": "scripts/db-start.sh",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "token:create": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/create-token.ts"
+    "token:create": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/create-token.ts",
+    "kb:sync": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/kb-sync.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

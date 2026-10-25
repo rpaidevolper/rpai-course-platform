@@ -1,6 +1,6 @@
 # 把 AI 接上平台
 
-講師在自己的 AI 裡備課，平台透過 MCP 記住每門課的藍圖（ADR 0008）。這份文件說明怎麼把各家 AI 接上平台的 MCP server。
+講師在自己的 AI 裡備課，平台透過 MCP 記住每門課的藍圖，並提供團隊的知識庫（ADR 0008）。這份文件說明怎麼把各家 AI 接上平台的 MCP server。
 
 所有 AI 都連同一個網址，帶同一種權杖：
 
@@ -10,7 +10,7 @@
 | 驗證 | HTTP header `Authorization: Bearer rcp_…` |
 | 權杖 | owner 用 `pnpm token:create --user <auth.users.id> --label <名稱>` 建立，只顯示一次 |
 
-平台把每組權杖對到一位講師，MCP 工具只看得到那位講師的課程。
+平台把每組權杖對到一位講師，MCP 工具只看得到那位講師的課程。知識庫是全團隊共用的，任何權杖都查得到。
 
 權杖等於這位講師在平台上的身分：不要貼進對話、issue 或 commit。外洩時請 owner 在 Supabase 把那筆 `api_tokens` 的 `revoked_at` 設成現在時間，再建一組新的。
 
@@ -84,7 +84,7 @@ url = "https://rpai-course-platform.vercel.app/api/mcp"
 bearer_token_env_var = "RPAI_PLATFORM_TOKEN"
 ```
 
-再在啟動 Codex 的環境設定 `export RPAI_PLATFORM_TOKEN=<權杖>`。Codex 照工具描述讀寫同一份藍圖。`rpai-*` skill 要另外放進 Codex 讀得到的 skill 資料夾（例如 `~/.agents/skills/`）。
+再在啟動 Codex 的環境設定 `export RPAI_PLATFORM_TOKEN=<權杖>`。Codex 照工具描述讀寫同一份藍圖、查同一個知識庫。`rpai-*` skill 要另外放進 Codex 讀得到的 skill 資料夾（例如 `~/.agents/skills/`）。
 
 ## 其他支援 MCP 的 AI
 

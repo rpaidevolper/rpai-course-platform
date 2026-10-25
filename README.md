@@ -210,6 +210,7 @@ claude plugin install mattpocock-skills@mattpocock
 | [`docs/spec.md`](docs/spec.md) | 最早的產品規格 v0.1，已由 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131) 取代 |
 | [`docs/architecture.md`](docs/architecture.md) | 資料模型、產檔流程 |
 | [`docs/connect-ai.md`](docs/connect-ai.md) | 把 claude.ai、Claude 桌面版、Claude Code、Codex 接上平台的 MCP server |
+| [`docs/knowledge-sync.md`](docs/knowledge-sync.md) | 知識庫維護者怎麼把資料夾同步進平台 |
 | [`docs/runbook.md`](docs/runbook.md) | 部署、回滾與故障排除 |
 | `docs/specs/` | 設計文件（例如 [正式環境與自動部署](docs/specs/2026-10-02-production-deployment-design.md)） |
 | `docs/adr/` | 架構與流程決策記錄 |

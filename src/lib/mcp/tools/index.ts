@@ -1,12 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/server";
+import type { KnowledgeStore } from "@/lib/knowledge/store";
 import type { CourseStore } from "../course-store";
 import type { JobStore } from "../job-store";
 import { registerCourseTools } from "./courses";
 import { registerJobTools } from "./jobs";
+import { registerKnowledgeTools } from "./knowledge";
 
 /** 工具要用的資料存取，一組工具一個 store。 */
 export interface PlatformStores {
   courses: CourseStore;
+  knowledge: KnowledgeStore;
   jobs: JobStore;
 }
 
@@ -16,5 +19,6 @@ export interface PlatformStores {
  */
 export function registerPlatformTools(server: McpServer, stores: PlatformStores): void {
   registerCourseTools(server, stores.courses);
+  registerKnowledgeTools(server, stores.knowledge);
   registerJobTools(server, stores.jobs);
 }
