@@ -1,13 +1,16 @@
 # RPAI Course Platform
 
-講師教材準備後台。講師先跟 AI 談出一份**教學藍圖**，再從同一份藍圖產出課程大綱、簡報與學員手冊。
+RPAI 講師備課用的團隊記憶與知識後台。講師在自己的 AI 裡談出一份**教學藍圖**，再產出課程大綱、簡報與學員手冊；平台記住藍圖的每一版、每份產物出自哪一版，並提供團隊的知識庫。
+
+> **北極星：讓 RPAI 講師把一門客製課，更快備到可以上課。** 每個功能怎麼對標，見 [`CLAUDE.md`](CLAUDE.md) 的「北極星」。
 
 | 部分 | 在哪跑 | 做什麼 |
 |---|---|---|
-| 後台（本 repo 的 Next.js app） | 伺服器 | 藍圖對話、版本管理、排產檔工作、產物下載、MCP server |
-| Claude Code plugin（`plugin/`） | 講師自己的電腦 | 用 MCP 拉藍圖、用 rpai-* skill 產檔、上傳成品 |
+| 平台（本 repo 的 Next.js app） | 伺服器 | MCP server（藍圖、產物、知識庫）、網頁（查看與下載） |
+| 講師的 AI | claude.ai、Claude 桌面版或 Claude Code；之後也可以是 Codex | 談藍圖、用 rpai-* skill 產教材，透過 MCP 存回平台 |
+| Claude Code plugin（`plugin/`） | 講師自己的電腦 | 給用 Claude Code 的講師：連線設定與打包的 rpai-* skill |
 
-產品規格見 [`docs/spec.md`](docs/spec.md)，架構見 [`docs/architecture.md`](docs/architecture.md)。
+v0 規格見 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131)，定位見 [ADR 0007](docs/adr/0007-north-star.md) 與 [ADR 0008](docs/adr/0008-platform-is-memory-and-knowledge-backend.md)，架構見 [`docs/architecture.md`](docs/architecture.md)。[`docs/spec.md`](docs/spec.md) 是最早的 v0.1 草案，已由 #131 取代。
 
 ## 部署速查
 
@@ -204,7 +207,7 @@ claude plugin install mattpocock-skills@mattpocock
 | 檔案 | 內容 |
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | 給 Claude Code 與人共用的專案規範、skill 分工 |
-| [`docs/spec.md`](docs/spec.md) | 產品規格 |
+| [`docs/spec.md`](docs/spec.md) | 最早的產品規格 v0.1，已由 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131) 取代 |
 | [`docs/architecture.md`](docs/architecture.md) | 資料模型、產檔流程 |
 | [`docs/runbook.md`](docs/runbook.md) | 部署、回滾與故障排除 |
 | `docs/specs/` | 設計文件（例如 [正式環境與自動部署](docs/specs/2026-10-02-production-deployment-design.md)） |

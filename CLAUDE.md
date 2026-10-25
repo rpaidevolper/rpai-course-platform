@@ -2,8 +2,28 @@
 
 @AGENTS.md
 
-本檔定義本專案的 skill 分工規則與技術規範。分工規則的目的是避免「同名／同職責」的 skill 互相搶觸發，
+本檔定義本專案的北極星、skill 分工規則與技術規範。分工規則的目的是避免「同名／同職責」的 skill 互相搶觸發，
 導致每次都要重猜該用哪一套。
+
+## 北極星
+
+> **讓 RPAI 講師把一門客製課，更快備到可以上課。**
+> 做得好的標準：**前提只談一次**、**教材彼此一致**、**每門課都從團隊最新的版本出發**。
+
+每張 issue 都標一個分類，包括 `/to-spec`、`/to-tickets` 用 `gh` 直接開的票。理由與取捨見 [ADR 0007](docs/adr/0007-north-star.md)。
+
+| 分類 | 意思 |
+|---|---|
+| 核心 | 直接讓上面一條標準變好；寫出是哪一條 |
+| 前提 | 核心要靠它才跑得起來，例如登入、權杖 |
+| 護欄 | 安全、機密、品質 |
+| 外圍 | 其餘功能，例如交付營運、學員發布；寫出為什麼現在做 |
+
+講師在自己的 AI 裡備課，平台是團隊的記憶與知識後台：對 AI 的門是 MCP，對人的門是網頁（[ADR 0008](docs/adr/0008-platform-is-memory-and-knowledge-backend.md)）。換成 Codex 或其他支援 MCP 的 AI，流程照樣要能跑，所以：
+
+1. **後台不呼叫 AI。** 對話與產檔都在講師的 AI 裡做。
+2. **流程寫在 MCP server 的 instructions 與工具描述。** plugin 與 skill 只補某個 AI 特有的事。
+3. **資料用通用格式。** 藍圖是 JSON 加 Markdown，產物是 docx／pptx／html，知識庫是 Markdown。
 
 ## 已安裝的 skill 來源
 
@@ -78,36 +98,36 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 
 ## 專案
 
-**rpai-course-platform** —— 講師用的教材準備後台。
+**rpai-course-platform** —— RPAI 講師備課用的團隊記憶與知識後台。
 
-核心機制是**藍圖續用**：講師先與 AI 對話，談出一份課程藍圖（受眾、教學目標、核心訊息、
-五元素完整性：理論／動手／帶走／金句／故事）。這份藍圖是整場課程的**唯一 context 來源**，
+核心機制是**藍圖續用**：講師在自己的 AI 裡談出一份課程藍圖（受眾、教學目標、核心訊息、
+五元素完整性：理論／動手／帶走／金句／故事），存進平台。這份藍圖是整門課程的**唯一 context 來源**，
 下游所有產出都讀它，不再重複詢問前提。
 
-由同一份藍圖衍生的產出：
+由同一份藍圖衍生的產物：
 
-- 課程架構（單元切分、時間配置、流程）
-- 簡報（.pptx）
-- 學員手冊
+- 課程大綱（.docx）
+- 簡報（.pptx，一天一份）
+- 學員手冊（.html，有動手環節的天一份）
 
 設計上的關鍵判斷：這三者不是三個獨立功能，而是**同一份 context 的三種投影**。
 任何讓它們各自持有前提的做法都是錯的——藍圖改動必須能傳播到所有下游產出。
 
-概念上游對應帳號層的 `rpai-talk-blueprint` skill 鏈；本專案是把那條鏈產品化成有後台的系統。
+談藍圖、產教材的方法在帳號層的 `rpai-talk-blueprint` skill 鏈裡，由講師的 AI 執行；平台記住結果，並提供團隊的知識庫。
 
 ### 核心原則（動任何功能前先讀）
 
 1. **藍圖是唯一真相來源。** 對話只是產生／修改藍圖的手段；所有前提（受眾、時數、工具、情境）一律來自 `Blueprint`，不讀對話紀錄。產物可以另讀一份上游產物（例如學員手冊讀該天的簡報），但不能從上游產物取得藍圖沒有的前提（見 `docs/adr/0003-page-script-as-upstream-artifact.md` 與 `docs/adr/0005-page-script-merged-into-slides.md`）。
 2. **藍圖有版本，產物綁版本。** `artifacts.blueprint_id` 指向產生它的那一版；藍圖升版不會自動重生產物，UI 顯示「已過期」讓講師決定。
 3. **五元素完整性**是藍圖 schema 的一部分，缺哪格 UI 要看得到。
-4. **產檔在講師自己的 Claude Code 裡跑。** 後台只排工作、收檔案；plugin 透過 MCP 拉藍圖、用 rpai-* skill 產檔、上傳成品。後台不自己跑 python-pptx。
+4. **對話與產檔都在講師自己的 AI 裡跑。** 講師的 AI 透過 MCP 讀寫藍圖、查知識庫、把產物存回平台；後台只存資料、簽檔案網址（ADR 0008）。
 
 完整設計與決策記錄見 `docs/architecture.md`。
 
 ### 技術棧
 
 - Next.js 16（App Router、`src/` 目錄）+ TypeScript strict + Tailwind v4
-- Anthropic TypeScript SDK `@anthropic-ai/sdk`，預設模型 `claude-opus-5-5`（後台的藍圖對話與抽藍圖）
+- Anthropic TypeScript SDK `@anthropic-ai/sdk`：只剩 `src/lib/claude/` 裡沒有接線的舊程式，由 #138 移除
 - MCP server：`mcp-handler` + `@modelcontextprotocol/server` v2，掛在 `src/app/api/mcp/route.ts`
 - Supabase（Postgres + Auth + Storage），schema 在 `supabase/migrations/`
 - zod v4（藍圖 schema、結構化輸出、MCP 工具輸入）、vitest
@@ -134,7 +154,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 ```
 src/app/              Next.js 路由（頁面、API route；/api/mcp 是 MCP server）
 src/lib/blueprint/    藍圖 schema 與完整性檢查（純函式，可單測）
-src/lib/claude/       所有 Anthropic API 呼叫集中在這裡
+src/lib/claude/       沒有接線的舊 Anthropic API 程式，由 #138 移除
 src/lib/mcp/          MCP 工具、權杖驗證、工作佇列存取
 src/lib/supabase/     Supabase client
 supabase/migrations/  SQL migration，只新增不改舊檔
@@ -149,6 +169,8 @@ docs/                 架構與決策記錄
 
 ### Claude API 規範
 
+這一節只管 `src/lib/claude/` 裡的舊程式，#138 會連同這一節一起移除；新功能照北極星規則 1，後台不呼叫 AI。
+
 動任何 `src/lib/claude/` 程式前，先載入 `claude-api` skill 確認 API 形狀，不要憑記憶寫。
 
 - 模型由每場對話的 `conversations.model` 決定（清單與預設在 `src/lib/claude/models.ts`），呼叫端一律把 `ModelId` 傳進來，不要寫死模型字串。清單一律用各系列的最新版（Haiku 用最新版 Haiku，目前是 `claude-haiku-5-5`）。各模型參數支援不同（例如 effort 的預設值不一樣），新增參數前先確認清單內每個模型都吃得下。
@@ -160,7 +182,8 @@ docs/                 架構與決策記錄
 
 ### MCP 與 plugin 規範
 
-- 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，`plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
+- 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，MCP server 的 instructions 與 `plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
+- 工具要讓講師的 AI 自己走完整個流程（開課、存藍圖、查知識庫、存回產物），流程寫在 instructions 與工具描述裡（北極星規則 2）。
 - 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）
 - 檔案不走 MCP 傳：`request_upload` 給 signed URL，plugin 用 curl 上傳，再 `complete_job`。
 - `plugin/skills/rpai-*`（`rpai-platform-runner` 除外）是帳號層 skill 的快照，以帳號層為準；要改 skill 內容，先改帳號層，再用同步 PR 更新 repo。`rpai-platform-runner` 只在 repo 裡，直接改 repo。同步 PR 要保留 repo 快照的去識別化，合併前掃描客戶名稱。

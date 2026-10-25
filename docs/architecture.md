@@ -2,15 +2,19 @@
 
 ## 1. 這個產品在解什麼問題
 
+> **北極星：讓 RPAI 講師把一門客製課，更快備到可以上課。** 做得好的標準：前提只談一次、教材彼此一致、每門課都從團隊最新的版本出發（[ADR 0007](adr/0007-north-star.md)）。
+
 講師要準備一場課，通常得分別產出課程大綱、簡報、學員手冊，而這三樣東西本質上共用同一份 context：受眾是誰、目標是什麼、時間多長、要講哪些段落。分開做就會重複問三次、彼此不同步。
 
 所以產品的核心不是「AI 幫你做簡報」，而是：
 
 > 先跟 AI 把一份**教學藍圖**討論清楚，之後所有教材都從這份藍圖生成，藍圖改了下游就知道自己過期。
 
-這條 pipeline 在 RPAI 既有的 skill 裡已經驗證過（`rpai-talk-blueprint` → `rpai-course-outline` / `rpai-course-content` / `rpai-pptx-workflow`），本專案是把它產品化成講師後台。
+這條 pipeline 在 RPAI 既有的 skill 裡已經驗證過（`rpai-talk-blueprint` → `rpai-course-outline` / `rpai-course-content` / `rpai-pptx-workflow`），講師也已經在自己的 Claude 裡用它。所以本專案不重做那條鏈：講師在自己的 AI 裡談藍圖、產教材；平台是團隊的記憶與知識後台，記住藍圖的每一版、每份產物出自哪一版，並提供團隊的知識庫。對 AI 的門是 MCP，對人的門是網頁，後台不呼叫 AI（[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)）。
 
 ## 2. 兩個部分
+
+> **已由 [ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md) 取代。** 下圖是原本的設計：後台自己做藍圖對話，網頁排產檔工作，再由 Claude Code 認領。新的分工是「講師的 AI ↔ MCP ↔ 平台」，由 #133–#136 實作時改寫本節。
 
 ```
 ┌─ 後台（Next.js，你的伺服器）────────────────┐   ┌─ 講師的電腦 ──────────────────────────┐
@@ -54,6 +58,8 @@ zod schema：`src/lib/blueprint/schema.ts`。DB schema：`supabase/migrations/`�
 
 ## 4. 產檔流程
 
+> **已由 [ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md) 取代。** 產物改由講師的 AI 直接存回平台，不再經過網頁排工作；本節由 #135 改寫。
+
 ```
 講師在後台點「生成簡報」
   → artifacts 新增 (kind=slides, blueprint_id=v3, version=next, status=pending, runner=claude_code)
@@ -78,6 +84,8 @@ MCP 工具定義在 `src/lib/mcp/`，plugin 端流程在 `plugin/skills/rpai-pla
 
 ## 5. 後台的 AI 呼叫
 
+> **已由 [ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md) 取代：後台不呼叫 AI。** 本節描述的程式都沒有接線，由 #138 移除。
+
 | 階段 | 用什麼 | 為什麼 |
 |---|---|---|
 | 藍圖對話 | Messages API streaming（`client.messages.stream`） | 即時回覆、自己掌控對話與存檔 |
@@ -90,6 +98,7 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 
 | 決策 | 選擇 | 理由 | 日期 |
 |---|---|---|---|
+| **平台定位** | **講師在自己的 AI 裡備課；平台是團隊的記憶與知識後台（MCP＋網頁），後台不呼叫 AI** | 一個 AI session 記不住團隊的事；講師留在平常用的 Claude；換成 Codex 等其他 AI 也能用（[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)）。下面的「模型」一列因此退場 | 2026-10-25 |
 | 技術棧 | Next.js 16 + TypeScript，單一 repo | 前後端一起、串流聊天順手 | 2026-09-03 |
 | 資料庫 | Supabase Postgres + Storage，RLS 依 owner_id | 登入、檔案、資料庫一站解決 | 2026-09-03 |
 | 模型 | 預設 `claude-opus-5-5`，每場對話可在 `conversations.model` 各自選（Opus 5.5／Sonnet 5.5／最新版 Haiku（目前 5.5）／Fable 5.1，清單在 `src/lib/claude/models.ts`）；不指定 thinking（各模型用自己的預設），用 effort 調深度 | 依 claude-api skill 的預設；講師依草稿／定稿、成本、速度自選 | 2026-09-03、2026-10-02、2026-10-24 |

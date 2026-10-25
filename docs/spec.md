@@ -1,5 +1,7 @@
 # RPAI Course Platform — 產品規格（v0.1）
 
+> **已由 [#131](https://github.com/rpaidevolper/rpai-course-platform/issues/131)（v0 規格）取代，保留作為歷史紀錄。** 北極星與平台定位見 [ADR 0007](adr/0007-north-star.md)、[ADR 0008](adr/0008-platform-is-memory-and-knowledge-backend.md)：講師在自己的 AI 裡談藍圖、產教材，後台不再自己做藍圖對話，也不再從網頁排產檔工作。
+
 > 狀態：草案，對應 2026-09-03 的討論。架構與決策理由在 `docs/architecture.md`，本文只講「要做出什麼、怎樣算做完」。
 
 ## 1. 背景與目標

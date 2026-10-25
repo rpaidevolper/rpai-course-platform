@@ -73,6 +73,8 @@ jobs:
             2. 正確性：邏輯錯誤、沒處理的邊界情況、安全問題（特別是 CLAUDE.md 的 MCP 與資料規範：owner 過濾、RLS）。
             3. 測試：新行為有沒有測試；測試驗的是對外行為，不是實作細節；有沒有為了過而寫的空測試。
             4. 一致性：命名是否使用 glossary 的詞彙，是否違反既有 ADR 或 CLAUDE.md 的規範。
+            5. 北極星：對照 CLAUDE.md 的「北極星」，issue 標的分類和這次的改動相符嗎？外圍的改動有沒有寫為什麼現在做？
+               後台有沒有新增任何 AI 呼叫（ADR 0008：後台不呼叫 AI）？流程有沒有只寫在某個 AI 的 plugin 或 skill 裡、沒寫進 MCP 的 instructions？
 
             回報方式：
             - 必須修的問題用 inline comment（mcp__github_inline_comment__create_inline_comment）留在對應的程式碼行，
