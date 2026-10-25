@@ -16,7 +16,6 @@
     "kb:sync": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/kb-sync.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.123.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@supabase/supabase-js": "^2.114.0",
     "mcp-handler": "^2.1.1",

@@ -188,7 +188,7 @@ finish() {
 # 設計與背景見 docs/specs/2026-10-02-production-deployment-design.md。
 # 可重複執行；已輸入的值存在 .env.production.local（已被 .gitignore 排除，做完可刪），Enter 沿用。
 
-TOTAL_STAGES=7
+TOTAL_STAGES=6
 ENV_FILE=".env.production.local"
 VERCEL_CLI="vercel@62.1.0"
 VERCEL_PROJECT_NAME="rpai-course-platform"
@@ -260,14 +260,7 @@ ask_secret SUPABASE_ACCESS_TOKEN "Paste access token:"
 write_env SUPABASE_ACCESS_TOKEN "$SUPABASE_ACCESS_TOKEN"
 set_secret SUPABASE_ACCESS_TOKEN "$SUPABASE_ACCESS_TOKEN"
 
-# ── 5. Anthropic ──────────────────────────────────────────────────────────
-stage "Anthropic：API key（藍圖對話用）"
-open_url "https://console.anthropic.com/settings/keys"
-step "Create Key，名稱填 rpai-course-platform-production，複製（只會顯示一次）。"
-ask_secret ANTHROPIC_API_KEY "Paste Anthropic API key:"
-write_env ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
-
-# ── 6. Vercel ─────────────────────────────────────────────────────────────
+# ── 5. Vercel ─────────────────────────────────────────────────────────────
 stage "Vercel：建立專案並設定環境變數"
 say "專案由 CLI 建立，且不連接 GitHub（部署只由 GitHub Actions 觸發）。"
 open_url "https://vercel.com/account/tokens"
@@ -285,13 +278,13 @@ set_secret VERCEL_TOKEN "$VERCEL_TOKEN"
 set_secret VERCEL_ORG_ID "$VERCEL_ORG_ID"
 set_secret VERCEL_PROJECT_ID "$VERCEL_PROJECT_ID"
 say "寫入 Vercel Production 環境變數 …"
-for name in ANTHROPIC_API_KEY NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
   printf '%s' "${!name}" | npx --yes "$VERCEL_CLI" env add "$name" production --force --token "$VERCEL_TOKEN" >/dev/null
   printf '  %s✓ set%s Vercel env %s (production)\n' "$GREEN" "$RESET" "$name"
 done
 pause
 
-# ── 7. 首次部署（bootstrap）與 production 網址 ───────────────────────────
+# ── 6. 首次部署（bootstrap）與 production 網址 ───────────────────────────
 stage "首次部署（bootstrap）並取得 production 網址"
 say "在你的終端機裡完成第一次部署：套用 migration、部署 Vercel、跑 smoke test。"
 say "這同時是 deploy.yml 的預演：它跑的是同一組指令，這裡過了，之後的自動部署才有把握。"
