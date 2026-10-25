@@ -1,8 +1,5 @@
 import { KNOWN_INDUSTRIES } from "./industries.ts";
 
-/** 來源一、二的名稱，字數（[...name].length）在這個值以下時，只有別名檔列出才比對，避免「虛工」這類短詞誤判。 */
-const SHORT_NAME_MAX = 3;
-
 /** 不算客戶的名稱：團隊自己的品牌與產業名稱（比對不分大小寫）。 */
 const BUILTIN_EXCEPTIONS: readonly string[] = ["RPAI", ...KNOWN_INDUSTRIES];
 
@@ -16,10 +13,12 @@ export interface NameStats {
   fromRecipes: number;
   /** 別名檔列出的名稱數 */
   fromAliases: number;
+  /** 名稱表裡 2 個字以下（[...name].length <= 2）的名稱數。這類名稱容易誤判；報告只印數量，不印名稱。 */
+  short: number;
 }
 
 export interface NameTable {
-  /** 文字裡有沒有命中任何名稱（不分大小寫）。 */
+  /** 文字裡有沒有命中任何名稱（不分大小寫；比對規則見 patternOf）。 */
   hits(text: string): boolean;
   /** 把命中的名稱換成遮罩字。檔名與路徑都要過這一關，報告才不會印出名稱。 */
   mask(text: string): string;
@@ -36,6 +35,21 @@ export interface RecipeNameSource {
 const lower = (text: string): string => text.toLowerCase();
 const charCount = (text: string): number => [...text].length;
 const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** 全部由 ASCII 字元組成的名稱（字母、數字、空白或標點，例如 GE、3M、C&A）；含中文或其他字元的不是。 */
+const isAsciiName = (name: string): boolean => [...name].every((char) => char.charCodeAt(0) < 0x80);
+
+/**
+ * 單一名稱的比對樣式（hits 與 mask 共用，所以兩者的比對邏輯一致）：
+ * - 英文名只比對完整的詞：前後一個字元都不能是 ASCII 字母或數字。所以 GE 不命中 AGENT、manaGEment，
+ *   但命中「GE 的講師」「與GE合作」「(GE)」。
+ * - 含中文或其他非 ASCII 字元的名稱，直接比對子字串，因為中文沒有字詞邊界。
+ * 這裡不用 \b：名稱以標點開頭或結尾時，\b 會判錯。
+ */
+const patternOf = (name: string): string => {
+  const escaped = escapeRegExp(name);
+  return isAsciiName(name) ? `(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])` : escaped;
+};
 
 /**
  * 配方 id 的客戶段（沒有就回 null）：
@@ -74,8 +88,8 @@ export function parseAliases(text: string | null): { names: string[]; exceptions
 
 /**
  * 建立名稱表（只在記憶體裡，不寫進任何檔案或資料庫）。
- * 來源：配方的 client、配方 id 的客戶段、別名檔。排除內建例外與別名檔的 ! 例外；
- * 配方來源的 3 字（含）以下名稱，只有別名檔也列出時才留下。
+ * 來源：配方的 client、配方 id 的客戶段、別名檔。排除內建例外與別名檔的 ! 例外。
+ * 所有名稱不分長短都比對，比對規則見 patternOf。
  */
 export function buildNameTable(input: { recipes: RecipeNameSource[]; aliasesText: string | null }): NameTable {
   const aliases = parseAliases(input.aliasesText);
@@ -92,31 +106,22 @@ export function buildNameTable(input: { recipes: RecipeNameSource[]; aliasesText
       if (name && !exceptionKeys.has(lower(name))) recipeNames.set(lower(name), name);
     }
   }
-  const keptRecipeNames = [...recipeNames].filter(([key, name]) => charCount(name) > SHORT_NAME_MAX || aliasNames.has(key));
-
-  const table = new Map<string, string>([...keptRecipeNames, ...aliasNames]);
-  const keys = [...table.keys()];
-  const maskPattern =
-    table.size > 0
-      ? new RegExp(
-          [...table.values()]
-            .sort((a, b) => charCount(b) - charCount(a))
-            .map(escapeRegExp)
-            .join("|"),
-          "gi",
-        )
-      : null;
+  const table = new Map<string, string>([...recipeNames, ...aliasNames]);
+  // 長的名稱排在前面：遮罩時「虛構精密工業」要先於「虛構精密」比對。
+  const byLength = [...table.values()].sort((a, b) => charCount(b) - charCount(a));
+  const pattern = byLength.map(patternOf).join("|");
+  // hits 用不帶 g 的版本（帶 g 的 RegExp 用 test 會記住 lastIndex）；mask 用帶 g 的版本。兩者樣式相同。
+  const hitPattern = pattern === "" ? null : new RegExp(pattern, "i");
+  const maskPattern = pattern === "" ? null : new RegExp(pattern, "gi");
 
   return {
-    hits: (text) => {
-      const lowered = lower(text);
-      return keys.some((key) => lowered.includes(key));
-    },
+    hits: (text) => hitPattern?.test(text) ?? false,
     mask: (text) => (maskPattern ? text.replace(maskPattern, MASK_TEXT) : text),
     stats: {
       total: table.size,
-      fromRecipes: keptRecipeNames.filter(([key]) => !aliasNames.has(key)).length,
+      fromRecipes: [...recipeNames.keys()].filter((key) => !aliasNames.has(key)).length,
       fromAliases: aliasNames.size,
+      short: byLength.filter((name) => charCount(name) <= 2).length,
     },
   };
 }

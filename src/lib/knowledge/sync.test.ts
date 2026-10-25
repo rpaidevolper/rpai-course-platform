@@ -115,9 +115,11 @@ describe("runSync 同步", () => {
       aliasesText: await fixtureAliases(),
     });
     expect(logs).toContain("讀到 13 個 Markdown：模組框架 1、模組卡 2、單元卡 4、課程配方 4；略過 2 個（不是知識庫文件）");
-    expect(logs).toContain("名稱表：6 個名稱（配方 3、別名檔 3）。報告不列出名稱。");
-    expect(logs).toContain("暫停使用：3 份文字含客戶名稱，AI 查不到，修正資料夾後重跑。");
+    expect(logs).toContain("名稱表：7 個名稱（配方 4、別名檔 3）；其中 2 個是 2 個字以下的短名稱，容易誤判，誤判時在別名檔用 ! 列為例外。報告不列出名稱。");
+    expect(logs).toContain("暫停使用：4 份文字含客戶名稱，AI 查不到，修正資料夾後重跑。");
+    expect(logs).toContain("  - 單元卡/A1_會議紀錄整理.md");
     expect(logs).toContain("  - 單元卡/A2_資料整理實作.md");
+    expect(logs).toContain("  - 單元卡/B1_流程診斷練習.md");
     expect(logs).toContain("  - 模組卡/B2_提問與指令.md");
   });
 
