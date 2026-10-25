@@ -16,6 +16,25 @@ body:
       description: 使用者能做到什麼現在做不到的事。
     validations:
       required: true
+  - type: dropdown
+    id: north-star
+    attributes:
+      label: 北極星分類
+      description: 北極星是「讓 RPAI 講師把一門客製課，更快備到可以上課」，分類的意思見 CLAUDE.md 的「北極星」。
+      options:
+        - 核心：直接讓一條標準變好（前提只談一次／教材彼此一致／從團隊最新的版本出發）
+        - 前提：核心要靠它才跑得起來
+        - 護欄：安全、機密、品質
+        - 外圍：其餘功能
+    validations:
+      required: true
+  - type: textarea
+    id: north-star-why
+    attributes:
+      label: 對標說明
+      description: 核心寫出讓哪一條標準變好；前提與護欄寫出它撐住哪個核心功能；外圍寫出為什麼現在做。
+    validations:
+      required: true
   - type: textarea
     id: notes
     attributes:
