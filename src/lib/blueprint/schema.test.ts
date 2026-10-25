@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { z } from "zod";
 import {
   BlueprintSchema,
   checkBlueprint,
@@ -151,8 +151,8 @@ describe("BlueprintSchema", () => {
     ).toThrow();
   });
 
-  it("仍可轉成 Claude 結構化輸出的格式", () => {
-    expect(() => zodOutputFormat(BlueprintSchema)).not.toThrow();
+  it("可以轉成 JSON Schema（MCP 工具的輸入格式）", () => {
+    expect(z.toJSONSchema(BlueprintSchema)).toMatchObject({ type: "object" });
   });
 });
 

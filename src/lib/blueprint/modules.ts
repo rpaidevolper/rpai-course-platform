@@ -17,7 +17,7 @@ export const MODULES = [
 export type ModuleId = (typeof MODULES)[number]["id"];
 export type ModuleKind = (typeof MODULES)[number]["kind"];
 
-/** 模組代號清單，給 z.enum 用（zodOutputFormat 不吃 optional／default，所以是純 enum）。 */
+/** 模組代號清單，給 z.enum 用。 */
 export const MODULE_IDS = MODULES.map((m) => m.id) as [ModuleId, ...ModuleId[]];
 
 /** 模組的定義：代號、類別（A 或 B）與名稱。 */
