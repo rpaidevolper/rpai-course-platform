@@ -48,10 +48,10 @@ export interface ArtifactStore {
 }
 
 /** artifacts 連 blueprints（取出藍圖版本）的欄位。 */
-const ARTIFACT_COLUMNS =
+export const ARTIFACT_COLUMNS =
   "id, course_id, kind, day, version, status, filename, storage_path, upstream_id, edited_from_id, created_at, meta, blueprint:blueprints!inner(version)";
 
-interface ArtifactRow {
+export interface ArtifactRow {
   id: string;
   course_id: string;
   kind: ArtifactKind;
@@ -67,7 +67,8 @@ interface ArtifactRow {
   blueprint: { version: number };
 }
 
-function toRecord(row: ArtifactRow): ArtifactRecord {
+/** 資料庫的一列轉成 ArtifactRecord。網頁的讀取（lib/dashboard/store.ts）共用這個。 */
+export function toArtifactRecord(row: ArtifactRow): ArtifactRecord {
   return {
     id: row.id,
     course_id: row.course_id,
@@ -98,7 +99,7 @@ export function createSupabaseArtifactStore(): ArtifactStore {
       .eq("course_id", courseId)
       .order("created_at", { ascending: true });
     if (error) throw error;
-    return (data as unknown as ArtifactRow[]).map(toRecord);
+    return (data as unknown as ArtifactRow[]).map(toArtifactRecord);
   }
 
   /** 同一個（課程, 種類, 天）裡已有的產物，用來取版本號。day 是 null 時要用 is null 查。 */
@@ -111,7 +112,7 @@ export function createSupabaseArtifactStore(): ArtifactStore {
     query = day === null ? query.is("day", null) : query.eq("day", day);
     const { data, error } = await query;
     if (error) throw error;
-    return (data as unknown as ArtifactRow[]).map(toRecord);
+    return (data as unknown as ArtifactRow[]).map(toArtifactRecord);
   }
 
   return {
@@ -159,7 +160,7 @@ export function createSupabaseArtifactStore(): ArtifactStore {
         .eq("course.owner_id", ownerId)
         .maybeSingle();
       if (error) throw error;
-      return data ? toRecord(data as unknown as ArtifactRow) : null;
+      return data ? toArtifactRecord(data as unknown as ArtifactRow) : null;
     },
 
     async createArtifact(input) {
@@ -185,7 +186,7 @@ export function createSupabaseArtifactStore(): ArtifactStore {
           })
           .select(ARTIFACT_COLUMNS)
           .single();
-        if (!error) return toRecord(data as unknown as ArtifactRow);
+        if (!error) return toArtifactRecord(data as unknown as ArtifactRow);
         if (error.code !== UNIQUE_VIOLATION) throw new Error(`產物寫入失敗：${error.message}`);
         lastError = error;
       }

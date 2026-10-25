@@ -153,9 +153,11 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 ### 目錄
 
 ```
-src/app/              Next.js 路由（頁面、API route；/api/mcp 是 MCP server）
+src/app/              Next.js 路由：(dashboard) 是登入後的網頁，login 是登入頁，u 是上傳頁，demo 是設計稿，api/mcp 是 MCP server
+src/proxy.ts          只做樂觀檢查：沒有登入 cookie 就導去 /login；頁面與 route handler 自己再驗一次
 src/lib/blueprint/    藍圖 schema 與完整性檢查（純函式，可單測）
 src/lib/claude/       沒有接線的舊 Anthropic API 程式，由 #138 移除
+src/lib/dashboard/    網頁用的資料讀取、上傳與下載（不以 owner 過濾，見「資料規範」）
 src/lib/knowledge/    知識庫的解析、去識別化、同步與查詢；`scripts/kb-sync.ts` 直接執行，只能用加 `.ts` 的相對路徑 import
 src/lib/mcp/          MCP 工具、server instructions、權杖驗證、每組工具的資料存取（*-store.ts）
 src/lib/supabase/     Supabase client
@@ -196,6 +198,7 @@ docs/                 架構與決策記錄
 - 新增欄位 = 新增一個 migration 檔（`supabase/migrations/NNNN_*.sql`），並同步更新 zod schema 與 `docs/architecture.md`。
 - 所有表都開 RLS；資料只有 `owner_id` 本人可讀寫。
   - **目標狀態**（[ADR 0004](docs/adr/0004-one-shared-workspace-for-all-instructors.md)）：全團隊共用一個工作區，RLS 與 MCP 都改以工作區過濾，用 service role 時仍要自己加工作區條件。schema v2 實作前，現行程式仍以 `owner_id` 過濾，這條與 MCP 規範的 owner 條件照舊；不要提前改 MCP 或 RLS。
+  - **網頁的例外（v0）**：網頁用一組團隊共用的密碼（`DASHBOARD_PASSWORD`）登入，看得到全部課程，等同 ADR 0004 的全團隊共用。所以 `src/lib/dashboard/` 的查詢不以 owner 過濾，只能在通過登入檢查的頁面與 route handler 裡用；上傳頁（`/u/`）靠一次性權杖授權，只能讀寫權杖對應的那一份產物。
 - Migration 必須向下相容：合併後 CI 會先把 migration 套到 production、再部署程式碼，所以舊版程式碼會短暫面對新 schema。新增欄位可以；移除或改名要拆成兩個 PR（先上線不再使用它的程式碼，下一個 PR 才移除）。有破壞性的 migration 要在 PR 說明標明。
 
 ### 環境變數

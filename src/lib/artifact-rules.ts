@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { Blueprint } from "@/lib/blueprint/schema";
-import { artifactExtension, type ArtifactKind } from "@/lib/artifacts";
+import { ARTIFACT_KINDS, ARTIFACT_KIND_LABELS, artifactExtension, type ArtifactKind } from "@/lib/artifacts";
 
 /** 產物的狀態；只有 ready 才算完成，下游與過期判斷都只看 ready。 */
 export type ArtifactStatus = "pending" | "generating" | "ready" | "failed";
@@ -170,4 +170,45 @@ export function staleReasons(
   }
 
   return STALE_REASONS.filter((reason) => found.has(reason));
+}
+
+/** 產物清單的一列。網頁與 MCP 的 rpai_platform_list_artifacts 都用這個形狀。 */
+export interface ArtifactSummary {
+  id: string;
+  kind: ArtifactKind;
+  kind_label: string;
+  day: number | null;
+  version: number;
+  blueprint_version: number;
+  status: ArtifactStatus;
+  filename: string | null;
+  stale_reasons: StaleReason[];
+  created_at: string;
+}
+
+/**
+ * 產物清單：依種類（課程大綱、簡報、學員手冊）、天由小到大、版本由大到小排序，並附過期原因。MCP 的 list_artifacts 與網頁都用它。
+ * 不改傳進來的陣列。
+ */
+export function summarizeArtifacts(artifacts: ArtifactRecord[], latestBlueprintVersion: number | null): ArtifactSummary[] {
+  return [...artifacts].sort(byKindDayVersion).map((a) => ({
+    id: a.id,
+    kind: a.kind,
+    kind_label: ARTIFACT_KIND_LABELS[a.kind],
+    day: a.day,
+    version: a.version,
+    blueprint_version: a.blueprint_version,
+    status: a.status,
+    filename: a.filename,
+    stale_reasons: staleReasons(a, artifacts, latestBlueprintVersion),
+    created_at: a.created_at,
+  }));
+}
+
+function byKindDayVersion(a: ArtifactRecord, b: ArtifactRecord): number {
+  return (
+    ARTIFACT_KINDS.indexOf(a.kind) - ARTIFACT_KINDS.indexOf(b.kind) ||
+    (a.day ?? 0) - (b.day ?? 0) ||
+    b.version - a.version
+  );
 }

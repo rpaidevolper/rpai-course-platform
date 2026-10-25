@@ -48,6 +48,8 @@ Claude 在雲端的程式碼執行環境裡產出 .docx、.pptx、.html，再用
 
 帳號層的 `rpai-*` skill（`rpai-talk-blueprint` 等）照常可用：skill 負責怎麼談、怎麼做教材，平台負責記住結果。
 
+平台記了什麼，可以在網頁上看：打開 `https://rpai-course-platform.vercel.app`，輸入團隊共用的密碼，就看得到每門課的最新藍圖、歷史版本與產物，也能下載。
+
 ### Claude 桌面版：本機橋接
 
 組織沒有 Request headers 時，桌面版可以用本機的 MCP 設定，透過 [`mcp-remote`](https://github.com/geelen/mcp-remote) 帶 header 連到平台。電腦上要有 Node 18 以上。編輯 `claude_desktop_config.json`（**Settings → Developer → Edit Config**）：

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { DemoRuntime } from "./_components/demo-runtime";
 import { ThemeScript } from "./_components/theme-toggle";
 
 export const metadata: Metadata = {
-  title: "RPAI 講師後台",
-  description: "跟 AI 談出教學藍圖，從同一份藍圖產出教材，並把每一場課的東西集中給學員",
+  title: "RPAI 課程平台",
+  description: "RPAI 講師備課用的團隊記憶與知識後台",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -15,10 +14,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <ThemeScript />
       </head>
-      <body>
-        {children}
-        <DemoRuntime />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

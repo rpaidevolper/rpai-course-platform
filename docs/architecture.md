@@ -40,6 +40,19 @@
 | `rpai_platform_list_artifacts` | 列出課程的產物與過期原因 |
 | `rpai_platform_get_artifact_download` | 10 分鐘的下載網址 |
 
+網頁（`src/app/`）給人看平台記了什麼，不能改藍圖：
+
+| 路徑 | 做什麼 |
+|---|---|
+| `/login` | 輸入團隊共用的密碼（`DASHBOARD_PASSWORD`），發一個 30 天的簽章 cookie；換密碼後舊 cookie 一律失效 |
+| `/` | 全部課程，附最新藍圖版本 |
+| `/courses/[id]` | 最新藍圖（五元素、待確認事項、檢查結果）、歷史版本、產物與過期原因 |
+| `/artifacts/[id]/download` | 簽 10 分鐘、帶 download 選項的網址並導過去 |
+| `/u/[artifactId]?t=` | 上傳頁：不用登入，靠一次性權杖；講師在瀏覽器選檔，直接傳到 Storage |
+| `/demo` | 設計稿，瀏覽器裡的假資料 |
+
+網頁看得到全部課程（等同 ADR 0004 的全團隊共用），MCP 仍以權杖的 owner 過濾。課程頁和 MCP 工具用同一組純函式（`checkBlueprint`、`openItems`、`blueprintReport`、`summarizeArtifacts`），兩邊看到的缺漏、待確認事項與過期原因一致。
+
 ## 3. 資料模型
 
 > **名詞正在改版。** 產品模組已改成「專案 → 課程 → 場次」，並新增發布、學員入口與知識庫（名詞見 `GLOSSARY.md`，取捨見 [ADR 0002](adr/0002-each-course-owns-its-blueprint.md)）。下圖仍是目前 schema 的樣子：其中的 `Course` 指「一場課」，對應新名詞的「課程」加上「場次」。schema 會等設計稿（#22）對齊後另外設計。領域模型 v2（多天課程、課綱討論、定稿、客戶文件與需求條目）見 #25 與 [ADR 0003](adr/0003-page-script-as-upstream-artifact.md)；其中「逐頁腳本是產物」已由 [ADR 0005](adr/0005-page-script-merged-into-slides.md) 取代：講稿寫在簡報的 speaker notes，學員手冊的上游是該天的簡報。領域模型 v3（知識庫改成模組框架、模組卡、單元卡、課程配方與產業素材包；課程結案回存；全團隊共用一個工作區）見 #53、[ADR 0002 的修訂](adr/0002-each-course-owns-its-blueprint.md) 與 [ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)。
@@ -122,8 +135,8 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
 ## 7. 還沒決定的事
 
 - **權杖管理 UI**：現在只有 `pnpm token:create`；後台要有「產生／撤銷權杖」頁。
-- **講師登入**：Supabase Auth；Next.js 端要用 `@supabase/ssr` 處理 cookie session（尚未安裝）。
-- **後台頁面**：對話頁、藍圖版本頁、產物列表（含過期標示與下載）都還沒做。
+- **分辨是哪位講師**：v0 的網頁用共用密碼，claude.ai 連接器用一組全組織共用的權杖，平台分不出是誰。要分人得做 OAuth（連接器）與個人登入（網頁）。
+- **共用密碼的防護**：登入沒有次數限制；登出只刪瀏覽器的 cookie，被複製的 cookie 在 30 天內或換密碼前都有效。
 - **結構化輸出的 schema 相容性**：`BlueprintSchema` 用了 `min(1)`、`min(2)` 這類限制，第一次真的呼叫 `extractBlueprint()` 時要確認 API 接受；不接受就把限制移到 `checkBlueprint()` 做。
 - **藍圖 diff UI**：v2 → v3 改了什麼要讓講師看得到。
 - **多講師／團隊**：已決定全團隊共用一個工作區（[ADR 0004](adr/0004-one-shared-workspace-for-all-instructors.md)）；目前 schema 只有單一 owner，schema v2 時改以工作區過濾。
@@ -141,7 +154,7 @@ Prompt 組裝順序（影響快取命中）：品牌規範 + 角色設定（最�
                                    ▼  deploy.yml（CI 通過後）
                                 supabase db push ─────────────► 雲端 Supabase（production）
                                 vercel build + deploy --prod ─► Vercel（Next.js app + /api/mcp）
-                                smoke-test.sh ──► /api/health、/、/api/mcp
+                                smoke-test.sh ──► /api/health、/login、/、/demo、/u、/api/mcp
 ```
 
 - 部署只由 GitHub Actions 觸發，Vercel 的 Git 自動部署關閉（`vercel.json`）。順序固定：migration 先、程式碼後，任何一步失敗就中止。

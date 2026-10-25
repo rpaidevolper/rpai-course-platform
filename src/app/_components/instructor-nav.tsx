@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/", label: "首頁", match: (p: string) => p === "/" },
+  { href: "/demo", label: "首頁", match: (p: string) => p === "/demo" },
   // 場次跟麵包屑一樣歸在專案底下
-  { href: "/projects", label: "專案", match: (p: string) => p.startsWith("/projects") || p.startsWith("/courses") || p.startsWith("/sessions") },
-  { href: "/knowledge", label: "知識庫", match: (p: string) => p.startsWith("/knowledge") },
-  { href: "/settings", label: "講師偏好", match: (p: string) => p.startsWith("/settings") },
+  { href: "/demo/projects", label: "專案", match: (p: string) => p.startsWith("/demo/projects") || p.startsWith("/demo/courses") || p.startsWith("/demo/sessions") },
+  { href: "/demo/knowledge", label: "知識庫", match: (p: string) => p.startsWith("/demo/knowledge") },
+  { href: "/demo/settings", label: "講師偏好", match: (p: string) => p.startsWith("/demo/settings") },
 ];
 
 export function InstructorNav() {
