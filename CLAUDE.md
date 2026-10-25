@@ -157,7 +157,7 @@ src/app/              Next.js 路由（頁面、API route；/api/mcp 是 MCP ser
 src/lib/blueprint/    藍圖 schema 與完整性檢查（純函式，可單測）
 src/lib/claude/       沒有接線的舊 Anthropic API 程式，由 #138 移除
 src/lib/knowledge/    知識庫的解析、去識別化、同步與查詢；`scripts/kb-sync.ts` 直接執行，只能用加 `.ts` 的相對路徑 import
-src/lib/mcp/          MCP 工具、權杖驗證、工作佇列存取
+src/lib/mcp/          MCP 工具、server instructions、權杖驗證、每組工具的資料存取（*-store.ts）
 src/lib/supabase/     Supabase client
 supabase/migrations/  SQL migration，只新增不改舊檔
 plugin/               講師端 Claude Code plugin（.mcp.json、runner skill、打包的 rpai-* skill）
@@ -187,7 +187,7 @@ docs/                 架構與決策記錄
 - 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，MCP server 的 instructions 與 `plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
 - 工具要讓講師的 AI 自己走完整個流程（開課、存藍圖、查知識庫、存回產物），流程寫在 instructions 與工具描述裡（北極星規則 2）。
 - 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）例外是知識庫：它全團隊共用，`search_knowledge`、`read_knowledge` 不以 owner 過濾，但只回沒有退役、沒有旗標的文件。
-- 檔案不走 MCP 傳：`request_upload` 給 signed URL，plugin 用 curl 上傳，再 `complete_job`。
+- 檔案不走 MCP 傳：`rpai_platform_request_artifact_upload` 給 signed upload URL，講師的 AI 用 PUT 上傳，再 `rpai_platform_complete_artifact_upload`；連不出去時講師用一次性的上傳頁。
 - `plugin/skills/rpai-*`（`rpai-platform-runner` 除外）是帳號層 skill 的快照，以帳號層為準；要改 skill 內容，先改帳號層，再用同步 PR 更新 repo。`rpai-platform-runner` 只在 repo 裡，直接改 repo。同步 PR 要保留 repo 快照的去識別化，合併前掃描客戶名稱。
 
 ### 資料規範

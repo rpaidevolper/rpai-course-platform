@@ -1,6 +1,6 @@
 # 把 AI 接上平台
 
-講師在自己的 AI 裡備課，平台透過 MCP 記住每門課的藍圖，並提供團隊的知識庫（ADR 0008）。這份文件說明怎麼把各家 AI 接上平台的 MCP server。
+講師在自己的 AI 裡備課，平台透過 MCP 記住每門課的藍圖與產物，並提供團隊的知識庫（ADR 0008）。這份文件說明怎麼把各家 AI 接上平台的 MCP server。
 
 所有 AI 都連同一個網址，帶同一種權杖：
 
@@ -30,6 +30,15 @@ Team 方案只有 Owner 能加自訂連接器，而且整個組織共用一組�
 連接器加好後不能改驗證設定；要換權杖就移除連接器，再加一次。
 
 **Request headers 是 beta，只開放給部分組織。** 第 5 步看不到 **Request headers** 時，表示組織還沒有這個功能。這時網站版接不上，改用下面的「Claude 桌面版：本機橋接」或 Claude Code。
+
+### Owner：讓 Claude 能把檔案傳回平台
+
+Claude 在雲端的程式碼執行環境裡產出 .docx、.pptx、.html，再用 HTTP PUT 傳到平台給的上傳網址。上傳網址在 Supabase 的網域，所以要開放這個網域：
+
+1. 到 **Organization settings → Capabilities**，確認 **Code execution and file creation** 是開的。
+2. 網路存取選「套件管理器加上指定的網域」，加上 Supabase 專案的網域 `<專案代號>.supabase.co`。
+
+有使用者回報加了網域仍然連不出去。傳不上去時，平台會給一個上傳頁連結（2 小時內有效，只能用一次），講師把 Claude 產出的檔案下載下來，在瀏覽器上傳即可。
 
 ### 講師：開始用
 
@@ -84,7 +93,7 @@ url = "https://rpai-course-platform.vercel.app/api/mcp"
 bearer_token_env_var = "RPAI_PLATFORM_TOKEN"
 ```
 
-再在啟動 Codex 的環境設定 `export RPAI_PLATFORM_TOKEN=<權杖>`。Codex 照工具描述讀寫同一份藍圖、查同一個知識庫。`rpai-*` skill 要另外放進 Codex 讀得到的 skill 資料夾（例如 `~/.agents/skills/`）。
+再在啟動 Codex 的環境設定 `export RPAI_PLATFORM_TOKEN=<權杖>`。Codex 照工具描述讀寫同一份藍圖、查同一個知識庫、存回產物。`rpai-*` skill 要另外放進 Codex 讀得到的 skill 資料夾（例如 `~/.agents/skills/`）。
 
 ## 其他支援 MCP 的 AI
 
