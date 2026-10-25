@@ -201,7 +201,7 @@ export function createSupabaseArtifactStore(): ArtifactStore {
     },
 
     async fileExists(storagePath) {
-      // 確認檔案真的到了，才標 ready（同 job-store 的做法）。
+      // 確認檔案真的到了，才標 ready。
       const dir = storagePath.split("/").slice(0, -1).join("/");
       const name = storagePath.split("/").pop() ?? "";
       const { data: objects, error } = await supabase.storage.from(ARTIFACT_BUCKET).list(dir, { search: name });

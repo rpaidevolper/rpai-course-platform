@@ -12,7 +12,7 @@ const RUNNER_SKILL = readFileSync(
 /** 註冊時不會呼叫 store，給空物件就夠了。 */
 function registeredTools(): string[] {
   const t = createTestServer();
-  registerPlatformTools(t.server, {} as PlatformStores);
+  registerPlatformTools(t.server, {} as PlatformStores, { baseUrl: "http://localhost:3000" });
   return t.toolNames();
 }
 
