@@ -145,6 +145,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 | 本機 Supabase | `pnpm db:start`（啟動並把連線資訊寫入 `.env.local`）、`pnpm db:stop`、`pnpm db:reset`（清空並重套 migrations） |
 | 部署後 smoke test | `scripts/smoke-test.sh <url> [commit]` |
 | 建講師權杖 | `pnpm token:create --user <auth.users.id> --label 名稱` |
+| 同步知識庫 | `pnpm kb:sync <資料夾> [--aliases <別名檔>] [--apply]`（見 `docs/knowledge-sync.md`） |
 | 測 plugin | `claude --plugin-dir ./plugin` |
 
 提交前必跑 `pnpm lint && pnpm typecheck && pnpm test`。套件管理一律用 pnpm。
@@ -155,6 +156,7 @@ rpai-talk-blueprint  →  rpai-course-outline / rpai-course-content  →  rpai-p
 src/app/              Next.js 路由（頁面、API route；/api/mcp 是 MCP server）
 src/lib/blueprint/    藍圖 schema 與完整性檢查（純函式，可單測）
 src/lib/claude/       沒有接線的舊 Anthropic API 程式，由 #138 移除
+src/lib/knowledge/    知識庫的解析、去識別化、同步與查詢；`scripts/kb-sync.ts` 直接執行，只能用加 `.ts` 的相對路徑 import
 src/lib/mcp/          MCP 工具、權杖驗證、工作佇列存取
 src/lib/supabase/     Supabase client
 supabase/migrations/  SQL migration，只新增不改舊檔
@@ -184,7 +186,7 @@ docs/                 架構與決策記錄
 
 - 工具名稱一律 `rpai_platform_` 前綴、snake_case；改工具名或參數時，MCP server 的 instructions 與 `plugin/skills/rpai-platform-runner/SKILL.md` 要同步改。
 - 工具要讓講師的 AI 自己走完整個流程（開課、存藍圖、查知識庫、存回產物），流程寫在 instructions 與工具描述裡（北極星規則 2）。
-- 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）
+- 所有工具都以權杖對應的 `owner_id` 過濾資料；用 service role client 時**必須**自己加 owner 條件，不要相信 RLS 會擋。（之後會改以工作區過濾，見「資料規範」的目標狀態。）例外是知識庫：它全團隊共用，`search_knowledge`、`read_knowledge` 不以 owner 過濾，但只回沒有退役、沒有旗標的文件。
 - 檔案不走 MCP 傳：`request_upload` 給 signed URL，plugin 用 curl 上傳，再 `complete_job`。
 - `plugin/skills/rpai-*`（`rpai-platform-runner` 除外）是帳號層 skill 的快照，以帳號層為準；要改 skill 內容，先改帳號層，再用同步 PR 更新 repo。`rpai-platform-runner` 只在 repo 裡，直接改 repo。同步 PR 要保留 repo 快照的去識別化，合併前掃描客戶名稱。
 

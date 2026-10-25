@@ -33,6 +33,8 @@
 | `rpai_platform_list_courses` | 用標題關鍵字找課程，附最新藍圖版本 |
 | `rpai_platform_get_blueprint` | 讀某一版藍圖：JSON、給人讀的 Markdown、完整性檢查（report）、所有版本 |
 | `rpai_platform_save_blueprint` | 存一版藍圖；沒給課程就建立課程，課程標題跟著最新一版 |
+| `rpai_platform_search_knowledge` | 查知識庫：模組框架、模組卡、單元卡、課程配方（全團隊共用） |
+| `rpai_platform_read_knowledge` | 讀一份知識庫文件的完整內容 |
 
 舊的工作佇列工具（`list_jobs`、`claim_job`、`request_upload`、`complete_job`、`fail_job`）由 #135 移除。
 
@@ -61,6 +63,8 @@ ApiToken（講師的 Claude Code 權杖；只存 sha256）
 - **五元素是 schema 的一部分。** `elements.{theory, handsOn, takeaway, quote, story}` 哪一格是空的，`missingElements()` 直接算得出來。
 - **時間骨架是天 → 時段 → 單元。** `days[].slots[].units[]`；時段預設 180 分鐘、不另排休息。總時長由 `totalMinutes()` 從時段推得，不另存。`checkBlueprint()` 逐時段比對單元分鐘加總，並標出純講述單元（`activity` 為 null）。每個單元記錄所屬模組 `module`（A1–B4）與應用層級 `level`（`L1`–`L5`、`na`＝不適用（純方法，評過了）或 `null`＝未評；單元卡與藍圖單元用同一組值，`checkBlueprint()` 把未評的單元列為 `unit_unrated`，準備度也列出），以及來源 `source`（`{ kind: unit_card | course, id, version, unit }`；`unit_card` 的 version 為 null，`course` 是該課程的藍圖版本；新做為 null）與沿用程度 `reuse`（`reuse` 沿用／`modify` 要改／`new` 新做），`checkBlueprint()` 把要改與新做的單元列為 `unit_needs_work`。課程「複製自哪門課程的哪一版藍圖」記在課程上（設計稿的 `Course.copiedFrom`），不在藍圖裡。`blueprints.content` 只是 jsonb，形狀改了不需要 migration，但改版前存的藍圖不符合新 schema。
 - **工具與待確認事項。** `tools[]` 記名稱、方案等級（free／paid／enterprise）與是否已跟客戶確認；`openQuestions[]` 是物件（`text`、`audience`：client 問客戶／self 自己決定、`unit`：受影響單元的標題或 null，與 `carriesFrom` 同一種參照方式）。`checkBlueprint()` 回報 `open_question` 與 `unconfirmed_tool`；`openItems()` 把兩者合成一份清單（未確認工具視為問客戶），`clientEmailText()` 把問客戶的事項排成可貼進信件的文字（`src/lib/blueprint/open-items.ts`）。
+
+- **知識庫是一張表。** `knowledge_documents` 存去識別化後的模組框架、模組卡、單元卡與課程配方：`kind`、`source_key`（來源 id 的 sha256，不含客戶名稱）、`modules`、`title`、`frontmatter`（jsonb）、`body`（Markdown）、`content_hash`、`flags`、`synced_at`、`retired_at`。全團隊共用、不屬於任何講師：開 RLS、不開 policy，只有伺服器端讀寫。由維護者在本機跑 `pnpm kb:sync` 同步（[`knowledge-sync.md`](knowledge-sync.md)）；帶旗標（文字含客戶名稱）或退役的文件，MCP 查不到。程式在 `src/lib/knowledge/`。
 
 zod schema：`src/lib/blueprint/schema.ts`。DB schema：`supabase/migrations/`。
 
