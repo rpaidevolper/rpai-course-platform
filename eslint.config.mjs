@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude Code 派出的 agent 在這裡開 git worktree，各自跑自己的 lint
+    ".claude/worktrees/**",
   ]),
 ]);
 
