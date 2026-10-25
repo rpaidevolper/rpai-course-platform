@@ -1,23 +1,31 @@
 ---
 name: rpai-platform-runner
 description: >
-  處理 RPAI Course Platform 後台排下來的教材生成工作。當使用者說「跑平台的工作」「處理待生成的教材」
-  「有沒有待生成的教材」「幫我把後台排的簡報／大綱／手冊做出來」「/rpai-platform-runner」，或提到
-  course platform、教材佇列、jobs 時，立即使用此 skill。流程是：用 MCP 拉藍圖 → 在本機用 rpai-* skill
-  產檔 → 把成品上傳回平台。不要自己重問受眾／目標／時間，這些都在藍圖裡。
+  在 Claude Code 裡用 RPAI Course Platform 備課：找課、讀藍圖、談完把藍圖存回平台，以及處理後台排下來的教材生成工作。
+  當使用者說「我要備一門 X 課」「繼續 X 課」「把藍圖存到平台」「跑平台的工作」「有沒有待生成的教材」「/rpai-platform-runner」，
+  或提到 course platform、教材佇列、jobs 時，立即使用此 skill。不要重問藍圖裡已經有的受眾／目標／時間。
 ---
 
 # rpai-platform-runner
 
-後台（RPAI Course Platform）負責跟講師談出教學藍圖並排工作；**產檔在講師自己的 Claude Code 裡跑**，
-用的是這個 plugin 打包的 `rpai-*` skill。這個 skill 負責把兩邊接起來。
+平台（RPAI Course Platform）是團隊的記憶與知識後台，記住每門課的藍圖。**備課流程寫在平台 MCP server 的說明（instructions）與工具描述裡**，任何接上平台的 AI 都照它走；這個 skill 只補 Claude Code 特有的事：本機檔案放哪裡、怎麼用 curl 上傳。
 
 ## 前提
 
 MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `server_url` 與 `api_token`）。
 工具呼叫失敗或找不到工具時，請使用者到 `/plugin` 檢查設定；**不要自己猜網址或權杖**，也不要把權杖印出來。
 
-## 流程
+## 備課：找課、讀藍圖、存藍圖
+
+照 MCP server 的說明走。Claude Code 另外要把藍圖落地成本機檔案，讓 `rpai-*` skill 讀得到：
+
+1. 用 `rpai_platform_get_blueprint` 讀到藍圖後，在目前工作目錄建立 `rpai-platform/<course_id>/`，寫兩個檔案：
+   - `blueprint.v<版本>.json`：回傳的 `content`，原樣存。
+   - `<課程標題>_教學藍圖.md`：回傳的 `markdown`，原樣存。下游 skill 開場會先找 `*_教學藍圖.md`，找到就不會重問前提。
+2. 新課用 `rpai-talk-blueprint` 談。講師認可後，把藍圖整理成 `rpai_platform_save_blueprint` 要的 JSON 存回平台（欄位與說明見工具的 input schema），再照第 1 步落地新的版本。
+3. 不要直接改本機的 `blueprint.v<版本>.json`。藍圖要改就存成新版，讓平台記住。
+
+## 處理後台排下來的產檔工作
 
 ### 1. 列出待處理工作
 
@@ -31,29 +39,12 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 呼叫 `rpai_platform_claim_job`，`claimed_by` 填機器名稱或使用者名稱。回傳內容包含 `kind`、課程資訊、
 `blueprint`（JSON）、`blueprint_version`、講師的 `instructions`。
 
-在目前工作目錄建立 `rpai-platform/<course_id>/`，寫兩個檔案：
+再用 `rpai_platform_get_blueprint`（`course_id` 與工作的 `blueprint_version`）取得同一版藍圖的 `markdown`，照「備課」第 1 步落地成本機檔案。
 
-1. `blueprint.v<版本>.json` —— 原始 JSON，原樣存。
-2. `<課程標題>_教學藍圖.md` —— 依 `rpai-talk-blueprint` skill 的固定結構整理成 Markdown。
-   下游 skill 開場都會先找 `*_教學藍圖.md`，找到就不會重問前提。
+藍圖的天 → 時段 → 單元三層照順序排，總時長是各時段 `minutes` 的加總：**不要自己加休息**，也不要把第幾天搞混。
+`reuse` 是 `modify` 或 `new` 的單元，產檔時要依藍圖重寫，不要照搬來源的舊內容。
 
-藍圖 JSON 欄位對應：`audience` → 受眾、`outcomes` → 教學目標、`elements` → 五元素落點、
-`narrative` → 敘事主軸、`days` → 時間骨架、`constraints` → 限制、`tools` → 工具、`openQuestions` → 待確認事項。
-
-`days` 是「天 → 時段 → 單元」三層：每一天有 `theme`（主軸）與 `slots`（時段）；時段有 `label`（上午／下午）、
-`minutes`（預設 180，不另排休息）與 `units`（單元）；單元有 `title`、`minutes`、`objective`（學習目標）、
-`method`（教學方式）、`outcome`（成果）、`keyPoints`、`activity`（動手環節，`null` 代表純講述單元）、
-`elements`、`carriesFrom`（承接自哪個較早單元的標題，沒有則 `null`）、`module`（單元所屬的模組：A1–A5 是工具環境、B1–B4 是方法）、
-`level`（應用層級 L1–L5，由問答、產出、工作流、助理到自動化；評過了、但是純方法、沒有用 AI 做事的單元為 `"na"`；還沒評為 `null`，兩者不同，`null` 會被列進準備度）、
-`source`（出自知識庫哪張單元卡、或哪門過去課程的哪個單元：`{ kind: "unit_card" | "course", id, version, unit }`；
-`unit_card` 的 `version` 為 `null`，`course` 的 `version` 是該課程藍圖的版本；新做則 `source` 為 `null`）、`reuse`（沿用程度：`reuse` 沿用、`modify` 要改、`new` 新做）。
-`reuse` 是 `modify` 或 `new` 的單元，產檔時要依藍圖重寫，不要照搬來源的舊內容。總時長是各時段 `minutes` 的加總，
-藍圖不另存；時間骨架照天與時段排，**不要自己加休息**，也不要把第幾天搞混。
-
-`tools` 每一項有 `name`、`plan`（`free`／`paid`／`enterprise`）與 `confirmedWithClient`；`confirmedWithClient` 為 `false` 的工具算一筆**問客戶**的待確認事項。
-`openQuestions` 每一項有 `text`、`audience`（`client` 問客戶／`self` 講師自己決定）與 `unit`（受影響單元的標題，沒有則 `null`）。
-
-有待確認事項（`openQuestions` 不是空的，或有未確認的工具）→ **先列給使用者**，依問客戶／自己決定分開列，問要不要先確認。使用者說先做，就在產物裡受影響的單元標「（待確認）」，不要自己編答案。
+有待確認事項（`get_blueprint` 回傳的 `report.open_items` 不是空的）→ **先列給使用者**，依問客戶／自己決定分開列，問要不要先確認。使用者說先做，就在產物裡受影響的單元標「（待確認）」，不要自己編答案。
 
 ### 3. 依 kind 產檔
 
@@ -86,4 +77,4 @@ MCP server `rpai-course-platform` 必須已連線（安裝 plugin 時填的 `ser
 
 - 不要跳過認領直接產檔；沒認領的工作平台不會知道有人在做。
 - 不要重問藍圖已經回答的事。真的缺資訊才問，而且先看 `openQuestions` 與未確認的 `tools`。
-- 不要修改 `blueprint.v<版本>.json`；覺得藍圖該改，回報給使用者去後台改，讓它升版。
+- 不要修改 `blueprint.v<版本>.json`；覺得藍圖該改，跟使用者確認後用 `rpai_platform_save_blueprint` 存成新版。
