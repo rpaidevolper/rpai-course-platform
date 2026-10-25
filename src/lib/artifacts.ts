@@ -1,5 +1,8 @@
 import path from "node:path";
 
+/** 產物檔案所在的 Supabase Storage bucket（私有，一律用 signed URL 上傳、下載）。 */
+export const ARTIFACT_BUCKET = "artifacts";
+
 /** 產物種類。加種類時 plugin/skills/rpai-platform-runner/SKILL.md 的對應表要一起改。 */
 export const ARTIFACT_KINDS = ["outline", "slides", "handbook"] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];

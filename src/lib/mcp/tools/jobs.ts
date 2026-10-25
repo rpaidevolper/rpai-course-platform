@@ -1,61 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { ARTIFACT_KIND_LABELS, contentTypeFor } from "@/lib/artifacts";
-import { ownerIdFrom } from "./auth";
-import type { JobStore } from "./store";
-
-function ok(data: Record<string, unknown>) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    structuredContent: data,
-  };
-}
-
-function fail(message: string) {
-  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
-}
+import { ownerIdFrom } from "../auth";
+import type { JobStore } from "../job-store";
+import { fail, ok } from "./result";
 
 const JobId = z.string().uuid().describe("工作 id（artifacts.id），從 rpai_platform_list_jobs 取得");
 
 /**
- * 講師的 Claude Code 透過這些工具跟後台互動。
+ * 工作佇列：後台排下來的產檔工作，由講師的 Claude Code 認領後產檔。
  * 流程：list_jobs → claim_job → （本機產檔）→ request_upload → curl PUT → complete_job。
- * 工具名或參數改了，plugin/skills/rpai-platform-runner/SKILL.md 要同步。
+ * 第 3 段改成講師直接在對話裡要產物，這組工具會移除。
  */
-export function registerPlatformTools(server: McpServer, store: JobStore): void {
-  server.registerTool(
-    "rpai_platform_list_courses",
-    {
-      title: "列出我的課程",
-      description: "列出目前講師在平台上的所有課程（id、標題、最後更新時間）。只讀。",
-      inputSchema: z.object({}),
-      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    },
-    async (_args, ctx) => {
-      const courses = await store.listCourses(ownerIdFrom(ctx.http?.authInfo));
-      return ok({ count: courses.length, courses });
-    },
-  );
-
-  server.registerTool(
-    "rpai_platform_get_blueprint",
-    {
-      title: "讀取教學藍圖",
-      description:
-        "讀取某門課的教學藍圖 JSON。不給 version 就回最新一版。只讀；藍圖要改請講師回後台改，讓它升版。",
-      inputSchema: z.object({
-        course_id: z.string().uuid().describe("課程 id，從 rpai_platform_list_courses 取得"),
-        version: z.number().int().positive().optional().describe("指定版本；省略＝最新"),
-      }),
-      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    },
-    async ({ course_id, version }, ctx) => {
-      const record = await store.getBlueprint(ownerIdFrom(ctx.http?.authInfo), course_id, version);
-      if (!record) return fail("找不到這門課或這個版本的藍圖。先用 rpai_platform_list_courses 確認 course_id。");
-      return ok({ ...record });
-    },
-  );
-
+export function registerJobTools(server: McpServer, store: JobStore): void {
   server.registerTool(
     "rpai_platform_list_jobs",
     {
