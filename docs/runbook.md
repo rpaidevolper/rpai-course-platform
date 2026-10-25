@@ -70,5 +70,7 @@ pnpm exec supabase db dump --linked --password "$SUPABASE_DB_PASSWORD" -f backup
 | 資料庫密碼 | Supabase Dashboard → Settings → Database 重設 → `gh secret set SUPABASE_DB_PASSWORD` |
 | Supabase access token / Vercel token | 在各自 Dashboard 重新產生 → `gh secret set` |
 | Anthropic API key | Console 重新產生 → `vercel env add ANTHROPIC_API_KEY production --force` → 重新部署 |
+| 網頁的共用密碼 | `vercel env add DASHBOARD_PASSWORD production --force` → 重新部署。舊的登入 cookie 全部失效，大家要重新登入 |
+| 連接器權杖（`rcp_`） | `pnpm token:create` 建新的 → 換到 claude.ai 連接器（要移除後重加）與講師的設定 → 在 Supabase 把舊的那筆 `api_tokens.revoked_at` 設成現在時間 |
 
 這些都需要 owner 帳號。環境變數與 secrets 都不要貼到 issue、PR 或聊天。
