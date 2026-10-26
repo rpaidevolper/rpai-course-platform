@@ -38,7 +38,7 @@ export interface SyncStore {
 }
 
 const TABLE = "knowledge_documents";
-const DOCUMENT_COLUMNS = "id, kind, modules, title, frontmatter, body, flags, retired_at";
+const DOCUMENT_COLUMNS = "id, kind, modules, title, frontmatter, body, flags, retired_at, synced_at";
 /** 分頁大小（PostgREST 預設最多回 1000 列，超過要分頁，否則會悄悄漏掉文件）。 */
 const PAGE_SIZE = 500;
 /** 寫入一批的列數，避免單次請求太大。 */

@@ -41,7 +41,7 @@ export interface DashboardStore {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 不是 uuid 就不送進資料庫（Postgres 對不合法的 uuid 會報錯），直接當作找不到。 */
-function isUuid(value: string): boolean {
+export function isUuid(value: string): boolean {
   return UUID.test(value);
 }
 

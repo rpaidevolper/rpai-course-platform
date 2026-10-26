@@ -14,6 +14,7 @@ function doc(overrides: Partial<KnowledgeDocument>): KnowledgeDocument {
     body: "內文",
     flags: [],
     retired_at: null,
+    synced_at: "2026-10-26T00:00:00.000Z",
     ...overrides,
   };
 }

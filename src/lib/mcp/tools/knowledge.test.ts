@@ -40,6 +40,7 @@ async function fixtureDocs(): Promise<KnowledgeDocument[]> {
     body: doc.body,
     flags: doc.flags,
     retired_at: null,
+    synced_at: "2026-10-26T00:00:00.000Z",
   }));
 }
 

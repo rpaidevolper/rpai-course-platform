@@ -2,6 +2,8 @@ import { KNOWLEDGE_KINDS, type KnowledgeDocument, type KnowledgeKind } from "./t
 
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 50;
+/** 關鍵字最多幾個字（MCP 搜尋工具與網頁的知識庫頁共用） */
+export const MAX_QUERY_CHARS = 100;
 const SNIPPET_CHARS = 120;
 /** 命中處之前保留的字數，其餘給命中處之後。 */
 const SNIPPET_BEFORE_HIT = 40;
@@ -33,8 +35,13 @@ export interface SearchHit {
  * 沒有關鍵字：依種類（框架、模組卡、單元卡、配方）再依標題排序。
  */
 export function searchKnowledge(docs: KnowledgeDocument[], options: SearchOptions = {}): SearchHit[] {
-  const tokens = (options.query ?? "").toLowerCase().split(/\s+/).filter((token) => token !== "");
   const limit = Math.min(options.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
+  return rankKnowledge(docs, options).slice(0, limit);
+}
+
+/** 和 searchKnowledge 一樣的過濾與排序，但不設筆數上限（網頁列表用）。 */
+export function rankKnowledge(docs: KnowledgeDocument[], options: Omit<SearchOptions, "limit"> = {}): SearchHit[] {
+  const tokens = (options.query ?? "").toLowerCase().split(/\s+/).filter((token) => token !== "");
 
   const matched = docs
     .filter((doc) => isServable(doc))
@@ -45,7 +52,7 @@ export function searchKnowledge(docs: KnowledgeDocument[], options: SearchOption
 
   matched.sort((a, b) => b.score - a.score || compareDefault(a.doc, b.doc));
 
-  return matched.slice(0, limit).map(({ doc }) => ({
+  return matched.map(({ doc }) => ({
     id: doc.id,
     kind: doc.kind,
     modules: doc.modules,

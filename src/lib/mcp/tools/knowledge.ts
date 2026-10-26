@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { MODULE_IDS } from "@/lib/blueprint/modules";
-import { isServable, searchKnowledge } from "@/lib/knowledge/search";
+import { isServable, MAX_QUERY_CHARS, searchKnowledge } from "@/lib/knowledge/search";
 import type { KnowledgeStore } from "@/lib/knowledge/store";
 import { KNOWLEDGE_KINDS } from "@/lib/knowledge/types";
 import { fail, ok } from "./result";
@@ -29,7 +29,7 @@ export function registerKnowledgeTools(server: McpServer, store: KnowledgeStore)
         query: z
           .string()
           .trim()
-          .max(100)
+          .max(MAX_QUERY_CHARS)
           .optional()
           .describe("關鍵字，用空白分開，不分大小寫。省略就依種類與標題列出"),
         kind: z.enum(KNOWLEDGE_KINDS).optional().describe("只查這一種：framework、module_card、unit_card、recipe"),
