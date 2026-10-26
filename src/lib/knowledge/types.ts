@@ -50,4 +50,6 @@ export interface KnowledgeDocument {
   body: string;
   flags: string[];
   retired_at: string | null;
+  /** 最後一次同步寫入這份文件的時間 */
+  synced_at: string;
 }

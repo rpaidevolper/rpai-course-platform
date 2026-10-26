@@ -1,6 +1,6 @@
 # 同步知識庫
 
-知識庫的真相來源是維護者本機的 Markdown 資料夾（格式見 [`specs/2026-10-24-knowledge-base-import-mapping.md`](specs/2026-10-24-knowledge-base-import-mapping.md)）。`pnpm kb:sync` 把資料夾的內容去識別化後同步進平台，講師的 AI 再透過 MCP 的 `rpai_platform_search_knowledge`、`rpai_platform_read_knowledge` 查它。
+知識庫的真相來源是維護者本機的 Markdown 資料夾（格式見 [`specs/2026-10-24-knowledge-base-import-mapping.md`](specs/2026-10-24-knowledge-base-import-mapping.md)）。`pnpm kb:sync` 把資料夾的內容去識別化後同步進平台，講師的 AI 再透過 MCP 的 `rpai_platform_search_knowledge`、`rpai_platform_read_knowledge` 查它。同步完可以在網頁的「知識庫」頁（`/knowledge`）確認平台上有哪些文件，看到的和 AI 查得到的一樣。
 
 ## 誰來跑、在哪裡跑
 

@@ -47,11 +47,13 @@
 | `/login` | 輸入團隊共用的密碼（`DASHBOARD_PASSWORD`），發一個 30 天的簽章 cookie；換密碼後舊 cookie 一律失效 |
 | `/` | 全部課程，附最新藍圖版本 |
 | `/courses/[id]` | 最新藍圖（五元素、待確認事項、檢查結果）、歷史版本、產物與過期原因 |
+| `/knowledge` | 知識庫（唯讀）：AI 查得到的文件依種類分組，可用種類、模組、關鍵字篩選，不設筆數上限；暫停使用的只顯示份數 |
+| `/knowledge/[id]` | 一份知識庫文件的 frontmatter 與本文；暫停使用或退役的回 404 |
 | `/artifacts/[id]/download` | 簽 10 分鐘、帶 download 選項的網址並導過去 |
 | `/u/[artifactId]?t=` | 上傳頁：不用登入，靠一次性權杖；講師在瀏覽器選檔，直接傳到 Storage |
 | `/demo` | 設計稿，瀏覽器裡的假資料 |
 
-網頁看得到全部課程（等同 ADR 0004 的全團隊共用），MCP 仍以權杖的 owner 過濾。課程頁和 MCP 工具用同一組純函式（`checkBlueprint`、`openItems`、`blueprintReport`、`summarizeArtifacts`），兩邊看到的缺漏、待確認事項與過期原因一致。
+網頁看得到全部課程（等同 ADR 0004 的全團隊共用），MCP 仍以權杖的 owner 過濾。課程頁和 MCP 工具用同一組純函式（`checkBlueprint`、`openItems`、`blueprintReport`、`summarizeArtifacts`），兩邊看到的缺漏、待確認事項與過期原因一致。知識庫頁也和 MCP 的搜尋共用 `isServable` 與 `rankKnowledge`，網頁看到的就是 AI 查得到的。
 
 ## 3. 資料模型
 

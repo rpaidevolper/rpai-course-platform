@@ -3,7 +3,7 @@ import { ThemeToggle } from "../_components/theme-toggle";
 import { signOut } from "./session";
 
 /**
- * 登入後的外框：頁首有品牌、設計稿連結與登出。
+ * 登入後的外框：頁首有品牌、知識庫與設計稿連結、登出。
  * 登入檢查在各頁自己做（layout 不會每次導覽都重跑）。
  */
 export default function DashboardLayout({ children }: LayoutProps<"/">) {
@@ -13,6 +13,9 @@ export default function DashboardLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-8">
           <Link href="/" className="font-bold text-ink">
             RPAI 課程平台
+          </Link>
+          <Link href="/knowledge" className="text-sm font-bold text-body hover:text-ink">
+            知識庫
           </Link>
           <Link href="/demo" className="text-sm font-bold text-body hover:text-ink">
             看設計稿
