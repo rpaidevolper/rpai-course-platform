@@ -1,6 +1,6 @@
 import { MODULE_IDS } from "@/lib/blueprint/modules";
 import type { BrowseFilter } from "@/lib/knowledge/browse";
-import { isServable } from "@/lib/knowledge/search";
+import { isServable, MAX_QUERY_CHARS } from "@/lib/knowledge/search";
 import type { KnowledgeStore } from "@/lib/knowledge/store";
 import { KNOWLEDGE_KINDS, type KnowledgeDocument, type KnowledgeKind } from "@/lib/knowledge/types";
 import { isUuid } from "./store";
@@ -10,19 +10,16 @@ import { isUuid } from "./store";
  * 讀取一樣只能在通過登入檢查的頁面裡用。
  */
 
-/** 關鍵字最多幾個字（和 MCP 搜尋工具的上限一樣） */
-const MAX_QUERY_CHARS = 100;
-
 type SearchParams = Record<string, string | string[] | undefined>;
 
 /** 網址參數（kind、module、q）轉成篩選；不認得的值當作沒篩選，不報錯。 */
 export function parseBrowseFilter(params: SearchParams): BrowseFilter {
   const filter: BrowseFilter = {};
-  const kind = first(params.kind);
+  const kind = firstParam(params.kind);
   if (kind !== undefined && (KNOWLEDGE_KINDS as readonly string[]).includes(kind)) filter.kind = kind as KnowledgeKind;
-  const moduleId = first(params.module);
+  const moduleId = firstParam(params.module);
   if (moduleId !== undefined && (MODULE_IDS as readonly string[]).includes(moduleId)) filter.module = moduleId;
-  const query = first(params.q)?.trim().slice(0, MAX_QUERY_CHARS);
+  const query = firstParam(params.q)?.trim().slice(0, MAX_QUERY_CHARS);
   if (query) filter.query = query;
   return filter;
 }
@@ -37,6 +34,7 @@ export async function readKnowledgeDocument(store: KnowledgeStore, id: string): 
   return doc && isServable(doc) ? doc : null;
 }
 
-function first(value: string | string[] | undefined): string | undefined {
+/** 同一個參數出現多次時只取第一個 */
+function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }

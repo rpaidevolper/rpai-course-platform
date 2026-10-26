@@ -3,10 +3,11 @@ import { MODULES } from "@/lib/blueprint/modules";
 import { formatDateTime } from "@/lib/dashboard/format";
 import { parseBrowseFilter } from "@/lib/dashboard/knowledge";
 import { browseKnowledge } from "@/lib/knowledge/browse";
+import { MAX_QUERY_CHARS } from "@/lib/knowledge/search";
 import { createSupabaseKnowledgeStore } from "@/lib/knowledge/store";
 import { KNOWLEDGE_KIND_LABELS, KNOWLEDGE_KINDS } from "@/lib/knowledge/types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Badge, Card, Empty, Field, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
+import { Badge, Button, Card, Empty, Field, PageHeader, SectionTitle, Select, TextInput } from "../../_components/ui";
 import { requireSignedIn } from "../session";
 
 /**
@@ -64,12 +65,10 @@ export default async function KnowledgePage({ searchParams }: PageProps<"/knowle
           </Select>
         </Field>
         <Field label="關鍵字">
-          <TextInput type="search" name="q" defaultValue={filter.query ?? ""} maxLength={100} placeholder="例如 GAS 觸發器" />
+          <TextInput type="search" name="q" defaultValue={filter.query ?? ""} maxLength={MAX_QUERY_CHARS} placeholder="例如 GAS 觸發器" />
         </Field>
         <div className="flex items-center gap-3">
-          <button type="submit" className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-bold text-on-accent hover:bg-accent-press">
-            篩選
-          </button>
+          <Button type="submit">篩選</Button>
           {filtered && (
             <Link href="/knowledge" className="text-sm font-bold text-accent underline underline-offset-2 hover:text-accent-press">
               清除

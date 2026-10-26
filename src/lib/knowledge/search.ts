@@ -2,6 +2,8 @@ import { KNOWLEDGE_KINDS, type KnowledgeDocument, type KnowledgeKind } from "./t
 
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 50;
+/** 關鍵字最多幾個字（MCP 搜尋工具與網頁的知識庫頁共用） */
+export const MAX_QUERY_CHARS = 100;
 const SNIPPET_CHARS = 120;
 /** 命中處之前保留的字數，其餘給命中處之後。 */
 const SNIPPET_BEFORE_HIT = 40;
